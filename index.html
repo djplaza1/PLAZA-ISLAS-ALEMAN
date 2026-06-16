@@ -54,7 +54,6 @@
             color: #10b981;
             border-bottom-color: #10b981;
         }
-        /* Tarjeta giratoria */
         .flashcard {
             perspective: 1000px;
             width: 100%;
@@ -95,7 +94,6 @@
             border: 1px solid #334155;
             transform: rotateY(180deg);
         }
-        /* Centered popup overlay */
         .popup-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -1202,7 +1200,6 @@
                 container.appendChild(row);
             });
 
-            // Asignar eventos de audio dinámicamente
             document.querySelectorAll('.speak-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -1450,29 +1447,30 @@
             advanceAuto();
         }
 
-        // ==================== VOZ Y TEXTO ====================
-        function initSpeechRecognition() {
+        // ==================== VOZ Y TEXTO (CORREGIDO PARA AMBOS MODOS) ====================
+        function initSpeechRecognition(lang = 'de-DE') {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
                 return false;
             }
             recognition = new SpeechRecognition();
-            recognition.lang = 'de-DE';
+            recognition.lang = lang;
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
             recognition.continuous = false;
             return true;
         }
 
-        function startVoiceRecognition(callback) {
-            if (!recognition && !initSpeechRecognition()) {
-                callback(null, 'not-supported');
-                return;
+        function startVoiceRecognition(callback, lang = 'de-DE') {
+            if (!recognition || recognition.lang !== lang) {
+                if (!initSpeechRecognition(lang)) {
+                    callback(null, 'not-supported');
+                    return;
+                }
             }
             if (isRecognizing) return;
 
-            // Solicitar permiso de micrófono primero
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(() => {
                     isRecognizing = true;
@@ -1488,7 +1486,7 @@
                     recognition.start();
                 })
                 .catch((err) => {
-                    callback(null, err.message || 'Permiso de micrófono denegado');
+                    callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
                 });
         }
 
@@ -1518,17 +1516,16 @@
         }
 
         function startVoiceInput() {
-            if (trainingDirection !== 'normal') {
-                alert('El modo voz solo está disponible en Producción (ES→DE).');
-                return;
-            }
-            const target = trainingQueue[currentTrainIndex].de;
+            // Permitir ambos modos
+            const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+            const lang = trainingDirection === 'normal' ? 'de-DE' : 'es-ES';
+
             document.getElementById('btn-voice-input').disabled = true;
             document.getElementById('voice-feedback').classList.add('hidden');
             startVoiceRecognition((transcript, error) => {
                 document.getElementById('btn-voice-input').disabled = false;
                 if (error) {
-                    alert('Error de micrófono: ' + (error === 'not-allowed' ? 'Permiso denegado' : error));
+                    alert('Error de micrófono: ' + error);
                     return;
                 }
                 const score = computeScore(transcript, target);
@@ -1539,7 +1536,7 @@
                 renderDynamicStars('grammar', localGrammarRating);
                 renderDynamicStars('fluency', localFluencyRating);
                 revealTargetStructure();
-            });
+            }, lang);
         }
 
         function startTypingInput() {
