@@ -95,6 +95,26 @@
             border: 1px solid #334155;
             transform: rotateY(180deg);
         }
+        /* Centered popup overlay */
+        .popup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .popup-content {
+            background: #1e293b;
+            border: 1px solid #10b981;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 90%;
+            width: 350px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            position: relative;
+        }
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col transition-colors duration-300">
@@ -385,12 +405,7 @@
             islands: [],
             conversations: [],
             vocabulary: [],
-            stats: {
-                dailyRepetitions: {},
-                dailyTime: {},
-                streak: 0,
-                lastPracticeDate: null
-            },
+            stats: { dailyRepetitions: {}, dailyTime: {}, streak: 0, lastPracticeDate: null },
             settings: { flowType: 'manual', order: 'sequential', loops: 2, pause: 4, speed: 0.9 }
         };
 
@@ -545,7 +560,9 @@
                 const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
                 const secs = (elapsed % 60).toString().padStart(2,'0');
                 display.textContent = `${mins}:${secs}`;
-            } else display.textContent = '00:00';
+            } else {
+                display.textContent = '00:00';
+            }
         }
         function trackNetPracticeTime() {
             if (sessionStartTime) {
@@ -570,19 +587,25 @@
                 const now = new Date(today);
                 const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
                 if (diff > 1) appData.stats.streak = 0;
-            } else appData.stats.streak = 0;
+            } else {
+                appData.stats.streak = 0;
+            }
             saveDatabaseToLocalStorage();
         }
         function logRepetitionImpact() {
             const today = getTodayDateString();
             appData.stats.dailyRepetitions[today] = (appData.stats.dailyRepetitions[today] || 0) + 1;
+            
             if (appData.stats.lastPracticeDate !== today) {
                 if (appData.stats.lastPracticeDate) {
                     const last = new Date(appData.stats.lastPracticeDate);
                     const now = new Date(today);
                     const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
-                    appData.stats.streak = diff === 1 ? appData.stats.streak + 1 : 1;
-                } else appData.stats.streak = 1;
+                    if (diff === 1) appData.stats.streak++;
+                    else if (diff > 1) appData.stats.streak = 1;
+                } else {
+                    appData.stats.streak = 1;
+                }
                 appData.stats.lastPracticeDate = today;
             }
             saveDatabaseToLocalStorage();
@@ -592,64 +615,131 @@
         function createIsland() {
             const name = document.getElementById('new-island-name').value.trim();
             if (!name) return;
-            appData.islands.push({ id: 'island_' + Date.now(), name, phrases: [] });
+            appData.islands.push({ id: 'island_' + Date.now(), name: name, phrases: [] });
             saveDatabaseToLocalStorage();
             document.getElementById('new-island-name').value = '';
             renderIslandsGrid();
         }
-        function deleteIsland(id, event) { event.stopPropagation(); if (!confirm("¿Eliminar esta isla?")) return; appData.islands = appData.islands.filter(isl => isl.id !== id); saveDatabaseToLocalStorage(); renderIslandsGrid(); }
+
+        function deleteIsland(id, event) {
+            event.stopPropagation();
+            if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
+            appData.islands = appData.islands.filter(isl => isl.id !== id);
+            saveDatabaseToLocalStorage();
+            renderIslandsGrid();
+        }
+
         function renderIslandsGrid() {
             const container = document.getElementById('islands-container');
-            const search = document.getElementById('global-search-field').value.toLowerCase().trim();
+            const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
             container.innerHTML = '';
-            let lexA=0, lexB1=0, lexB2=0, lexVerbs=0, lexAkk=0, lexDat=0;
-            appData.islands.forEach(isl => isl.phrases.forEach(p => {
-                const raw = (p.de + " " + (p.tags || "")).toLowerCase();
-                if (raw.includes('#a1') || raw.includes('#a2')) lexA++;
-                if (raw.includes('#b1')) lexB1++;
-                if (raw.includes('#b2')) lexB2++;
-                if (raw.includes('#verb')) lexVerbs++;
-                if (raw.includes('#prep-akk')) lexAkk++;
-                if (raw.includes('#prep-dat')) lexDat++;
-            }));
+
+            let lexA = 0, lexB1 = 0, lexB2 = 0, lexVerbs = 0, lexAkk = 0, lexDat = 0;
+            appData.islands.forEach(isl => {
+                isl.phrases.forEach(p => {
+                    const raw = (p.de + " " + (p.tags || "")).toLowerCase();
+                    if (raw.includes('#a1') || raw.includes('#a2')) lexA++;
+                    if (raw.includes('#b1')) lexB1++;
+                    if (raw.includes('#b2')) lexB2++;
+                    if (raw.includes('#verb')) lexVerbs++;
+                    if (raw.includes('#prep-akk')) lexAkk++;
+                    if (raw.includes('#prep-dat')) lexDat++;
+                });
+            });
+
             document.getElementById('lex-count-a').innerText = lexA;
             document.getElementById('lex-count-b1').innerText = lexB1;
             document.getElementById('lex-count-b2').innerText = lexB2;
             document.getElementById('lex-count-verbs').innerText = lexVerbs;
             document.getElementById('lex-count-akk').innerText = lexAkk;
             document.getElementById('lex-count-dat').innerText = lexDat;
-            const favCount = countVirtualPhrases('fav'), focoCount = countVirtualPhrases('foco');
-            if (favCount > 0 && !search) container.appendChild(createVirtualCard('virtual_fav', '⭐ Favoritas', favCount, 'amber'));
-            if (focoCount > 0 && !search) container.appendChild(createVirtualCard('virtual_foco', '🔥 Foco Intensivo', focoCount, 'rose'));
+
+            const favCount = countVirtualPhrases('fav');
+            const focoCount = countVirtualPhrases('foco');
+            if (favCount > 0 && !searchQuery) container.appendChild(createVirtualCard('virtual_fav', '⭐ Favoritas', favCount, 'amber'));
+            if (focoCount > 0 && !searchQuery) container.appendChild(createVirtualCard('virtual_foco', '🔥 Foco Intensivo', focoCount, 'rose'));
+
             appData.islands.forEach(island => {
-                let phrases = island.phrases;
-                if (search) phrases = island.phrases.filter(p => p.de.toLowerCase().includes(search) || p.es.toLowerCase().includes(search) || (p.tags||'').toLowerCase().includes(search));
-                if (search && phrases.length === 0) return;
+                let phrasesToShow = island.phrases;
+                if (searchQuery) {
+                    phrasesToShow = island.phrases.filter(p =>
+                        p.de.toLowerCase().includes(searchQuery) ||
+                        p.es.toLowerCase().includes(searchQuery) ||
+                        (p.tags && p.tags.toLowerCase().includes(searchQuery))
+                    );
+                }
+                if (searchQuery && phrasesToShow.length === 0) return;
+
                 const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700/80 rounded-2xl p-5 hover:border-slate-600 transition cursor-pointer shadow-lg";
+                card.className = "bg-slate-800 border border-slate-700/80 rounded-2xl p-5 hover:border-slate-600 transition cursor-pointer shadow-lg hover:shadow-xl";
                 card.onclick = () => openIslandDetail(island.id);
-                card.innerHTML = `<div class="flex justify-between items-start gap-2 mb-4"><h3 class="font-bold text-base">${island.name}</h3><button onclick="deleteIsland('${island.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5"><i class="fa-solid fa-trash-can"></i></button></div><span class="text-xs bg-slate-900 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700 font-bold">${phrases.length} oraciones</span>`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-2 mb-4">
+                        <h3 class="font-bold text-base tracking-tight">${island.name}</h3>
+                        <button onclick="deleteIsland('${island.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-xs bg-slate-900 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700 font-bold">${phrasesToShow.length} oraciones</span>
+                    </div>
+                `;
                 container.appendChild(card);
             });
-            if (appData.islands.length === 0) container.innerHTML = '<div class="col-span-full text-center py-16 text-slate-500">Crea tu primera isla.</div>';
+
+            if (appData.islands.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-16 text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl font-medium">Crea tu primera isla para comenzar.</div>';
+            }
         }
+
         function createVirtualCard(id, name, count, color) {
             const div = document.createElement('div');
-            div.className = `bg-gradient-to-br from-slate-800 to-slate-850 border-2 border-dashed border-${color}-500/40 rounded-2xl p-5 hover:border-${color}-400 transition cursor-pointer shadow-xl`;
+            div.className = `bg-gradient-to-br from-slate-800 to-slate-850 border-2 border-dashed border-${color}-500/40 rounded-2xl p-5 hover:border-${color}-400 transition cursor-pointer flex flex-col justify-between shadow-xl`;
             div.onclick = () => openIslandDetail(id);
-            div.innerHTML = `<h3 class="font-black text-base text-${color}-400">${name}</h3><span class="text-xs bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-lg border border-slate-700 w-fit">${count} estructuras</span>`;
+            div.innerHTML = `
+                <h3 class="font-black text-base text-${color}-400 tracking-wide">${name}</h3>
+                <span class="text-xs bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-lg border border-slate-700 w-fit">${count} Estructuras Críticas</span>
+            `;
             return div;
         }
-        function countVirtualPhrases(type) { let c=0; appData.islands.forEach(isl => isl.phrases.forEach(p => { if (type==='fav' && p.isFavorite) c++; if (type==='foco' && p.isFocus) c++; })); return c; }
 
-        // ==================== CONVERSACIONES (CORREGIDAS) ====================
+        function countVirtualPhrases(type) {
+            let count = 0;
+            appData.islands.forEach(isl => {
+                isl.phrases.forEach(p => {
+                    if (type === 'fav' && p.isFavorite) count++;
+                    if (type === 'foco' && p.isFocus) count++;
+                });
+            });
+            return count;
+        }
+
+        // ==================== CONVERSACIONES ====================
         function seedDefaultConversations() {
             appData.conversations = [
-                { id: 'conv_1', name: 'Sich vorstellen (Presentarse)', phrases: [{id:'p1',de:'Hallo, ich heiße Max Müller.',es:'Hola, me llamo Max Müller.'},{id:'p2',de:'Ich komme aus Spanien.',es:'Vengo de España.'},{id:'p3',de:'Ich wohne in Madrid.',es:'Vivo en Madrid.'},{id:'p4',de:'Ich bin 25 Jahre alt.',es:'Tengo 25 años.'},{id:'p5',de:'Ich arbeite als Ingenieur.',es:'Trabajo como ingeniero.'}] },
-                { id: 'conv_2', name: 'Im Restaurant (En el restaurante)', phrases: [{id:'p6',de:'Ich hätte gern einen Tisch für zwei Personen.',es:'Quisiera una mesa para dos personas.'},{id:'p7',de:'Die Speisekarte, bitte.',es:'La carta, por favor.'},{id:'p8',de:'Ich möchte das Schnitzel mit Pommes.',es:'Quisiera el schnitzel con patatas fritas.'},{id:'p9',de:'Zahlen, bitte!',es:'¡La cuenta, por favor!'}] }
+                {
+                    id: 'conv_1',
+                    name: 'Sich vorstellen (Presentarse)',
+                    phrases: [
+                        {id:'p1',de:'Hallo, ich heiße Max Müller.',es:'Hola, me llamo Max Müller.'},
+                        {id:'p2',de:'Ich komme aus Spanien.',es:'Vengo de España.'},
+                        {id:'p3',de:'Ich wohne in Madrid.',es:'Vivo en Madrid.'},
+                        {id:'p4',de:'Ich bin 25 Jahre alt.',es:'Tengo 25 años.'},
+                        {id:'p5',de:'Ich arbeite als Ingenieur.',es:'Trabajo como ingeniero.'}
+                    ]
+                },
+                {
+                    id: 'conv_2',
+                    name: 'Im Restaurant (En el restaurante)',
+                    phrases: [
+                        {id:'p6',de:'Ich hätte gern einen Tisch für zwei Personen.',es:'Quisiera una mesa para dos personas.'},
+                        {id:'p7',de:'Die Speisekarte, bitte.',es:'La carta, por favor.'},
+                        {id:'p8',de:'Ich möchte das Schnitzel mit Pommes.',es:'Quisiera el schnitzel con patatas fritas.'},
+                        {id:'p9',de:'Zahlen, bitte!',es:'¡La cuenta, por favor!'}
+                    ]
+                }
             ];
             saveDatabaseToLocalStorage();
         }
+
         function renderConversationsList() {
             const container = document.getElementById('conversations-list');
             if (!container) return;
@@ -666,6 +756,7 @@
                 container.appendChild(card);
             });
         }
+
         function createConversation() {
             const name = prompt('Nombre de la conversación:');
             if (!name) return;
@@ -673,6 +764,7 @@
             saveDatabaseToLocalStorage();
             renderConversationsList();
         }
+
         function openConversationDetail(convId) {
             currentConversationId = convId;
             const conv = appData.conversations.find(c => c.id === convId);
@@ -683,12 +775,14 @@
             renderConvPhrases();
             switchView('conversation-detail');
         }
+
         function deleteConversation() {
             if (!confirm('¿Eliminar esta conversación?')) return;
             appData.conversations = appData.conversations.filter(c => c.id !== currentConversationId);
             saveDatabaseToLocalStorage();
             switchView('conversations');
         }
+
         function renderConvPhrases() {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
             if (!conv) return;
@@ -701,6 +795,7 @@
                 container.appendChild(div);
             });
         }
+
         function addPhraseToConversation() {
             const de = document.getElementById('conv-phrase-de').value.trim();
             const es = document.getElementById('conv-phrase-es').value.trim();
@@ -713,6 +808,7 @@
             document.getElementById('conv-phrase-es').value = '';
             renderConvPhrases();
         }
+
         function deleteConvPhrase(phraseId) {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
             if (!conv) return;
@@ -720,18 +816,23 @@
             saveDatabaseToLocalStorage();
             renderConvPhrases();
         }
+
         function initiateConvTraining(direction) {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
             if (!conv || conv.phrases.length === 0) return;
             const virtualId = 'conv_virtual_' + conv.id;
             appData.islands = appData.islands.filter(isl => isl.id !== virtualId);
-            appData.islands.push({ id: virtualId, name: '💬 ' + conv.name, phrases: conv.phrases.map(p => ({
-                id: p.id, de: p.de, es: p.es, tags: '',
-                starsGrammarNormal: 0, starsFluencyNormal: 0,
-                starsGrammarInverse: 0, starsFluencyInverse: 0,
-                isFavorite: false, isFocus: false,
-                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
-            }))});
+            appData.islands.push({
+                id: virtualId,
+                name: '💬 ' + conv.name,
+                phrases: conv.phrases.map(p => ({
+                    id: p.id, de: p.de, es: p.es, tags: '',
+                    starsGrammarNormal: 0, starsFluencyNormal: 0,
+                    starsGrammarInverse: 0, starsFluencyInverse: 0,
+                    isFavorite: false, isFocus: false,
+                    interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
+                }))
+            });
             saveDatabaseToLocalStorage();
             initiateTrainingSession(virtualId, direction);
         }
@@ -748,8 +849,12 @@
                 renderVocabularyList();
             }
         }
+
         function startFlashcardSession() {
-            if (!appData.vocabulary || appData.vocabulary.length === 0) { alert('No hay palabras.'); return; }
+            if (!appData.vocabulary || appData.vocabulary.length === 0) {
+                alert('No hay palabras en tu vocabulario.');
+                return;
+            }
             flashcardWords = [...appData.vocabulary];
             currentFlashcardIndex = 0;
             isFlipped = false;
@@ -757,6 +862,7 @@
             document.getElementById('vocabulary-list-container').classList.add('hidden');
             showFlashcard();
         }
+
         function showFlashcard() {
             if (flashcardWords.length === 0) return;
             const word = flashcardWords[currentFlashcardIndex];
@@ -765,6 +871,7 @@
             const frontEx = dir === 'de-es' ? (word.example_de || '') : (word.example_es || '');
             const back = dir === 'de-es' ? word.translation : word.word;
             const backEx = dir === 'de-es' ? (word.example_es || '') : (word.example_de || '');
+
             document.getElementById('fc-front-word').innerText = front;
             document.getElementById('fc-front-example').innerText = frontEx;
             document.getElementById('fc-back-word').innerText = back;
@@ -773,10 +880,27 @@
             document.getElementById('flashcard').classList.remove('flipped');
             isFlipped = false;
         }
-        function flipFlashcard() { document.getElementById('flashcard').classList.toggle('flipped'); isFlipped = !isFlipped; }
-        function nextFlashcard() { if (currentFlashcardIndex < flashcardWords.length-1) { currentFlashcardIndex++; showFlashcard(); } }
-        function prevFlashcard() { if (currentFlashcardIndex > 0) { currentFlashcardIndex--; showFlashcard(); } }
+
+        function flipFlashcard() {
+            document.getElementById('flashcard').classList.toggle('flipped');
+            isFlipped = !isFlipped;
+        }
+
+        function nextFlashcard() {
+            if (currentFlashcardIndex < flashcardWords.length - 1) {
+                currentFlashcardIndex++;
+                showFlashcard();
+            }
+        }
+        function prevFlashcard() {
+            if (currentFlashcardIndex > 0) {
+                currentFlashcardIndex--;
+                showFlashcard();
+            }
+        }
+
         function markKnownWord() {
+            if (flashcardWords.length === 0) return;
             flashcardWords.splice(currentFlashcardIndex, 1);
             if (flashcardWords.length === 0) {
                 document.getElementById('flashcard-area').classList.add('hidden');
@@ -784,7 +908,7 @@
                 renderVocabularyList();
                 return;
             }
-            if (currentFlashcardIndex >= flashcardWords.length) currentFlashcardIndex = flashcardWords.length-1;
+            if (currentFlashcardIndex >= flashcardWords.length) currentFlashcardIndex = flashcardWords.length - 1;
             showFlashcard();
         }
 
@@ -803,15 +927,33 @@
             } catch(e) {}
             return null;
         }
-        function showWordPopup(word, x, y) {
-            const existing = document.getElementById('word-popup');
-            if (existing) existing.remove();
-            const popup = document.createElement('div');
-            popup.id = 'word-popup';
-            popup.className = "fixed bg-slate-800 border border-emerald-500 rounded-xl p-4 shadow-2xl z-50 text-sm w-72";
-            popup.style.left = x + 'px'; popup.style.top = y + 'px';
-            popup.innerHTML = `<p class="font-bold text-lg text-emerald-400">${word}</p><p class="text-slate-300 mt-1" id="popup-trans">Buscando traducción...</p><div class="mt-2"><input type="text" id="popup-example" placeholder="Frase de ejemplo (opcional)" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white"></div><div class="flex gap-2 mt-3"><button id="popup-save-btn" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-xs font-bold flex-1" disabled>➕ Guardar</button><button onclick="document.getElementById('word-popup').remove()" class="text-slate-400 hover:text-white">✕</button></div>`;
-            document.body.appendChild(popup);
+
+        function showWordPopup(word) {
+            const existingOverlay = document.querySelector('.popup-overlay');
+            if (existingOverlay) existingOverlay.remove();
+
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) overlay.remove();
+            });
+
+            const content = document.createElement('div');
+            content.className = 'popup-content';
+            content.innerHTML = `
+                <p class="font-bold text-lg text-emerald-400 mb-2">${word}</p>
+                <p class="text-slate-300 mt-1" id="popup-trans">Buscando traducción...</p>
+                <div class="mt-2">
+                    <input type="text" id="popup-example" placeholder="Frase de ejemplo (opcional)" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button id="popup-save-btn" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-xs font-bold flex-1" disabled>➕ Guardar</button>
+                    <button onclick="document.querySelector('.popup-overlay').remove()" class="text-slate-400 hover:text-white">✕</button>
+                </div>
+            `;
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+
             fetchOnlineTranslation(word).then(trans => {
                 const transEl = document.getElementById('popup-trans');
                 const saveBtn = document.getElementById('popup-save-btn');
@@ -828,87 +970,238 @@
                     };
                 }
             });
-            setTimeout(() => document.addEventListener('click', function close(e) { if (!popup.contains(e.target)) { popup.remove(); document.removeEventListener('click', close); } }), 100);
         }
+
         function addWordToVocabulary(word, translation) {
             if (!appData.vocabulary) appData.vocabulary = [];
-            if (appData.vocabulary.some(v => v.word === word)) { alert('Esa palabra ya está en tu vocabulario.'); return; }
+            if (appData.vocabulary.some(v => v.word === word)) {
+                alert('Esa palabra ya está en tu vocabulario.');
+                return;
+            }
             const example = document.getElementById('popup-example')?.value.trim() || '';
-            appData.vocabulary.push({ word, translation, example_de: example, example_es: '', added: getTodayDateString() });
+            appData.vocabulary.push({
+                word, translation,
+                example_de: example,
+                example_es: '',
+                added: getTodayDateString()
+            });
             saveDatabaseToLocalStorage();
-            document.getElementById('word-popup')?.remove();
-            renderVocabularyList();
+            document.querySelector('.popup-overlay')?.remove();
+            if (document.getElementById('vocabulary-list-container').classList.contains('hidden') === false) {
+                renderVocabularyList();
+            }
         }
+
         function wrapWordsInSpans(text, lang = 'de') {
             if (!text) return '';
             return text.split(' ').map(w => {
                 const clean = w.replace(/[.,!?;:()]/g, '');
                 if (clean.length === 0) return w;
-                if (lang === 'de') return `<span class="clickable-word" onclick="event.stopPropagation(); showWordPopup('${clean}', event.clientX, event.clientY)">${w}</span>`;
+                if (lang === 'de') {
+                    return `<span class="clickable-word" onclick="event.stopPropagation(); showWordPopup('${clean}')">${w}</span>`;
+                }
                 return w;
             }).join(' ');
         }
+
         function renderVocabularyList() {
             const container = document.getElementById('vocabulary-list-container');
             const search = document.getElementById('vocab-search')?.value.toLowerCase() || '';
             const filtered = (appData.vocabulary || []).filter(v => v.word.toLowerCase().includes(search) || v.translation.toLowerCase().includes(search));
-            container.innerHTML = filtered.length === 0 ? '<p class="text-slate-500 text-center py-8">No hay palabras. Toca una palabra alemana en cualquier frase para añadirla.</p>' : '';
+            container.innerHTML = filtered.length === 0 ? '<p class="text-slate-500 text-center py-8">Aún no has guardado palabras. Toca una palabra alemana en cualquier frase para añadirla.</p>' : '';
             filtered.forEach(v => {
                 const div = document.createElement('div');
                 div.className = "flex justify-between items-center py-3";
-                div.innerHTML = `<div><span class="font-bold text-emerald-400">${v.word}</span><span class="text-slate-400 ml-4">${v.translation}</span><span class="text-[10px] text-slate-500 ml-4">${v.added||''}</span></div><button onclick="deleteVocabWord('${v.word}')" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>`;
+                div.innerHTML = `
+                    <div>
+                        <span class="font-bold text-emerald-400">${v.word}</span>
+                        <span class="text-slate-400 ml-4">${v.translation}</span>
+                        <span class="text-[10px] text-slate-500 ml-4">${v.added||''}</span>
+                    </div>
+                    <button onclick="deleteVocabWord('${v.word}')" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                `;
                 container.appendChild(div);
             });
         }
-        function deleteVocabWord(word) { appData.vocabulary = appData.vocabulary.filter(v => v.word !== word); saveDatabaseToLocalStorage(); renderVocabularyList(); }
+
+        function deleteVocabWord(word) {
+            appData.vocabulary = appData.vocabulary.filter(v => v.word !== word);
+            saveDatabaseToLocalStorage();
+            renderVocabularyList();
+        }
 
         // ==================== DETALLE DE ISLA ====================
         function openIslandDetail(islandId) {
             currentActiveIslandId = islandId;
-            let title = '';
-            if (islandId === 'virtual_fav') title = '⭐ Favoritas';
-            else if (islandId === 'virtual_foco') title = '🔥 Foco Intensivo';
-            else { const island = appData.islands.find(isl => isl.id === islandId); if (!island) return; title = island.name; }
+            let title = "";
+            if (islandId === 'virtual_fav') title = "⭐ Favoritas";
+            else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
+            else {
+                const island = appData.islands.find(isl => isl.id === islandId);
+                if (!island) return;
+                title = island.name;
+            }
             document.getElementById('detail-island-title').innerText = title;
             renderPhrasesList();
-            document.getElementById('btn-start-training-normal').onclick = () => initiateTrainingSession(islandId, 'normal');
-            document.getElementById('btn-start-training-inverse').onclick = () => initiateTrainingSession(islandId, 'inverse');
+
+            document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
+            document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
+
             switchView('island-detail');
         }
+
         function getPhrasesArray(islandId) {
-            if (islandId === 'virtual_fav') { let list = []; appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFavorite) list.push(p); })); return list; }
-            if (islandId === 'virtual_foco') { let list = []; appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFocus) list.push(p); })); return list; }
-            const island = appData.islands.find(isl => isl.id === islandId);
-            return island ? island.phrases : [];
+            if (islandId === 'virtual_fav') {
+                let list = [];
+                appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFavorite) list.push(p); }));
+                return list;
+            } else if (islandId === 'virtual_foco') {
+                let list = [];
+                appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFocus) list.push(p); }));
+                return list;
+            } else {
+                const island = appData.islands.find(isl => isl.id === islandId);
+                return island ? island.phrases : [];
+            }
         }
-        function toggleVisibilityMatrix(type) { if (type==='de') hideGermanList = !hideGermanList; else hideSpanishList = !hideSpanishList; renderPhrasesList(); }
+
+        function toggleVisibilityMatrix(type) {
+            if(type === 'de') hideGermanList = !hideGermanList;
+            if(type === 'es') hideSpanishList = !hideSpanishList;
+            renderPhrasesList();
+        }
+
+        function addSinglePhrase() {
+            const deText = document.getElementById('phrase-de').value.trim();
+            const esText = document.getElementById('phrase-es').value.trim();
+            const tagsText = document.getElementById('phrase-tags').value.trim();
+            if (!deText || !esText) return;
+
+            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+            if (!island) { alert("No puedes insertar oraciones directamente en una isla virtual."); return; }
+
+            island.phrases.push({
+                id: 'phrase_' + Date.now(),
+                de: deText,
+                es: esText,
+                tags: tagsText,
+                starsGrammarNormal: 0, starsFluencyNormal: 0,
+                starsGrammarInverse: 0, starsFluencyInverse: 0,
+                isFavorite: false, isFocus: false,
+                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
+            });
+
+            saveDatabaseToLocalStorage();
+            document.getElementById('phrase-de').value = '';
+            document.getElementById('phrase-es').value = '';
+            document.getElementById('phrase-tags').value = '';
+            openIslandDetail(currentActiveIslandId);
+        }
+
+        function addBulkPhrasesBlock() {
+            const bulkText = document.getElementById('bulk-phrases').value.trim();
+            if (!bulkText) return;
+
+            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+            if (!island) { alert("Selecciona una isla física real para realizar la importación en bloque."); return; }
+
+            const lines = bulkText.split('\n');
+            let successCount = 0;
+
+            lines.forEach((line, i) => {
+                if (!line.trim()) return;
+                const coreParts = line.split('//');
+                if (coreParts.length === 2) {
+                    let dePart = coreParts[0].trim();
+                    let esRaw = coreParts[1].trim();
+                    
+                    let tags = "";
+                    const tagRegex = /\[([^\]]+)\]/;
+                    const match = esRaw.match(tagRegex);
+                    if (match) {
+                        tags = match[1].trim();
+                        esRaw = esRaw.replace(tagRegex, '').trim();
+                    }
+
+                    if (dePart && esRaw) {
+                        island.phrases.push({
+                            id: 'phrase_' + Date.now() + '_' + i,
+                            de: dePart,
+                            es: esRaw,
+                            tags: tags,
+                            starsGrammarNormal: 0, starsFluencyNormal: 0,
+                            starsGrammarInverse: 0, starsFluencyInverse: 0,
+                            isFavorite: false, isFocus: false,
+                            interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
+                        });
+                        successCount++;
+                    }
+                }
+            });
+
+            saveDatabaseToLocalStorage();
+            document.getElementById('bulk-phrases').value = '';
+            openIslandDetail(currentActiveIslandId);
+        }
+
+        function deletePhrase(phraseId) {
+            appData.islands.forEach(isl => {
+                isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
+            });
+            saveDatabaseToLocalStorage();
+            openIslandDetail(currentActiveIslandId);
+        }
+
+        function togglePhraseFeature(phraseId, type) {
+            appData.islands.forEach(isl => {
+                const target = isl.phrases.find(p => p.id === phraseId);
+                if (target) {
+                    if (type === 'fav') target.isFavorite = !target.isFavorite;
+                    if (type === 'foco') target.isFocus = !target.isFocus;
+                }
+            });
+            saveDatabaseToLocalStorage();
+            renderPhrasesList();
+        }
+
         function renderPhrasesList() {
             const container = document.getElementById('phrases-container');
             const phrases = getPhrasesArray(currentActiveIslandId);
             document.getElementById('phrase-count').innerText = phrases.length;
             container.innerHTML = '';
-            if (phrases.length === 0) { container.innerHTML = '<div class="text-center py-8 text-slate-500">Sin oraciones.</div>'; return; }
-            phrases.forEach((phrase, idx) => {
+
+            if (phrases.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Esta sección no contiene oraciones indexadas en este momento.</div>`;
+                return;
+            }
+
+            phrases.forEach((phrase, index) => {
                 const row = document.createElement('div');
                 row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
+                
+                const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
+                const esClass = hideSpanishList ? "hidden-content" : "text-xs text-slate-400 italic";
+                const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
+
                 row.innerHTML = `
                     <div class="space-y-1 flex-grow">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs font-mono text-slate-500">${idx+1}.</span>
-                            <span class="${hideGermanList ? 'hidden-content' : 'font-bold'}">${wrapWordsInSpans(phrase.de, 'de')}</span>
-                            ${phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 px-1.5 py-0.5 rounded">${phrase.tags}</span>` : ''}
+                            <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
+                            <p class="${deClass}">${wrapWordsInSpans(phrase.de, 'de')}</p>
+                            ${tagsBadge}
                         </div>
-                        <p class="${hideSpanishList ? 'hidden-content' : 'text-xs italic text-slate-400'}">"${phrase.es}"</p>
+                        <p class="${esClass}">"${phrase.es}"</p>
                     </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button class="bg-slate-900 border border-slate-700 p-2 text-xs rounded-lg speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}','fav')" class="p-2 text-xs ${phrase.isFavorite ? 'text-amber-400' : 'text-slate-500'}"><i class="fa-solid fa-star"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}','foco')" class="p-2 text-xs ${phrase.isFocus ? 'text-rose-400' : 'text-slate-500'}"><i class="fa-solid fa-fire"></i></button>
-                        <button onclick="deletePhrase('${phrase.id}')" class="text-slate-500 hover:text-rose-400 p-2"><i class="fa-solid fa-trash-can"></i></button>
+                    <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
+                        <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
+                        <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg transition ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40 border border-amber-900' : 'text-slate-500 hover:text-amber-400'}" title="Marcar Favorita"><i class="fa-solid fa-star"></i></button>
+                        <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg transition ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40 border border-rose-900' : 'text-slate-500 hover:text-rose-400'}" title="Enviar a Foco Intensivo"><i class="fa-solid fa-fire"></i></button>
+                        <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 `;
                 container.appendChild(row);
             });
+
             // Asignar eventos de audio dinámicamente
             document.querySelectorAll('.speak-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
@@ -917,6 +1210,7 @@
                 });
             });
         }
+
         function fireLocalSpeak(deText) {
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(deText);
@@ -924,59 +1218,31 @@
             utter.rate = appData.settings.speed || 0.9;
             window.speechSynthesis.speak(utter);
         }
-        function addSinglePhrase() {
-            const de = document.getElementById('phrase-de').value.trim();
-            const es = document.getElementById('phrase-es').value.trim();
-            const tags = document.getElementById('phrase-tags').value.trim();
-            if (!de || !es) return;
-            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) return;
-            island.phrases.push({ id: 'phrase_' + Date.now(), de, es, tags, starsGrammarNormal:0, starsFluencyNormal:0, starsGrammarInverse:0, starsFluencyInverse:0, isFavorite:false, isFocus:false, interval:1, nextReviewDate: getTodayDateString(), easeFactor:2.5 });
-            saveDatabaseToLocalStorage();
-            document.getElementById('phrase-de').value = ''; document.getElementById('phrase-es').value = ''; document.getElementById('phrase-tags').value = '';
-            openIslandDetail(currentActiveIslandId);
-        }
-        function addBulkPhrasesBlock() {
-            const text = document.getElementById('bulk-phrases').value.trim();
-            if (!text) return;
-            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) return;
-            text.split('\n').forEach(line => {
-                if (!line.trim()) return;
-                const parts = line.split('//');
-                if (parts.length === 2) {
-                    let de = parts[0].trim();
-                    let esRaw = parts[1].trim();
-                    let tags = '';
-                    const match = esRaw.match(/\[([^\]]+)\]/);
-                    if (match) { tags = match[1].trim(); esRaw = esRaw.replace(match[0], '').trim(); }
-                    if (de && esRaw) island.phrases.push({ id: 'phrase_' + Date.now() + Math.random(), de, es: esRaw, tags, starsGrammarNormal:0, starsFluencyNormal:0, starsGrammarInverse:0, starsFluencyInverse:0, isFavorite:false, isFocus:false, interval:1, nextReviewDate: getTodayDateString(), easeFactor:2.5 });
-                }
-            });
-            saveDatabaseToLocalStorage();
-            document.getElementById('bulk-phrases').value = '';
-            openIslandDetail(currentActiveIslandId);
-        }
-        function deletePhrase(phraseId) { appData.islands.forEach(isl => isl.phrases = isl.phrases.filter(p => p.id !== phraseId)); saveDatabaseToLocalStorage(); openIslandDetail(currentActiveIslandId); }
-        function togglePhraseFeature(phraseId, type) { appData.islands.forEach(isl => { const p = isl.phrases.find(p => p.id === phraseId); if (p) { if (type==='fav') p.isFavorite = !p.isFavorite; else p.isFocus = !p.isFocus; } }); saveDatabaseToLocalStorage(); renderPhrasesList(); }
 
         // ==================== ENTRENAMIENTO ====================
         function initiateTrainingSession(islandId, direction) {
             saveSettings();
-            let phrases = getPhrasesArray(islandId);
-            if (phrases.length === 0) { alert('Esta isla no tiene oraciones.'); return; }
+            let sourcePhrases = getPhrasesArray(islandId);
+            if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
+
             const order = document.getElementById('cfg-order').value;
-            if (order === 'random') phrases = [...phrases].sort(() => Math.random() - 0.5);
-            else if (order === 'worst') phrases = [...phrases].sort((a,b) => (a.starsGrammarNormal||0) - (b.starsGrammarNormal||0));
-            trainingQueue = phrases;
+            if (order === 'random') {
+                sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
+            } else if (order === 'worst') {
+                sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+            }
+
+            trainingQueue = sourcePhrases;
             currentTrainIndex = 0;
             trainingDirection = direction;
             document.getElementById('train-total-index').innerText = trainingQueue.length;
-            document.getElementById('train-mode-label').innerText = direction === 'normal' ? 'PRODUCCIÓN (ES→DE)' : 'COMPRENSIÓN (DE→ES)';
+            document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES ➔ DE)" : "COMPRENSION (DE ➔ ES)";
+            
             startTrainingTimer();
             setupTrainingSlide();
             switchView('training');
         }
+
         function exitTrainingSession() {
             pauseTrainingTimer();
             stopAudioAndTimers();
@@ -986,13 +1252,14 @@
             }
             switchView('islands');
         }
+
         function setupTrainingSlide() {
             if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
             window.speechSynthesis.cancel();
             const phrase = trainingQueue[currentTrainIndex];
             document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
-            document.getElementById('train-status-indicator').innerText = 'Listo';
-            document.getElementById('train-status-indicator').className = 'text-xs uppercase font-black tracking-widest text-blue-400';
+            document.getElementById('train-status-indicator').innerText = "Listo";
+            document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
             document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : wrapWordsInSpans(phrase.de, 'de');
             document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? wrapWordsInSpans(phrase.de, 'de') : phrase.es;
             document.getElementById('train-target-container').style.opacity = '0';
@@ -1006,94 +1273,177 @@
             document.getElementById('typing-input-area').classList.add('hidden');
             localGrammarRating = 0; localFluencyRating = 0;
             renderDynamicStars('grammar', 0); renderDynamicStars('fluency', 0);
-            if (document.getElementById('cfg-flow-type').value === 'auto') activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
+
+            if (document.getElementById('cfg-flow-type').value === 'auto') {
+                activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
+            }
         }
+
         function navigateTrainingQueue(step) {
             stopAudioAndTimers();
-            let idx = currentTrainIndex + step;
-            if (idx >= 0 && idx < trainingQueue.length) { currentTrainIndex = idx; setupTrainingSlide(); }
-            else if (idx >= trainingQueue.length) handleIslandTransitionOrLoop();
+            let tempIndex = currentTrainIndex + step;
+            if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
+                currentTrainIndex = tempIndex;
+                setupTrainingSlide();
+            } else if (tempIndex >= trainingQueue.length) {
+                handleIslandTransitionOrLoop();
+            }
         }
-        function handleFlowTypeChange() { saveSettings(); stopAudioAndTimers(); setupTrainingSlide(); }
+
+        function handleFlowTypeChange() {
+            saveSettings();
+            stopAudioAndTimers();
+            setupTrainingSlide();
+        }
+
         function executePlaybackChain() {
-            const btn = document.getElementById('btn-trigger-audio'); btn.disabled = true;
+            const triggerBtn = document.getElementById('btn-trigger-audio');
+            triggerBtn.disabled = true;
+
             const phrase = trainingQueue[currentTrainIndex];
             const loops = parseInt(document.getElementById('cfg-loops').value) || 2;
             const pause = parseInt(document.getElementById('cfg-pause').value) || 4;
             const speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
-            const flow = document.getElementById('cfg-flow-type').value;
-            let completed = 0;
-            document.getElementById('train-status-indicator').innerText = 'Audio activo...';
-            document.getElementById('train-status-indicator').className = 'text-xs uppercase font-black tracking-widest text-amber-500';
-            function run() {
-                if (completed >= loops) {
-                    document.getElementById('train-status-indicator').innerText = '¡Tu turno!';
-                    document.getElementById('train-status-indicator').className = 'text-xs uppercase font-black tracking-widest text-emerald-400';
-                    if (flow === 'auto') {
+            const flowType = document.getElementById('cfg-flow-type').value;
+
+            let completedLoops = 0;
+            const indicator = document.getElementById('train-status-indicator');
+            indicator.innerText = "Audio activo...";
+            indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
+
+            function runCycle() {
+                if (completedLoops >= loops) {
+                    indicator.innerText = "¡Tu turno!";
+                    indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
+                    if (flowType === 'auto') {
                         logRepetitionImpact();
-                        activePlaybackTimeout = setTimeout(() => { revealTargetStructure(); activePlaybackTimeout = setTimeout(advanceAuto, pause * 1000); }, 500);
+                        activePlaybackTimeout = setTimeout(() => {
+                            revealTargetStructure();
+                            activePlaybackTimeout = setTimeout(advanceAuto, pause * 1000);
+                        }, 500);
                     } else {
-                        btn.classList.add('hidden');
+                        triggerBtn.classList.add('hidden');
                         document.getElementById('btn-voice-input').classList.remove('hidden');
                         document.getElementById('btn-typing-input').classList.remove('hidden');
                         document.getElementById('btn-reveal').classList.remove('hidden');
                     }
                     return;
                 }
+
                 window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(phrase.de); utter.lang = 'de-DE'; utter.rate = speed;
-                utter.onend = () => { completed++; logRepetitionImpact(); activePlaybackTimeout = setTimeout(run, pause * 1000); };
-                window.speechSynthesis.speak(utter);
+                const utterance = new SpeechSynthesisUtterance(phrase.de);
+                utterance.lang = 'de-DE';
+                utterance.rate = speed;
+                utterance.onend = () => {
+                    completedLoops++;
+                    logRepetitionImpact();
+                    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+                };
+                window.speechSynthesis.speak(utterance);
             }
-            run();
+
+            runCycle();
         }
+
         function revealTargetStructure() {
             document.getElementById('train-target-container').style.opacity = '1';
             document.getElementById('btn-reveal').classList.add('hidden');
             document.getElementById('btn-voice-input').classList.add('hidden');
             document.getElementById('btn-typing-input').classList.add('hidden');
-            if (document.getElementById('cfg-flow-type').value === 'manual') document.getElementById('evaluation-panel').classList.remove('hidden');
+            if (document.getElementById('cfg-flow-type').value === 'manual') {
+                document.getElementById('evaluation-panel').classList.remove('hidden');
+            }
         }
-        function advanceAuto() { currentTrainIndex++; if (currentTrainIndex < trainingQueue.length) setupTrainingSlide(); else handleIslandTransitionOrLoop(); }
+
+        function advanceAuto() {
+            currentTrainIndex++;
+            if (currentTrainIndex < trainingQueue.length) {
+                setupTrainingSlide();
+            } else {
+                handleIslandTransitionOrLoop();
+            }
+        }
+
         function handleIslandTransitionOrLoop() {
             stopAudioAndTimers();
             if (currentActiveIslandId?.startsWith('virtual_') || currentActiveIslandId?.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual') {
-                currentTrainIndex = 0; setupTrainingSlide(); return;
+                currentTrainIndex = 0;
+                setupTrainingSlide();
+                return;
             }
+
             const idx = appData.islands.findIndex(isl => isl.id === currentActiveIslandId);
             if (idx !== -1 && idx + 1 < appData.islands.length) {
-                const next = appData.islands[idx + 1]; currentActiveIslandId = next.id; trainingQueue = [...next.phrases]; currentTrainIndex = 0;
+                const next = appData.islands[idx + 1];
+                currentActiveIslandId = next.id;
+                trainingQueue = [...next.phrases];
+                currentTrainIndex = 0;
+                if (trainingQueue.length === 0) {
+                    handleIslandTransitionOrLoop();
+                    return;
+                }
                 document.getElementById('train-total-index').innerText = trainingQueue.length;
                 document.getElementById('detail-island-title').innerText = next.name;
                 setupTrainingSlide();
-            } else if (appData.islands.length > 0) {
-                const first = appData.islands[0]; currentActiveIslandId = first.id; trainingQueue = [...first.phrases]; currentTrainIndex = 0;
-                setupTrainingSlide();
-            } else exitTrainingSession();
+            } else {
+                if (appData.islands.length > 0) {
+                    const first = appData.islands[0];
+                    currentActiveIslandId = first.id;
+                    trainingQueue = [...first.phrases];
+                    currentTrainIndex = 0;
+                    document.getElementById('train-total-index').innerText = trainingQueue.length;
+                    document.getElementById('detail-island-title').innerText = first.name;
+                    setupTrainingSlide();
+                } else {
+                    exitTrainingSession();
+                }
+            }
         }
+
         function renderDynamicStars(type, score) {
-            const container = document.getElementById(`stars-${type}`); container.innerHTML = '';
-            for (let i=1; i<=5; i++) {
+            const container = document.getElementById(type === 'grammar' ? 'stars-grammar' : 'stars-fluency');
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
                 const star = document.createElement('span');
-                star.className = `cursor-pointer text-2xl ${i <= score ? 'star-active' : 'star-inactive'}`;
+                star.className = `cursor-pointer text-2xl transition ${i <= score ? 'star-active' : 'star-inactive'}`;
                 star.innerHTML = i <= score ? '★' : '☆';
-                star.onclick = () => registerLocalScore(type, i);
+                star.setAttribute('onclick', `registerLocalScore('${type}', ${i})`);
                 container.appendChild(star);
             }
         }
-        function registerLocalScore(type, score) { if (type==='grammar') { localGrammarRating = score; renderDynamicStars('grammar', score); } else { localFluencyRating = score; renderDynamicStars('fluency', score); } }
+
+        function registerLocalScore(type, score) {
+            if (type === 'grammar') { localGrammarRating = score; renderDynamicStars('grammar', score); }
+            else { localFluencyRating = score; renderDynamicStars('fluency', score); }
+        }
+
         function submitPerformanceScores() {
-            if (!localGrammarRating || !localFluencyRating) { alert('Asigna puntuación.'); return; }
-            const phrase = trainingQueue[currentTrainIndex];
+            if (localGrammarRating === 0 || localFluencyRating === 0) { alert("Asigna puntuación a ambos campos analíticos."); return; }
+            
+            const currentPhrase = trainingQueue[currentTrainIndex];
             appData.islands.forEach(isl => {
-                const p = isl.phrases.find(p => p.id === phrase.id);
-                if (p) {
-                    if (trainingDirection === 'normal') { p.starsGrammarNormal = localGrammarRating; p.starsFluencyNormal = localFluencyRating; }
-                    else { p.starsGrammarInverse = localGrammarRating; p.starsFluencyInverse = localFluencyRating; }
-                    if (localGrammarRating <= 2) p.isFocus = true;
-                    p.interval = localGrammarRating >= 4 ? Math.min(p.interval * p.easeFactor, 365) : (localGrammarRating === 3 ? Math.max(1, p.interval) : 1);
-                    p.easeFactor = Math.max(1.3, p.easeFactor + (0.1 - (5-localGrammarRating)*(0.08+(5-localGrammarRating)*0.02)));
-                    const d = new Date(); d.setDate(d.getDate() + Math.ceil(p.interval)); p.nextReviewDate = d.toISOString().split('T')[0];
+                const target = isl.phrases.find(p => p.id === currentPhrase.id);
+                if (target) {
+                    if (trainingDirection === 'normal') {
+                        target.starsGrammarNormal = localGrammarRating;
+                        target.starsFluencyNormal = localFluencyRating;
+                    } else {
+                        target.starsGrammarInverse = localGrammarRating;
+                        target.starsFluencyInverse = localFluencyRating;
+                    }
+                    if(localGrammarRating <= 2) target.isFocus = true;
+                    // Ajustar SRS
+                    if (localGrammarRating >= 4) {
+                        target.interval = Math.min(target.interval * target.easeFactor, 365);
+                    } else if (localGrammarRating === 3) {
+                        target.interval = Math.max(1, target.interval);
+                    } else {
+                        target.interval = 1;
+                    }
+                    target.easeFactor = Math.max(1.3, target.easeFactor + (0.1 - (5 - localGrammarRating) * (0.08 + (5 - localGrammarRating) * 0.02)));
+                    const d = new Date();
+                    d.setDate(d.getDate() + Math.ceil(target.interval));
+                    target.nextReviewDate = d.toISOString().split('T')[0];
                 }
             });
             saveDatabaseToLocalStorage();
@@ -1102,38 +1452,103 @@
 
         // ==================== VOZ Y TEXTO ====================
         function initSpeechRecognition() {
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) { alert('Reconocimiento de voz no soportado.'); return false; }
-            recognition = new SR(); recognition.lang = 'de-DE'; recognition.interimResults = false; recognition.maxAlternatives = 1; recognition.continuous = false;
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+                return false;
+            }
+            recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.continuous = false;
             return true;
         }
-        function startVoiceRecognition(cb) {
-            if (!recognition && !initSpeechRecognition()) return;
+
+        function startVoiceRecognition(callback) {
+            if (!recognition && !initSpeechRecognition()) {
+                callback(null, 'not-supported');
+                return;
+            }
             if (isRecognizing) return;
-            isRecognizing = true;
-            recognition.onresult = e => { isRecognizing = false; cb(e.results[0][0].transcript.trim()); };
-            recognition.onerror = e => { isRecognizing = false; cb(null, e.error); };
-            recognition.start();
+
+            // Solicitar permiso de micrófono primero
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(() => {
+                    isRecognizing = true;
+                    recognition.onresult = (event) => {
+                        isRecognizing = false;
+                        const transcript = event.results[0][0].transcript.trim();
+                        callback(transcript);
+                    };
+                    recognition.onerror = (event) => {
+                        isRecognizing = false;
+                        callback(null, event.error);
+                    };
+                    recognition.start();
+                })
+                .catch((err) => {
+                    callback(null, err.message || 'Permiso de micrófono denegado');
+                });
         }
-        function levenshtein(a,b) { const m=[]; for(let i=0;i<=b.length;i++) m[i]=[i]; for(let j=0;j<=a.length;j++) m[0][j]=j; for(let i=1;i<=b.length;i++) for(let j=1;j<=a.length;j++) m[i][j]=b.charAt(i-1)===a.charAt(j-1)?m[i-1][j-1]:Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1); return m[b.length][a.length]; }
-        function computeScore(spoken, target) { const norm=s=>s.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,'').replace(/\s{2,}/g,' ').trim(); const s1=norm(spoken),s2=norm(target); if(!s1||!s2)return 0; return Math.round((1-levenshtein(s1,s2)/Math.max(s1.length,s2.length))*100); }
+
+        function levenshtein(a, b) {
+            const matrix = [];
+            let i, j;
+            for (i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (i = 1; i <= b.length; i++) {
+                for (j = 1; j <= a.length; j++) {
+                    matrix[i][j] = b.charAt(i - 1) === a.charAt(j - 1)
+                        ? matrix[i - 1][j - 1]
+                        : Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        function computeScore(spoken, target) {
+            const normalize = (str) => str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s{2,}/g, ' ').trim();
+            const s1 = normalize(spoken);
+            const s2 = normalize(target);
+            if (!s1 || !s2) return 0;
+            const dist = levenshtein(s1, s2);
+            const maxLen = Math.max(s1.length, s2.length);
+            return Math.round((1 - dist / maxLen) * 100);
+        }
+
         function startVoiceInput() {
-            if (trainingDirection !== 'normal') return;
+            if (trainingDirection !== 'normal') {
+                alert('El modo voz solo está disponible en Producción (ES→DE).');
+                return;
+            }
             const target = trainingQueue[currentTrainIndex].de;
             document.getElementById('btn-voice-input').disabled = true;
-            startVoiceRecognition((transcript, err) => {
+            document.getElementById('voice-feedback').classList.add('hidden');
+            startVoiceRecognition((transcript, error) => {
                 document.getElementById('btn-voice-input').disabled = false;
-                if (err) { alert('Error: '+err); return; }
+                if (error) {
+                    alert('Error de micrófono: ' + (error === 'not-allowed' ? 'Permiso denegado' : error));
+                    return;
+                }
                 const score = computeScore(transcript, target);
-                document.getElementById('voice-feedback').innerHTML = `🎙️ "${transcript}"<br>📊 ${score}%`;
+                document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
                 document.getElementById('voice-feedback').classList.remove('hidden');
-                localGrammarRating = score>=90?5:score>=75?4:score>=60?3:score>=40?2:1;
+                localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
                 localFluencyRating = 3;
-                renderDynamicStars('grammar', localGrammarRating); renderDynamicStars('fluency', localFluencyRating);
+                renderDynamicStars('grammar', localGrammarRating);
+                renderDynamicStars('fluency', localFluencyRating);
                 revealTargetStructure();
             });
         }
-        function startTypingInput() { document.getElementById('typing-input-area').classList.remove('hidden'); document.getElementById('typing-answer').value=''; document.getElementById('typing-feedback').classList.add('hidden'); document.getElementById('typing-answer').focus(); }
+
+        function startTypingInput() {
+            document.getElementById('typing-input-area').classList.remove('hidden');
+            document.getElementById('typing-answer').value = '';
+            document.getElementById('typing-feedback').classList.add('hidden');
+            document.getElementById('typing-answer').focus();
+        }
+
         function submitTypingAnswer() {
             const ans = document.getElementById('typing-answer').value.trim();
             if (!ans) return;
@@ -1142,9 +1557,10 @@
             document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
             document.getElementById('typing-feedback').classList.remove('hidden');
             document.getElementById('typing-input-area').classList.add('hidden');
-            localGrammarRating = score>=90?5:score>=75?4:score>=60?3:score>=40?2:1;
+            localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
             localFluencyRating = 4;
-            renderDynamicStars('grammar', localGrammarRating); renderDynamicStars('fluency', localFluencyRating);
+            renderDynamicStars('grammar', localGrammarRating);
+            renderDynamicStars('fluency', localFluencyRating);
             revealTargetStructure();
         }
 
@@ -1152,43 +1568,137 @@
         function handleKeyboardShortcuts(e) {
             if (!document.getElementById('view-training').classList.contains('active')) return;
             switch(e.key) {
-                case ' ': e.preventDefault(); executePlaybackChain(); break;
-                case 'ArrowLeft': e.preventDefault(); navigateTrainingQueue(-1); break;
-                case 'ArrowRight': e.preventDefault(); navigateTrainingQueue(1); break;
-                case 'r': e.preventDefault(); revealTargetStructure(); break;
-                case '1': case '2': case '3': case '4': case '5': e.preventDefault(); const s=parseInt(e.key); registerLocalScore('grammar',s); registerLocalScore('fluency',s); break;
-                case 'Enter': e.preventDefault(); if (!document.getElementById('evaluation-panel').classList.contains('hidden')) submitPerformanceScores(); else if (!document.getElementById('typing-input-area').classList.contains('hidden')) submitTypingAnswer(); break;
+                case ' ':
+                    e.preventDefault();
+                    executePlaybackChain();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    navigateTrainingQueue(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    navigateTrainingQueue(1);
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    revealTargetStructure();
+                    break;
+                case '1': case '2': case '3': case '4': case '5':
+                    e.preventDefault();
+                    const score = parseInt(e.key);
+                    registerLocalScore('grammar', score);
+                    registerLocalScore('fluency', score);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (!document.getElementById('evaluation-panel').classList.contains('hidden')) {
+                        submitPerformanceScores();
+                    } else if (!document.getElementById('typing-input-area').classList.contains('hidden')) {
+                        submitTypingAnswer();
+                    }
+                    break;
+                default: break;
             }
         }
 
         // ==================== ESTADÍSTICAS ====================
         function renderAdvancedStatistics() {
-            document.getElementById('stat-streak').innerText = `${appData.stats.streak||0} Días`;
-            let reps=0; Object.values(appData.stats.dailyRepetitions).forEach(v=>reps+=v);
-            document.getElementById('stat-total-reps').innerText = reps;
-            let secs=0; Object.values(appData.stats.dailyTime).forEach(v=>secs+=v);
-            const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60;
-            document.getElementById('stat-total-time').innerText = `${h}h ${m}m ${s}s`;
-            document.getElementById('stat-vocab-count').innerText = (appData.vocabulary||[]).length;
-            const graph = document.getElementById('stats-days-graph'); graph.innerHTML = '';
-            for (let i=6; i>=0; i--) {
-                const d = new Date(); d.setDate(d.getDate()-i);
-                const key = getTodayDateStringOffset(i);
-                const repsD = appData.stats.dailyRepetitions[key] || 0;
-                const secsD = appData.stats.dailyTime[key] || 0;
-                const bar = Math.min(100, Math.max(5, (repsD/100)*100));
+            document.getElementById('stat-streak').innerText = `${appData.stats.streak || 0} Días`;
+            
+            let grandTotalReps = 0;
+            Object.values(appData.stats.dailyRepetitions).forEach(v => grandTotalReps += v);
+            document.getElementById('stat-total-reps').innerText = grandTotalReps;
+
+            let grandTotalSeconds = 0;
+            Object.values(appData.stats.dailyTime).forEach(v => grandTotalSeconds += v);
+            const hours = Math.floor(grandTotalSeconds / 3600);
+            const minutes = Math.floor((grandTotalSeconds % 3600) / 60);
+            const seconds = grandTotalSeconds % 60;
+            document.getElementById('stat-total-time').innerText = `${hours}h ${minutes}m ${seconds}s`;
+            document.getElementById('stat-vocab-count').innerText = (appData.vocabulary || []).length;
+
+            const graphContainer = document.getElementById('stats-days-graph');
+            graphContainer.innerHTML = '';
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateKey = getTodayDateStringOffset(i);
+                const dailyReps = appData.stats.dailyRepetitions[dateKey] || 0;
+                const dailySecs = appData.stats.dailyTime[dateKey] || 0;
+                const dailyMin = Math.floor(dailySecs / 60);
+                const dailySec = dailySecs % 60;
+                const options = { weekday: 'long', day: 'numeric', month: 'short' };
+                const labelDia = d.toLocaleDateString('es-ES', options);
+                const barPercent = Math.min(100, Math.max(5, (dailyReps / 100) * 100));
+
                 const row = document.createElement('div');
                 row.className = "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800";
-                row.innerHTML = `<span class="w-36 font-bold capitalize">${d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'short'})}</span><div class="w-full bg-slate-800 rounded-full h-3"><div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full" style="width:${bar}%"></div></div><span class="font-mono">${repsD} reps | ${Math.floor(secsD/60)}m ${secsD%60}s</span>`;
-                graph.appendChild(row);
+                row.innerHTML = `
+                    <span class="w-36 font-bold text-slate-400 capitalize shrink-0">${labelDia}</span>
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full transition-all duration-500" style="width: ${barPercent}%"></div>
+                    </div>
+                    <div class="flex gap-2 shrink-0 font-mono text-[11px] text-slate-300">
+                        <span class="bg-emerald-950/60 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-bold">${dailyReps} reps</span>
+                        <span class="bg-blue-950/60 text-blue-400 px-2 py-0.5 rounded border border-blue-900/60 font-bold">${dailyMin}m ${dailySec}s</span>
+                    </div>
+                `;
+                graphContainer.appendChild(row);
             }
         }
-        function getTodayDateStringOffset(days) { const d=new Date(); d.setDate(d.getDate()-days); return [d.getFullYear(),('0'+(d.getMonth()+1)).slice(-2),('0'+d.getDate()).slice(-2)].join('-'); }
+
+        function getTodayDateStringOffset(daysAgo) {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
+        }
 
         // ==================== SYNC ====================
-        function exportDatabaseFile() { trackNetPracticeTime(); const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(appData)); a.download="Muller_Satzinseln_C2_Backup.json"; document.body.appendChild(a); a.click(); a.remove(); }
-        function copyJsonToClipboard() { trackNetPracticeTime(); navigator.clipboard.writeText(JSON.stringify(appData)).then(()=>alert('📋 Copiado.')); }
-        function importDatabaseFile() { const file=document.getElementById('import-file-field').files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ try{ const data=JSON.parse(e.target.result); if(data&&data.islands){ appData=data; saveDatabaseToLocalStorage(); loadSettings(); switchView('islands'); alert('✅ Importado.'); } }catch(ex){ alert('JSON inválido.'); } }; reader.readAsText(file); }
+        function exportDatabaseFile() {
+            trackNetPracticeTime();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const anchor = document.createElement('a');
+            anchor.href = dataStr;
+            anchor.download = "Muller_Satzinseln_ProX_Backup.json";
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+        }
+
+        function copyJsonToClipboard() {
+            trackNetPracticeTime();
+            navigator.clipboard.writeText(JSON.stringify(appData)).then(() => {
+                alert("📋 Copia maestra en portapapeles.");
+            }).catch(() => {
+                alert("Error al copiar.");
+            });
+        }
+
+        function importDatabaseFile() {
+            const fileField = document.getElementById('import-file-field');
+            if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data && data.islands) {
+                        appData = data;
+                        saveDatabaseToLocalStorage();
+                        loadSettings();
+                        alert("✅ Base de datos inyectada con éxito.");
+                        switchView('islands');
+                    } else {
+                        alert("JSON inválido.");
+                    }
+                } catch(err) {
+                    alert("Error al leer el archivo.");
+                }
+            };
+            reader.readAsText(fileField.files[0]);
+        }
     </script>
 </body>
 </html>
