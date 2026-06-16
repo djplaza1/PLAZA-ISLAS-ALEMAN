@@ -1450,19 +1450,16 @@
         }
 
         // ==================== VOZ Y TEXTO (CORREGIDO PARA AMBOS MODOS) ====================
-        function initSpeechRecognition(lang = 'de-DE') {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
-                return false;
-            }
-            recognition = new SpeechRecognition();
-            recognition.lang = lang;
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            recognition.continuous = false;
-            return true;
-        }
+     function initSpeechRecognition(lang = 'de-DE') {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge."); return false; }
+    recognition = new SpeechRecognition();
+    recognition.lang = lang;
+    recognition.interimResults = true;   // <--- cambiado a true
+    recognition.maxAlternatives = 1;
+    recognition.continuous = true;      // <--- cambiado a true
+    return true;
+}
 
 function startVoiceRecognition(callback, lang = 'de-DE') {
     if (voiceCancelFn) voiceCancelFn();
@@ -1482,33 +1479,49 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => {
             isRecognizing = true;
+            let hasResult = false; // bandera para saber si ya obtuvimos resultado
+
             voiceCancelFn = () => {
-                if (recognition) recognition.abort();
+                try { recognition.abort(); } catch(e) {}
                 isRecognizing = false;
                 if (voiceTimeout) clearTimeout(voiceTimeout);
             };
+
+            // Timeout de seguridad: 8 segundos
             voiceTimeout = setTimeout(() => {
-                voiceCancelFn();
-                callback(null, 'timeout');
-            }, 10000);
+                if (!hasResult) {
+                    voiceCancelFn();
+                    callback(null, 'timeout');
+                }
+            }, 8000);
 
             recognition.onresult = (event) => {
+                hasResult = true;
                 clearTimeout(voiceTimeout);
                 isRecognizing = false;
-                callback(event.results[0][0].transcript.trim());
+                // Tomamos el último resultado (por si continuous = true)
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript.trim();
+                callback(transcript);
+                // Detenemos el reconocimiento para evitar múltiples disparos
+                try { recognition.stop(); } catch(e) {}
             };
+
             recognition.onerror = (event) => {
                 clearTimeout(voiceTimeout);
                 isRecognizing = false;
-                callback(null, event.error === 'not-allowed' ? 'Permiso de micrófono denegado' : event.error);
+                callback(null, event.error === 'not-allowed' ? 'Permiso denegado' : event.error);
             };
+
             recognition.onend = () => {
-                if (isRecognizing) {
+                // Si termina sin haber dado resultado y seguimos esperando, avisamos
+                if (!hasResult && isRecognizing) {
                     clearTimeout(voiceTimeout);
                     isRecognizing = false;
                     callback(null, 'No se detectó voz. Intenta de nuevo.');
                 }
             };
+
             recognition.start();
         })
         .catch((err) => {
