@@ -1570,11 +1570,10 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
 }
 
 function startVoiceInput() {
-    const isNormal = (trainingDirection === 'normal');
-    // 🟢 FORZAMOS ESTRICTAMENTE EL CÓDIGO DE IDIOMA Y LA ETIQUETA VISUAL
-    const target = isNormal ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
-    const langCode = isNormal ? 'de-DE' : 'es-ES';
-    const langLabel = isNormal ? 'Alemán 🇩🇪' : 'Español 🇪🇸';
+    // 🟢 FORZAMOS ESTRICTAMENTE EL CÓDIGO DE IDIOMA A ALEMÁN SIEMPRE
+    const target = trainingQueue[currentTrainIndex].de; // Siempre comparamos con el texto en alemán
+    const langCode = 'de-DE'; // Micrófono siempre en alemán
+    const langLabel = 'Alemán 🇩🇪';
 
     const btn = document.getElementById('btn-voice-input');
     btn.disabled = true;
@@ -1596,15 +1595,16 @@ function startVoiceInput() {
             document.getElementById('voice-feedback').innerHTML = `⚠️ ${error}`;
             return;
         }
+        
         const score = computeScore(transcript, target);
-        document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste (${langLabel}): "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+        document.getElementById('voice-feedback').innerHTML = `🎙️ Has dicho: "<strong>${transcript}</strong>"<br>📊 Precisión (Alemán): <strong>${score}%</strong>`;
         
         localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-        localFluencyRating = 3;
+        localFluencyRating = 3; // Puedes ajustarlo luego manualmente
         renderDynamicStars('grammar', localGrammarRating);
         renderDynamicStars('fluency', localFluencyRating);
         revealTargetStructure();
-    }, langCode); // <-- Aquí le pasamos la orden estricta 'de-DE'
+    }, langCode); 
 }
 
 function cancelVoiceRecognition() {
