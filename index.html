@@ -1450,7 +1450,7 @@
         }
 
         // ==================== VOZ Y TEXTO (CORREGIDO PARA AMBOS MODOS) ====================
-  function initSpeechRecognition(lang = 'de-DE') {
+ function initSpeechRecognition(lang = 'de-DE') {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
         alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
@@ -1459,6 +1459,7 @@
     // Destruir instancia anterior si existe
     if (recognition) {
         try { recognition.abort(); } catch(e) {}
+        recognition = null;
     }
     recognition = new SpeechRecognition();
     recognition.lang = lang;
@@ -1489,64 +1490,73 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         return;
     }
 
-    isRecognizing = true;
-    let hasResult = false;
+    // 1) Solicitar permiso de micrófono explícitamente
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+            // Detenemos las pistas para no dejar el micrófono abierto permanentemente
+            stream.getTracks().forEach(track => track.stop());
 
-    // Función para cancelar limpiamente
-    voiceCancelFn = () => {
-        if (voiceTimeout) clearTimeout(voiceTimeout);
-        try { recognition.abort(); } catch(e) {}
-        isRecognizing = false;
-        voiceCancelFn = null;
-    };
+            // 2) Ahora sí podemos iniciar el reconocimiento
+            isRecognizing = true;
+            let hasResult = false;
 
-    // Timeout de seguridad (10 segundos sin respuesta)
-    voiceTimeout = setTimeout(() => {
-        if (!hasResult) {
-            voiceCancelFn();
-            callback(null, 'No se detectó voz. Intenta de nuevo.');
-        }
-    }, 10000);
+            voiceCancelFn = () => {
+                if (voiceTimeout) clearTimeout(voiceTimeout);
+                try { recognition.abort(); } catch(e) {}
+                isRecognizing = false;
+                voiceCancelFn = null;
+            };
 
-    recognition.onresult = (event) => {
-        hasResult = true;
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-        voiceCancelFn = null;
-        const last = event.results.length - 1;
-        const transcript = event.results[last][0].transcript.trim();
-        callback(transcript);
-    };
+            voiceTimeout = setTimeout(() => {
+                if (!hasResult) {
+                    voiceCancelFn();
+                    callback(null, 'No se detectó voz. Intenta de nuevo.');
+                }
+            }, 10000); // 10 segundos de espera
 
-    recognition.onerror = (event) => {
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-        voiceCancelFn = null;
-        let errorMsg = event.error;
-        if (event.error === 'not-allowed') errorMsg = 'Permiso de micrófono denegado.';
-        else if (event.error === 'no-speech') errorMsg = 'No se detectó voz. Habla más fuerte.';
-        else if (event.error === 'audio-capture') errorMsg = 'No se encontró micrófono.';
-        callback(null, errorMsg);
-    };
+            recognition.onresult = (event) => {
+                hasResult = true;
+                clearTimeout(voiceTimeout);
+                isRecognizing = false;
+                voiceCancelFn = null;
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript.trim();
+                callback(transcript);
+            };
 
-    recognition.onend = () => {
-        // Si terminó sin resultado y aún esperábamos, avisar
-        if (!hasResult && isRecognizing) {
-            clearTimeout(voiceTimeout);
-            isRecognizing = false;
-            voiceCancelFn = null;
-            callback(null, 'No se detectó voz. Intenta de nuevo.');
-        }
-    };
+            recognition.onerror = (event) => {
+                clearTimeout(voiceTimeout);
+                isRecognizing = false;
+                voiceCancelFn = null;
+                let errorMsg = event.error;
+                if (event.error === 'not-allowed') errorMsg = 'Permiso de micrófono denegado.';
+                else if (event.error === 'no-speech') errorMsg = 'No se detectó voz. Habla más fuerte.';
+                else if (event.error === 'audio-capture') errorMsg = 'No se encontró micrófono.';
+                else if (event.error === 'aborted') return; // cancelación manual
+                callback(null, errorMsg);
+            };
 
-    try {
-        recognition.start();
-    } catch (e) {
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-        voiceCancelFn = null;
-        callback(null, 'Error al iniciar micrófono. Recarga la página.');
-    }
+            recognition.onend = () => {
+                if (!hasResult && isRecognizing) {
+                    clearTimeout(voiceTimeout);
+                    isRecognizing = false;
+                    voiceCancelFn = null;
+                    callback(null, 'No se detectó voz. Intenta de nuevo.');
+                }
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                clearTimeout(voiceTimeout);
+                isRecognizing = false;
+                voiceCancelFn = null;
+                callback(null, 'Error al iniciar micrófono. Recarga la página.');
+            }
+        })
+        .catch((err) => {
+            callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
+        });
 }
 
 function startVoiceInput() {
@@ -1586,7 +1596,6 @@ function cancelVoiceRecognition() {
     document.getElementById('btn-voice-input').disabled = false;
     document.getElementById('voice-feedback').classList.add('hidden');
 }
-
         function startTypingInput() {
             document.getElementById('typing-input-area').classList.remove('hidden');
             document.getElementById('typing-answer').value = '';
