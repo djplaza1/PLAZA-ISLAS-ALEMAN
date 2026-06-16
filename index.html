@@ -1449,8 +1449,21 @@
             advanceAuto();
         }
 
-// ==================== VOZ Y TEXTO (VERSIÓN FINAL CON MICRÓFONO ACTIVO) ====================
-let micStream = null; // Variable global para mantener el stream de audio abierto
+// ==================== VOZ Y TEXTO (VERSIÓN CORREGIDA) ====================
+
+// 🟢 NUEVA FUNCIÓN: Esencial para comparar lo que dices con la frase objetivo
+function computeScore(transcript, target) {
+    if (!transcript || !target) return 0;
+    const t1 = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
+    const t2 = target.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
+    if (t1 === t2) return 100;
+    
+    const words1 = t1.split(' ');
+    const words2 = t2.split(' ');
+    let matches = 0;
+    words1.forEach(w => { if (words2.includes(w)) matches++; });
+    return Math.min(100, Math.round((matches / Math.max(words1.length, words2.length)) * 100));
+}
 
 function initSpeechRecognition(lang = 'de-DE') {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1458,33 +1471,25 @@ function initSpeechRecognition(lang = 'de-DE') {
         alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
         return false;
     }
-    // Destruir instancia anterior si existe
     if (recognition) {
         try { recognition.abort(); } catch(e) {}
         recognition = null;
     }
     recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = false;   // Solo resultado final
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.continuous = true;        // Se mantiene escuchando hasta que lo paremos manualmente
+    recognition.continuous = false; // 🔴 CRÍTICO PARA DISPOSITIVOS MÓVILES
     return true;
 }
 
 function startVoiceRecognition(callback, lang = 'de-DE') {
-    // Cancelar cualquier reconocimiento en curso
     if (voiceCancelFn) {
         voiceCancelFn();
         voiceCancelFn = null;
     }
     if (voiceTimeout) clearTimeout(voiceTimeout);
-    // Liberar stream anterior si existe
-    if (micStream) {
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-    }
 
-    // Si el idioma cambió o no hay instancia, crear una nueva
     if (!recognition || recognition.lang !== lang) {
         if (!initSpeechRecognition(lang)) {
             callback(null, 'not-supported');
@@ -1497,98 +1502,66 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         return;
     }
 
-    // 1º) Pedir permiso de micrófono y mantener el stream abierto
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            micStream = stream; // Guardamos el stream para que el micrófono siga activo
+    // 🟢 ELIMINADO getUserMedia(). Dejamos que SpeechRecognition controle el hardware
+    isRecognizing = true;
+    let hasResult = false;
 
-            isRecognizing = true;
-            let hasResult = false;
+    voiceCancelFn = () => {
+        clearTimeout(voiceTimeout);
+        try { recognition.abort(); } catch(e) {}
+        isRecognizing = false;
+        voiceCancelFn = null;
+    };
 
-            // Función de cancelación limpia
-            voiceCancelFn = () => {
-                clearTimeout(voiceTimeout);
-                if (micStream) {
-                    micStream.getTracks().forEach(track => track.stop());
-                    micStream = null;
-                }
-                try { recognition.abort(); } catch(e) {}
-                isRecognizing = false;
-                voiceCancelFn = null;
-            };
+    voiceTimeout = setTimeout(() => {
+        if (!hasResult) {
+            voiceCancelFn();
+            callback(null, 'No se detectó voz. Intenta de nuevo.');
+        }
+    }, 15000);
 
-            // Timeout de seguridad: si en 15 segundos no se detecta nada, cancelamos
-            voiceTimeout = setTimeout(() => {
-                if (!hasResult) {
-                    voiceCancelFn();
-                    callback(null, 'No se detectó voz. Intenta de nuevo.');
-                }
-            }, 15000);
+    recognition.onresult = (event) => {
+        hasResult = true;
+        clearTimeout(voiceTimeout);
+        recognition.stop();
+        isRecognizing = false;
+        voiceCancelFn = null;
 
-            recognition.onresult = (event) => {
-                hasResult = true;
-                clearTimeout(voiceTimeout);
-                // Liberar micrófono y detener reconocimiento
-                if (micStream) {
-                    micStream.getTracks().forEach(track => track.stop());
-                    micStream = null;
-                }
-                recognition.stop();
-                isRecognizing = false;
-                voiceCancelFn = null;
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript.trim();
+        callback(transcript);
+    };
 
-                const last = event.results.length - 1;
-                const transcript = event.results[last][0].transcript.trim();
-                callback(transcript);
-            };
+    recognition.onerror = (event) => {
+        clearTimeout(voiceTimeout);
+        isRecognizing = false;
+        voiceCancelFn = null;
 
-            recognition.onerror = (event) => {
-                clearTimeout(voiceTimeout);
-                if (micStream) {
-                    micStream.getTracks().forEach(track => track.stop());
-                    micStream = null;
-                }
-                isRecognizing = false;
-                voiceCancelFn = null;
+        if (event.error === 'aborted') return;
+        let msg = event.error;
+        if (event.error === 'not-allowed') msg = 'Permiso de micrófono denegado.';
+        else if (event.error === 'no-speech') msg = 'No se detectó voz. Habla más fuerte.';
+        else if (event.error === 'audio-capture') msg = 'No se encontró micrófono.';
+        callback(null, msg);
+    };
 
-                if (event.error === 'aborted') return;
-                let msg = event.error;
-                if (event.error === 'not-allowed') msg = 'Permiso de micrófono denegado.';
-                else if (event.error === 'no-speech') msg = 'No se detectó voz. Habla más fuerte.';
-                else if (event.error === 'audio-capture') msg = 'No se encontró micrófono.';
-                callback(null, msg);
-            };
+    recognition.onend = () => {
+        if (!hasResult && isRecognizing) {
+            clearTimeout(voiceTimeout);
+            isRecognizing = false;
+            voiceCancelFn = null;
+            callback(null, 'No se detectó voz. Intenta de nuevo.');
+        }
+    };
 
-            recognition.onend = () => {
-                // Si termina inesperadamente sin haber capturado nada
-                if (!hasResult && isRecognizing) {
-                    clearTimeout(voiceTimeout);
-                    if (micStream) {
-                        micStream.getTracks().forEach(track => track.stop());
-                        micStream = null;
-                    }
-                    isRecognizing = false;
-                    voiceCancelFn = null;
-                    callback(null, 'No se detectó voz. Intenta de nuevo.');
-                }
-            };
-
-            try {
-                recognition.start();
-            } catch(e) {
-                clearTimeout(voiceTimeout);
-                if (micStream) {
-                    micStream.getTracks().forEach(track => track.stop());
-                    micStream = null;
-                }
-                isRecognizing = false;
-                voiceCancelFn = null;
-                callback(null, 'Error al iniciar micrófono.');
-            }
-        })
-        .catch(err => {
-            callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
-        });
+    try {
+        recognition.start();
+    } catch(e) {
+        clearTimeout(voiceTimeout);
+        isRecognizing = false;
+        voiceCancelFn = null;
+        callback(null, 'Error al iniciar micrófono.');
+    }
 }
 
 function startVoiceInput() {
@@ -1612,8 +1585,11 @@ function startVoiceInput() {
             document.getElementById('voice-feedback').innerHTML = `⚠️ ${error}`;
             return;
         }
+        
+        // 🟢 AHORA SÍ EXISTE COMPUTESCORE
         const score = computeScore(transcript, target);
         document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+        
         localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
         localFluencyRating = 3;
         renderDynamicStars('grammar', localGrammarRating);
@@ -1628,163 +1604,164 @@ function cancelVoiceRecognition() {
     document.getElementById('btn-voice-input').disabled = false;
     document.getElementById('voice-feedback').classList.add('hidden');
 }
-        function startTypingInput() {
-            document.getElementById('typing-input-area').classList.remove('hidden');
-            document.getElementById('typing-answer').value = '';
-            document.getElementById('typing-feedback').classList.add('hidden');
-            document.getElementById('typing-answer').focus();
-        }
 
-        function submitTypingAnswer() {
-            const ans = document.getElementById('typing-answer').value.trim();
-            if (!ans) return;
-            const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
-            const score = computeScore(ans, target);
-            document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
-            document.getElementById('typing-feedback').classList.remove('hidden');
-            document.getElementById('typing-input-area').classList.add('hidden');
-            localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-            localFluencyRating = 4;
-            renderDynamicStars('grammar', localGrammarRating);
-            renderDynamicStars('fluency', localFluencyRating);
+function startTypingInput() {
+    document.getElementById('typing-input-area').classList.remove('hidden');
+    document.getElementById('typing-answer').value = '';
+    document.getElementById('typing-feedback').classList.add('hidden');
+    document.getElementById('typing-answer').focus();
+}
+
+function submitTypingAnswer() {
+    const ans = document.getElementById('typing-answer').value.trim();
+    if (!ans) return;
+    const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+    const score = computeScore(ans, target);
+    document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
+    document.getElementById('typing-feedback').classList.remove('hidden');
+    document.getElementById('typing-input-area').classList.add('hidden');
+    localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+    localFluencyRating = 4;
+    renderDynamicStars('grammar', localGrammarRating);
+    renderDynamicStars('fluency', localFluencyRating);
+    revealTargetStructure();
+}
+
+// ==================== ATAJOS DE TECLADO ====================
+function handleKeyboardShortcuts(e) {
+    if (!document.getElementById('view-training').classList.contains('active')) return;
+    switch(e.key) {
+        case ' ':
+            e.preventDefault();
+            executePlaybackChain();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            navigateTrainingQueue(-1);
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            navigateTrainingQueue(1);
+            break;
+        case 'r':
+            e.preventDefault();
             revealTargetStructure();
-        }
-
-        // ==================== ATAJOS DE TECLADO ====================
-        function handleKeyboardShortcuts(e) {
-            if (!document.getElementById('view-training').classList.contains('active')) return;
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    executePlaybackChain();
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    navigateTrainingQueue(-1);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    navigateTrainingQueue(1);
-                    break;
-                case 'r':
-                    e.preventDefault();
-                    revealTargetStructure();
-                    break;
-                case '1': case '2': case '3': case '4': case '5':
-                    e.preventDefault();
-                    const score = parseInt(e.key);
-                    registerLocalScore('grammar', score);
-                    registerLocalScore('fluency', score);
-                    break;
-                case 'Enter':
-                    e.preventDefault();
-                    if (!document.getElementById('evaluation-panel').classList.contains('hidden')) {
-                        submitPerformanceScores();
-                    } else if (!document.getElementById('typing-input-area').classList.contains('hidden')) {
-                        submitTypingAnswer();
-                    }
-                    break;
-                default: break;
+            break;
+        case '1': case '2': case '3': case '4': case '5':
+            e.preventDefault();
+            const score = parseInt(e.key);
+            registerLocalScore('grammar', score);
+            registerLocalScore('fluency', score);
+            break;
+        case 'Enter':
+            e.preventDefault();
+            if (!document.getElementById('evaluation-panel').classList.contains('hidden')) {
+                submitPerformanceScores();
+            } else if (!document.getElementById('typing-input-area').classList.contains('hidden')) {
+                submitTypingAnswer();
             }
-        }
+            break;
+        default: break;
+    }
+}
 
-        // ==================== ESTADÍSTICAS ====================
-        function renderAdvancedStatistics() {
-            document.getElementById('stat-streak').innerText = `${appData.stats.streak || 0} Días`;
-            
-            let grandTotalReps = 0;
-            Object.values(appData.stats.dailyRepetitions).forEach(v => grandTotalReps += v);
-            document.getElementById('stat-total-reps').innerText = grandTotalReps;
+// ==================== ESTADÍSTICAS ====================
+function renderAdvancedStatistics() {
+    document.getElementById('stat-streak').innerText = `${appData.stats.streak || 0} Días`;
+    
+    let grandTotalReps = 0;
+    Object.values(appData.stats.dailyRepetitions).forEach(v => grandTotalReps += v);
+    document.getElementById('stat-total-reps').innerText = grandTotalReps;
 
-            let grandTotalSeconds = 0;
-            Object.values(appData.stats.dailyTime).forEach(v => grandTotalSeconds += v);
-            const hours = Math.floor(grandTotalSeconds / 3600);
-            const minutes = Math.floor((grandTotalSeconds % 3600) / 60);
-            const seconds = grandTotalSeconds % 60;
-            document.getElementById('stat-total-time').innerText = `${hours}h ${minutes}m ${seconds}s`;
-            document.getElementById('stat-vocab-count').innerText = (appData.vocabulary || []).length;
+    let grandTotalSeconds = 0;
+    Object.values(appData.stats.dailyTime).forEach(v => grandTotalSeconds += v);
+    const hours = Math.floor(grandTotalSeconds / 3600);
+    const minutes = Math.floor((grandTotalSeconds % 3600) / 60);
+    const seconds = grandTotalSeconds % 60;
+    document.getElementById('stat-total-time').innerText = `${hours}h ${minutes}m ${seconds}s`;
+    document.getElementById('stat-vocab-count').innerText = (appData.vocabulary || []).length;
 
-            const graphContainer = document.getElementById('stats-days-graph');
-            graphContainer.innerHTML = '';
+    const graphContainer = document.getElementById('stats-days-graph');
+    graphContainer.innerHTML = '';
 
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const dateKey = getTodayDateStringOffset(i);
-                const dailyReps = appData.stats.dailyRepetitions[dateKey] || 0;
-                const dailySecs = appData.stats.dailyTime[dateKey] || 0;
-                const dailyMin = Math.floor(dailySecs / 60);
-                const dailySec = dailySecs % 60;
-                const options = { weekday: 'long', day: 'numeric', month: 'short' };
-                const labelDia = d.toLocaleDateString('es-ES', options);
-                const barPercent = Math.min(100, Math.max(5, (dailyReps / 100) * 100));
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateKey = getTodayDateStringOffset(i);
+        const dailyReps = appData.stats.dailyRepetitions[dateKey] || 0;
+        const dailySecs = appData.stats.dailyTime[dateKey] || 0;
+        const dailyMin = Math.floor(dailySecs / 60);
+        const dailySec = dailySecs % 60;
+        const options = { weekday: 'long', day: 'numeric', month: 'short' };
+        const labelDia = d.toLocaleDateString('es-ES', options);
+        const barPercent = Math.min(100, Math.max(5, (dailyReps / 100) * 100));
 
-                const row = document.createElement('div');
-                row.className = "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800";
-                row.innerHTML = `
-                    <span class="w-36 font-bold text-slate-400 capitalize shrink-0">${labelDia}</span>
-                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
-                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full transition-all duration-500" style="width: ${barPercent}%"></div>
-                    </div>
-                    <div class="flex gap-2 shrink-0 font-mono text-[11px] text-slate-300">
-                        <span class="bg-emerald-950/60 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-bold">${dailyReps} reps</span>
-                        <span class="bg-blue-950/60 text-blue-400 px-2 py-0.5 rounded border border-blue-900/60 font-bold">${dailyMin}m ${dailySec}s</span>
-                    </div>
-                `;
-                graphContainer.appendChild(row);
+        const row = document.createElement('div');
+        row.className = "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800";
+        row.innerHTML = `
+            <span class="w-36 font-bold text-slate-400 capitalize shrink-0">${labelDia}</span>
+            <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full transition-all duration-500" style="width: ${barPercent}%"></div>
+            </div>
+            <div class="flex gap-2 shrink-0 font-mono text-[11px] text-slate-300">
+                <span class="bg-emerald-950/60 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-bold">${dailyReps} reps</span>
+                <span class="bg-blue-950/60 text-blue-400 px-2 py-0.5 rounded border border-blue-900/60 font-bold">${dailyMin}m ${dailySec}s</span>
+            </div>
+        `;
+        graphContainer.appendChild(row);
+    }
+}
+
+function getTodayDateStringOffset(daysAgo) {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
+}
+
+// ==================== SYNC ====================
+function exportDatabaseFile() {
+    trackNetPracticeTime();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+    const anchor = document.createElement('a');
+    anchor.href = dataStr;
+    anchor.download = "Muller_Satzinseln_ProX_Backup.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+}
+
+function copyJsonToClipboard() {
+    trackNetPracticeTime();
+    navigator.clipboard.writeText(JSON.stringify(appData)).then(() => {
+        alert("📋 Copia maestra en portapapeles.");
+    }).catch(() => {
+        alert("Error al copiar.");
+    });
+}
+
+function importDatabaseFile() {
+    const fileField = document.getElementById('import-file-field');
+    if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data && data.islands) {
+                appData = data;
+                saveDatabaseToLocalStorage();
+                loadSettings();
+                alert("✅ Base de datos inyectada con éxito.");
+                switchView('islands');
+            } else {
+                alert("JSON inválido.");
             }
+        } catch(err) {
+            alert("Error al leer el archivo.");
         }
-
-        function getTodayDateStringOffset(daysAgo) {
-            const d = new Date();
-            d.setDate(d.getDate() - daysAgo);
-            return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
-        }
-
-        // ==================== SYNC ====================
-        function exportDatabaseFile() {
-            trackNetPracticeTime();
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-            const anchor = document.createElement('a');
-            anchor.href = dataStr;
-            anchor.download = "Muller_Satzinseln_ProX_Backup.json";
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-        }
-
-        function copyJsonToClipboard() {
-            trackNetPracticeTime();
-            navigator.clipboard.writeText(JSON.stringify(appData)).then(() => {
-                alert("📋 Copia maestra en portapapeles.");
-            }).catch(() => {
-                alert("Error al copiar.");
-            });
-        }
-
-        function importDatabaseFile() {
-            const fileField = document.getElementById('import-file-field');
-            if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data && data.islands) {
-                        appData = data;
-                        saveDatabaseToLocalStorage();
-                        loadSettings();
-                        alert("✅ Base de datos inyectada con éxito.");
-                        switchView('islands');
-                    } else {
-                        alert("JSON inválido.");
-                    }
-                } catch(err) {
-                    alert("Error al leer el archivo.");
-                }
-            };
-            reader.readAsText(fileField.files[0]);
-        }
+    };
+    reader.readAsText(fileField.files[0]);
+}
     </script>
 </body>
 </html>
