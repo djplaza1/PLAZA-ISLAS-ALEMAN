@@ -422,6 +422,8 @@
         let hideSpanishList = false;
         let recognition = null;
         let isRecognizing = false;
+        let voiceTimeout = null;
+        let voiceCancelFn = null;
 
         let flashcardWords = [];
         let currentFlashcardIndex = 0;
@@ -1462,33 +1464,57 @@
             return true;
         }
 
-        function startVoiceRecognition(callback, lang = 'de-DE') {
-            if (!recognition || recognition.lang !== lang) {
-                if (!initSpeechRecognition(lang)) {
-                    callback(null, 'not-supported');
-                    return;
-                }
-            }
-            if (isRecognizing) return;
+function startVoiceRecognition(callback, lang = 'de-DE') {
+    if (voiceCancelFn) voiceCancelFn();
+    if (voiceTimeout) clearTimeout(voiceTimeout);
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(() => {
-                    isRecognizing = true;
-                    recognition.onresult = (event) => {
-                        isRecognizing = false;
-                        const transcript = event.results[0][0].transcript.trim();
-                        callback(transcript);
-                    };
-                    recognition.onerror = (event) => {
-                        isRecognizing = false;
-                        callback(null, event.error);
-                    };
-                    recognition.start();
-                })
-                .catch((err) => {
-                    callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
-                });
+    if (!recognition || recognition.lang !== lang) {
+        if (!initSpeechRecognition(lang)) {
+            callback(null, 'not-supported');
+            return;
         }
+    }
+    if (isRecognizing) {
+        callback(null, 'Ya hay una grabación en curso.');
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+            isRecognizing = true;
+            voiceCancelFn = () => {
+                if (recognition) recognition.abort();
+                isRecognizing = false;
+                if (voiceTimeout) clearTimeout(voiceTimeout);
+            };
+            voiceTimeout = setTimeout(() => {
+                voiceCancelFn();
+                callback(null, 'timeout');
+            }, 10000);
+
+            recognition.onresult = (event) => {
+                clearTimeout(voiceTimeout);
+                isRecognizing = false;
+                callback(event.results[0][0].transcript.trim());
+            };
+            recognition.onerror = (event) => {
+                clearTimeout(voiceTimeout);
+                isRecognizing = false;
+                callback(null, event.error === 'not-allowed' ? 'Permiso de micrófono denegado' : event.error);
+            };
+            recognition.onend = () => {
+                if (isRecognizing) {
+                    clearTimeout(voiceTimeout);
+                    isRecognizing = false;
+                    callback(null, 'No se detectó voz. Intenta de nuevo.');
+                }
+            };
+            recognition.start();
+        })
+        .catch((err) => {
+            callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
+        });
+}
 
         function levenshtein(a, b) {
             const matrix = [];
@@ -1515,29 +1541,42 @@
             return Math.round((1 - dist / maxLen) * 100);
         }
 
-        function startVoiceInput() {
-            // Permitir ambos modos
-            const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
-            const lang = trainingDirection === 'normal' ? 'de-DE' : 'es-ES';
+   function startVoiceInput() {
+    const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+    const lang = trainingDirection === 'normal' ? 'de-DE' : 'es-ES';
 
-            document.getElementById('btn-voice-input').disabled = true;
-            document.getElementById('voice-feedback').classList.add('hidden');
-            startVoiceRecognition((transcript, error) => {
-                document.getElementById('btn-voice-input').disabled = false;
-                if (error) {
-                    alert('Error de micrófono: ' + error);
-                    return;
-                }
-                const score = computeScore(transcript, target);
-                document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
-                document.getElementById('voice-feedback').classList.remove('hidden');
-                localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-                localFluencyRating = 3;
-                renderDynamicStars('grammar', localGrammarRating);
-                renderDynamicStars('fluency', localFluencyRating);
-                revealTargetStructure();
-            }, lang);
+    const btn = document.getElementById('btn-voice-input');
+    btn.disabled = true;
+
+    document.getElementById('voice-feedback').classList.remove('hidden');
+    document.getElementById('voice-feedback').innerHTML = `
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-microphone text-rose-400 animate-pulse"></i>
+            <span>🎤 Escuchando... <button onclick="cancelVoiceRecognition()" class="text-xs underline text-slate-400 hover:text-white ml-2">Cancelar</button></span>
+        </div>
+    `;
+
+    startVoiceRecognition((transcript, error) => {
+        btn.disabled = false;
+        if (error) {
+            document.getElementById('voice-feedback').innerHTML = `⚠️ ${error}`;
+            return;
         }
+        const score = computeScore(transcript, target);
+        document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+        localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+        localFluencyRating = 3;
+        renderDynamicStars('grammar', localGrammarRating);
+        renderDynamicStars('fluency', localFluencyRating);
+        revealTargetStructure();
+    }, lang);
+}
+function cancelVoiceRecognition() {
+    if (voiceCancelFn) voiceCancelFn();
+    isRecognizing = false;
+    document.getElementById('btn-voice-input').disabled = false;
+    document.getElementById('voice-feedback').classList.add('hidden');
+}
 
         function startTypingInput() {
             document.getElementById('typing-input-area').classList.remove('hidden');
