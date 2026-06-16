@@ -1449,9 +1449,50 @@
             advanceAuto();
         }
 
-// ==================== VOZ Y TEXTO (VERSIÓN CORREGIDA) ====================
+// ==================== VOZ Y TEXTO (VERSIÓN ESTRICTA - C2 PRO) ====================
 
-// 🟢 NUEVA FUNCIÓN: Esencial para comparar lo que dices con la frase objetivo
+// 🟢 1. EVALUADOR ESTRICTO PARA VOZ (Penaliza orden, omisiones y palabras inventadas)
+function computeStrictEvaluation(transcript, target) {
+    if (!transcript || !target) return { score: 0, diff: '<span class="text-rose-500">No se detectó audio útil.</span>' };
+    
+    const originalWords = transcript.trim().split(/\s+/);
+    const targetWords = target.trim().split(/\s+/);
+    
+    const cleanTrans = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
+    const cleanTarget = target.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
+    
+    let matches = 0;
+    let diffHtml = [];
+    const maxLen = Math.max(cleanTrans.length, cleanTarget.length);
+    
+    for (let i = 0; i < maxLen; i++) {
+        const tWord = cleanTrans[i] || '';
+        const tgtWord = cleanTarget[i] || '';
+        
+        if (tWord === tgtWord && tWord !== '') {
+            matches++;
+            // Palabra perfecta
+            diffHtml.push(`<span class="text-emerald-400 font-bold">${originalWords[i] || tWord}</span>`);
+        } else {
+            // Palabra fallada, omitida o inventada
+            let errorChunk = '';
+            if (tWord) {
+                errorChunk += `<span class="text-rose-400 line-through bg-rose-950/40 px-1.5 py-0.5 rounded shadow-sm">${originalWords[i] || tWord}</span>`;
+            }
+            if (tgtWord) {
+                errorChunk += `<span class="text-amber-400 border-b-2 border-amber-500/50 text-[10px] uppercase block leading-none mt-1.5 font-black tracking-widest">Era: ${targetWords[i] || tgtWord}</span>`;
+            }
+            diffHtml.push(`<span class="inline-flex flex-col items-center align-top mx-1 mb-2">${errorChunk}</span>`);
+        }
+    }
+    
+    return { 
+        score: Math.min(100, Math.round((matches / maxLen) * 100)), 
+        diff: diffHtml.join(' ') 
+    };
+}
+
+// 🔵 2. EVALUADOR CLÁSICO (Mantenido exclusivamente para la escritura manual)
 function computeScore(transcript, target) {
     if (!transcript || !target) return 0;
     const t1 = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
@@ -1479,7 +1520,7 @@ function initSpeechRecognition(lang = 'de-DE') {
     recognition.lang = lang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.continuous = false; // 🔴 CRÍTICO PARA DISPOSITIVOS MÓVILES
+    recognition.continuous = false; 
     return true;
 }
 
@@ -1493,11 +1534,10 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         return;
     }
 
-    // 🔵 INSTANCIA LIMPIA Y CORTE DE AUDIO PREVIO (Evita colisiones)
     window.speechSynthesis.cancel(); 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = true; // 🟢 VITAL: Fuerza los resultados en vivo
+    recognition.interimResults = true; // Fuerza los resultados en vivo
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
@@ -1531,7 +1571,6 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
             }
         }
         
-        // 🟢 ACTUALIZACIÓN EN VIVO (Verás lo que dices al instante)
         const currentText = (capturedText + interim).trim();
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay && currentText) {
@@ -1545,7 +1584,6 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         if (!hasFiredCallback) {
             hasFiredCallback = true;
             
-            // 🔵 RESCATE DE DATOS: Si el motor de Chrome muere, leemos el DOM
             const textDisplay = document.getElementById('live-speech-text');
             const fallbackText = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').trim() : '';
             const final = capturedText.trim() || fallbackText;
@@ -1570,37 +1608,62 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
 }
 
 function startVoiceInput() {
-    // 🟢 FORZAMOS ESTRICTAMENTE EL CÓDIGO DE IDIOMA A ALEMÁN SIEMPRE
-    const target = trainingQueue[currentTrainIndex].de; // Siempre comparamos con el texto en alemán
-    const langCode = 'de-DE'; // Micrófono siempre en alemán
+    const target = trainingQueue[currentTrainIndex].de;
+    const langCode = 'de-DE';
     const langLabel = 'Alemán 🇩🇪';
 
     const btn = document.getElementById('btn-voice-input');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
+
+    const evalPanel = document.getElementById('evaluation-panel');
+    if (evalPanel) evalPanel.classList.add('hidden');
 
     document.getElementById('voice-feedback').classList.remove('hidden');
     document.getElementById('voice-feedback').innerHTML = `
-        <div class="flex items-center justify-between w-full">
-            <div class="flex items-center gap-3 truncate">
-                <i class="fa-solid fa-microphone text-rose-400 animate-pulse shrink-0"></i>
-                <span id="live-speech-text" class="text-slate-300 truncate font-bold">🎤 Escuchando en ${langLabel}...</span>
+        <div class="flex items-center justify-between w-full bg-slate-900 p-2 rounded-lg border border-slate-700">
+            <div class="flex items-center gap-3 truncate pl-2">
+                <i class="fa-solid fa-microphone text-rose-500 animate-pulse shrink-0 text-lg"></i>
+                <span id="live-speech-text" class="text-slate-300 truncate font-mono text-sm font-bold">🎤 Escuchando en ${langLabel}...</span>
             </div>
-            <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-700 transition shrink-0 ml-2">Detener</button>
+            <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-4 py-2 rounded-lg border border-slate-600 hover:bg-slate-700 hover:text-white transition shrink-0 ml-2 font-bold uppercase tracking-wider text-slate-400">Abortar</button>
         </div>
     `;
 
     startVoiceRecognition((transcript, error) => {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
+        
         if (error) {
-            document.getElementById('voice-feedback').innerHTML = `⚠️ ${error}`;
+            document.getElementById('voice-feedback').innerHTML = `
+                <div class="flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg border border-rose-900/50">
+                    <span class="text-rose-400 text-sm font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> ${error}</span>
+                    <button onclick="startVoiceInput()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-2"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+                </div>
+            `;
             return;
         }
         
-        const score = computeScore(transcript, target);
-        document.getElementById('voice-feedback').innerHTML = `🎙️ Has dicho: "<strong>${transcript}</strong>"<br>📊 Precisión (Alemán): <strong>${score}%</strong>`;
+        const evalData = computeStrictEvaluation(transcript, target);
+        const score = evalData.score;
         
-        localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-        localFluencyRating = 3; // Puedes ajustarlo luego manualmente
+        document.getElementById('voice-feedback').innerHTML = `
+            <div class="flex flex-col gap-4">
+                <div class="text-slate-200 leading-relaxed text-xl text-center p-6 bg-slate-950 border border-slate-800 rounded-2xl shadow-inner flex flex-wrap justify-center items-center">
+                    ${evalData.diff}
+                </div>
+                <div class="flex justify-between items-center border-t border-slate-800/80 pt-4 px-2">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Similitud Fonética</span>
+                        <span class="font-mono <strong class="text-3xl ${score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-500'} font-black">${score}%</strong></span>
+                    </div>
+                    <button onclick="startVoiceInput()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg flex items-center gap-2 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1">
+                        <i class="fa-solid fa-rotate-right text-lg"></i> Repetir
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        localGrammarRating = score >= 95 ? 5 : score >= 80 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+        localFluencyRating = score >= 80 ? 4 : 2; 
         renderDynamicStars('grammar', localGrammarRating);
         renderDynamicStars('fluency', localFluencyRating);
         revealTargetStructure();
@@ -1610,7 +1673,8 @@ function startVoiceInput() {
 function cancelVoiceRecognition() {
     if (voiceCancelFn) voiceCancelFn();
     isRecognizing = false;
-    document.getElementById('btn-voice-input').disabled = false;
+    const btn = document.getElementById('btn-voice-input');
+    if (btn) btn.disabled = false;
     document.getElementById('voice-feedback').classList.add('hidden');
 }
 
@@ -1624,11 +1688,15 @@ function startTypingInput() {
 function submitTypingAnswer() {
     const ans = document.getElementById('typing-answer').value.trim();
     if (!ans) return;
+    
+    // Aquí mantenemos el computeScore clásico para la escritura manual
     const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
     const score = computeScore(ans, target);
+    
     document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
     document.getElementById('typing-feedback').classList.remove('hidden');
     document.getElementById('typing-input-area').classList.add('hidden');
+    
     localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
     localFluencyRating = 4;
     renderDynamicStars('grammar', localGrammarRating);
