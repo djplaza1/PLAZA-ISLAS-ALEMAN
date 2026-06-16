@@ -1,44 +1,84 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profesor Plaza Müller - Satzinseln Trainer Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5">
+    <title>Profesor Plaza Müller - Satzinseln Trainer Pro X</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #cbd5e1;
+            --accent: #10b981;
+            --accent-hover: #34d399;
+            --border: #334155;
+            --card-bg: #1e293b;
+        }
+        .light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent: #059669;
+            --accent-hover: #047857;
+            --border: #e2e8f0;
+            --card-bg: #ffffff;
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .bg-slate-900, .bg-slate-800, .bg-slate-850, .bg-slate-950 {
+            background-color: var(--bg-secondary);
+        }
+        .text-slate-100, .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500, .text-slate-600 {
+            color: var(--text-secondary);
+        }
+        .border-slate-700, .border-slate-800 {
+            border-color: var(--border);
+        }
         .star-active { color: #f59e0b; }
-        .star-inactive { color: #475569; }
+        .star-inactive { color: #94a3b8; }
         .hidden-content { display: none !important; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
-
+<body class="font-sans min-h-screen flex flex-col transition-colors duration-300">
     <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 onclick="switchView('islands')" class="text-xl font-bold tracking-wider text-emerald-400 flex items-center gap-2 cursor-pointer select-none">
-                <i class="fa-solid fa-bolt-lightning"></i> PROFESOR PLAZA MÜLLER <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-600">PRO LEVEL</span>
+                <i class="fa-solid fa-bolt-lightning"></i> PROFESOR PLAZA MÜLLER <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-600">PRO X</span>
             </h1>
-            <nav class="flex flex-wrap gap-2 justify-center">
+            <nav class="flex flex-wrap gap-2 justify-center items-center">
                 <button onclick="switchView('islands')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-layer-group text-blue-400"></i> Mis Islas
                 </button>
+                <button onclick="switchView('conversations')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-cyan-400"></i> Conversaciones
+                </button>
                 <button onclick="switchView('stats')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
-                    <i class="fa-solid fa-chart-bar text-amber-400"></i> Estadísticas Analíticas
+                    <i class="fa-solid fa-chart-bar text-amber-400"></i> Estadísticas
                 </button>
                 <button onclick="switchView('sync')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
-                    <i class="fa-solid fa-rotate text-purple-400"></i> Sincronizar Drive
+                    <i class="fa-solid fa-rotate text-purple-400"></i> Sincronizar
+                </button>
+                <button onclick="toggleTheme()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2" title="Cambiar tema claro/oscuro">
+                    <i class="fa-solid fa-circle-half-stroke text-yellow-400"></i> Tema
                 </button>
             </nav>
         </div>
     </header>
 
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
-
-        <section id="view-islands" class="view-section hidden space-y-6">
+        <!-- VISTA ISLAS -->
+        <section id="view-islands" class="view-section active space-y-6">
             <div class="bg-slate-850 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                    <h2 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">Panel Maestro de Control</h2>
+                    <h2 class="text-2xl font-black tracking-tight flex items-center gap-2">Panel Maestro de Control</h2>
                     <p class="text-xs text-slate-400">Crea islas temáticas blindadas de Redemittel. Importa bloques sin límites de caracteres.</p>
                 </div>
                 <div class="flex gap-2 w-full lg:w-auto shrink-0">
@@ -78,23 +118,24 @@
 
             <div class="relative">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
-                <input type="text" id="global-search-field" oninput="renderIslandsGrid()" placeholder="Buscador inteligente de palabras cruzadas en todas las islas (Ej: 'mit', 'verliebt', 'Chef')..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500">
+                <input type="text" id="global-search-field" oninput="renderIslandsGrid()" placeholder="Buscar en todas las islas (ej: 'mit', '#B1', 'Chef')..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500">
             </div>
 
             <div id="islands-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
-        <section id="view-island-detail" class="view-section hidden space-y-4">
+        <!-- VISTA DETALLE DE ISLA -->
+        <section id="view-island-detail" class="view-section space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-1 rounded-xl">
                 <button onclick="switchView('islands')" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 shadow transition">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a Mis Islas
+                    <i class="fa-solid fa-arrow-left"></i> Volver
                 </button>
                 <div class="flex gap-2">
                     <button onclick="toggleVisibilityMatrix('de')" class="bg-slate-800 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-700 transition">
-                        <i class="fa-solid fa-eye-slash text-rose-400"></i> Alternar Alemán
+                        <i class="fa-solid fa-eye-slash text-rose-400"></i> Ocultar DE
                     </button>
                     <button onclick="toggleVisibilityMatrix('es')" class="bg-slate-800 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-700 transition">
-                        <i class="fa-solid fa-eye-slash text-sky-400"></i> Alternar Español
+                        <i class="fa-solid fa-eye-slash text-sky-400"></i> Ocultar ES
                     </button>
                 </div>
             </div>
@@ -102,12 +143,12 @@
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl space-y-6">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-slate-700 pb-4">
                     <h2 id="detail-island-title" class="text-2xl font-black text-emerald-400 tracking-tight"></h2>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap">
                         <button id="btn-start-training-normal" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg flex items-center gap-2">
-                            <i class="fa-solid fa-gavel"></i> Producción Activa (ES ➔ DE)
+                            <i class="fa-solid fa-gavel"></i> Producción (ES ➔ DE)
                         </button>
                         <button id="btn-start-training-inverse" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg flex items-center gap-2">
-                            <i class="fa-solid fa-eye"></i> Modo Comprensión (DE ➔ ES)
+                            <i class="fa-solid fa-eye"></i> Comprensión (DE ➔ ES)
                         </button>
                     </div>
                 </div>
@@ -115,9 +156,9 @@
                 <details class="bg-slate-900/40 border border-slate-700/60 rounded-xl p-4 transition">
                     <summary class="text-xs font-bold text-slate-300 cursor-pointer uppercase tracking-wider select-none"><i class="fa-solid fa-plus-circle text-emerald-400 mr-1"></i> Insertar Estructura Individual</summary>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <input type="text" id="phrase-de" placeholder="Frase nativa en alemán..." class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 font-medium text-emerald-300">
-                        <input type="text" id="phrase-es" placeholder="Traducción pura en español..." class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 font-medium">
-                        <input type="text" id="phrase-tags" placeholder="Etiquetas de control (Ej: #verb #B1 #prep-dat)" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-400 font-mono">
+                        <input type="text" id="phrase-de" placeholder="Frase en alemán..." class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 font-medium text-emerald-300">
+                        <input type="text" id="phrase-es" placeholder="Traducción español..." class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 font-medium">
+                        <input type="text" id="phrase-tags" placeholder="Etiquetas: #verb #B1 #prep-dat" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-400 font-mono">
                     </div>
                     <button onclick="addSinglePhrase()" class="mt-3 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition">
                         Guardar Ficha
@@ -126,40 +167,55 @@
 
                 <div class="bg-slate-900/60 border border-slate-700 p-4 rounded-xl space-y-2">
                     <h3 class="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                        <i class="fa-solid fa-bolt text-amber-400"></i> Importación Masiva Línea por Línea (Súper Rápida)
+                        <i class="fa-solid fa-bolt text-amber-400"></i> Importación Masiva
                     </h3>
-                    <p class="text-[11px] text-slate-400">Sintaxis limpia obligatoria: <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">Frase en Alemán // Traducción en Español [#tag1 #tag2]</code></p>
+                    <p class="text-[11px] text-slate-400">Formato: <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">Frase DE // Traducción ES [#tags]</code></p>
                     <textarea id="bulk-phrases" rows="4" placeholder="Ich bin mit ihm befreundet. // Soy amigo de él. [#verb #B1 #prep-dat]&#10;Das stimmt. // Es verdad. [#A1]" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs focus:outline-none focus:border-emerald-500 font-mono text-emerald-300"></textarea>
                     <button onclick="addBulkPhrasesBlock()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition">
-                        <i class="fa-solid fa-file-import"></i> Ejecutar Importación Masiva
+                        <i class="fa-solid fa-file-import"></i> Importar
                     </button>
                 </div>
             </div>
 
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
                 <h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                    <i class="fa-solid fa-database text-blue-500"></i> Oraciones Indexadas (<span id="phrase-count">0</span>)
+                    <i class="fa-solid fa-database text-blue-500"></i> Oraciones (<span id="phrase-count">0</span>)
                 </h3>
                 <div id="phrases-container" class="divide-y divide-slate-700 overflow-x-auto"></div>
             </div>
         </section>
 
-        <section id="view-training" class="view-section hidden max-w-3xl mx-auto space-y-4">
+        <!-- VISTA CONVERSACIONES -->
+        <section id="view-conversations" class="view-section space-y-6">
+            <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-comments text-cyan-400"></i> Escenarios Conversacionales (TELC)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="conversations-grid"></div>
+        </section>
+
+        <!-- VISTA ENTRENAMIENTO -->
+        <section id="view-training" class="view-section max-w-3xl mx-auto space-y-4">
             <div class="flex justify-between items-center">
                 <button onclick="exitTrainingSession()" class="text-xs text-slate-400 hover:text-white bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl font-bold transition">
-                    <i class="fa-solid fa-xmark"></i> Abortar Práctica
+                    <i class="fa-solid fa-xmark"></i> Abortar
                 </button>
                 <div class="text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300">
                     DIRECCIÓN: <span id="train-mode-label" class="text-emerald-400 font-bold"></span>
                 </div>
             </div>
 
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <div>
-                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Modo de Flujo:</label>
+                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Flujo:</label>
                     <select id="cfg-flow-type" onchange="handleFlowTypeChange()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200 focus:outline-none">
-                        <option value="manual">Manual (Tú evalúas)</option>
-                        <option value="auto">Modo Manos Libres (Coche/Cocina)</option>
+                        <option value="manual">Manual</option>
+                        <option value="auto">Auto (Coche)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Orden:</label>
+                    <select id="cfg-order" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200 focus:outline-none">
+                        <option value="sequential">Secuencial</option>
+                        <option value="random">Aleatorio</option>
+                        <option value="worst">Peor puntuadas</option>
                     </select>
                 </div>
                 <div>
@@ -167,86 +223,101 @@
                     <input type="number" id="cfg-loops" value="2" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
                 </div>
                 <div>
-                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa Voz Alta (s):</label>
+                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa (s):</label>
                     <input type="number" id="cfg-pause" value="4" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
                 </div>
                 <div>
-                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Velocidad TTS:</label>
+                    <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Velocidad:</label>
                     <input type="number" id="cfg-speed" value="0.9" step="0.1" min="0.5" max="1.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
                 </div>
             </div>
 
             <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 text-center shadow-2xl relative min-h-[340px] flex flex-col justify-between overflow-hidden">
                 <div class="flex justify-between items-center border-b border-slate-700/50 pb-3 mb-4">
-                    <span id="train-status-indicator" class="text-xs uppercase font-black tracking-widest text-blue-400">Listo para disparar</span>
-                    <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded">Ficha <span id="train-current-index">1</span> / <span id="train-total-index">1</span></span>
+                    <span id="train-status-indicator" class="text-xs uppercase font-black tracking-widest text-blue-400">Listo</span>
+                    <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded">Ficha <span id="train-current-index">1</span>/<span id="train-total-index">1</span></span>
                 </div>
 
                 <div class="my-auto space-y-6">
                     <div>
-                        <span id="label-stimulus-type" class="text-[10px] text-slate-400 block uppercase tracking-widest mb-1 font-bold">Estímulo Crudo:</span>
-                        <p id="train-text-stimulus" class="text-xl md:text-2xl font-bold text-slate-100 px-4"></p>
+                        <span id="label-stimulus-type" class="text-[10px] text-slate-400 block uppercase tracking-widest mb-1 font-bold">Estímulo:</span>
+                        <p id="train-text-stimulus" class="text-xl md:text-2xl font-bold px-4"></p>
                     </div>
                     
                     <div id="train-target-container" class="opacity-0 transition-opacity duration-300 border-t border-slate-700/60 pt-4">
-                        <span id="label-target-type" class="text-[10px] text-emerald-400 block uppercase tracking-widest mb-1 font-bold">Respuesta Estructural Correcta:</span>
+                        <span id="label-target-type" class="text-[10px] text-emerald-400 block uppercase tracking-widest mb-1 font-bold">Respuesta:</span>
                         <p id="train-text-target" class="text-2xl md:text-3xl font-black text-emerald-400 tracking-wide px-4"></p>
                     </div>
                 </div>
 
                 <div class="flex justify-between items-center mt-6 border-t border-slate-700/40 pt-4">
                     <button onclick="navigateTrainingQueue(-1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1">
-                        <i class="fa-solid fa-chevron-left"></i> <span class="hidden sm:inline">Anterior</span>
+                        <i class="fa-solid fa-chevron-left"></i> <span class="hidden sm:inline">Ant</span>
                     </button>
                     
-                    <div id="action-trigger-area" class="flex gap-2">
+                    <div id="action-trigger-area" class="flex gap-2 flex-wrap justify-center">
                         <button onclick="executePlaybackChain()" id="btn-trigger-audio" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center gap-2">
-                            <i class="fa-solid fa-play"></i> Disparar Cadena
+                            <i class="fa-solid fa-play"></i> Disparar
+                        </button>
+                        <button onclick="startVoiceInput()" id="btn-voice-input" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center gap-2 hidden">
+                            <i class="fa-solid fa-microphone"></i> Hablar
+                        </button>
+                        <button onclick="startTypingInput()" id="btn-typing-input" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center gap-2 hidden">
+                            <i class="fa-solid fa-keyboard"></i> Escribir
                         </button>
                         <button onclick="revealTargetStructure()" id="btn-reveal" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center gap-2 hidden">
-                            <i class="fa-solid fa-eye"></i> Revelar Estructura
+                            <i class="fa-solid fa-eye"></i> Revelar
                         </button>
                     </div>
 
                     <button onclick="navigateTrainingQueue(1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition flex items-center gap-1">
-                        <span class="hidden sm:inline">Siguiente</span> <i class="fa-solid fa-chevron-right"></i>
+                        <span class="hidden sm:inline">Sig</span> <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
 
+            <div id="voice-feedback" class="bg-slate-900 border border-emerald-700 p-3 rounded-xl text-sm hidden"></div>
+            <div id="typing-input-area" class="bg-slate-900 border border-indigo-700 p-4 rounded-xl hidden space-y-2">
+                <label class="text-xs font-bold text-indigo-300">Escribe tu respuesta:</label>
+                <input type="text" id="typing-answer" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white" placeholder="Escribe aquí...">
+                <button onclick="submitTypingAnswer()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-lg text-xs font-bold">Verificar</button>
+                <p id="typing-feedback" class="text-xs text-slate-300 hidden"></p>
+            </div>
+
             <div id="evaluation-panel" class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4 hidden">
-                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 text-center border-b border-slate-700 pb-2">Control de Calidad Fonética</h4>
+                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 text-center border-b border-slate-700 pb-2">Control de Calidad</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                        <span class="text-xs font-bold block text-slate-300 mb-2"><i class="fa-solid fa-gavel text-amber-500 mr-1"></i> Precisión Sintáctica</span>
+                        <span class="text-xs font-bold block text-slate-300 mb-2"><i class="fa-solid fa-gavel text-amber-500 mr-1"></i> Precisión</span>
                         <div class="flex justify-center gap-2" id="stars-grammar"></div>
                     </div>
                     <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                        <span class="text-xs font-bold block text-slate-300 mb-2"><i class="fa-solid fa-comments text-blue-500 mr-1"></i> Velocidad de Reacción</span>
+                        <span class="text-xs font-bold block text-slate-300 mb-2"><i class="fa-solid fa-comments text-blue-500 mr-1"></i> Fluidez</span>
                         <div class="flex justify-center gap-2" id="stars-fluency"></div>
                     </div>
                 </div>
                 <div class="text-center pt-2">
                     <button onclick="submitPerformanceScores()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-black py-3 rounded-xl text-xs uppercase tracking-widest transition shadow-lg">
-                        Confirmar Métricas y Continuar <i class="fa-solid fa-circle-chevron-right"></i>
+                        Confirmar Métricas <i class="fa-solid fa-circle-chevron-right"></i>
                     </button>
                 </div>
             </div>
         </section>
 
-        <section id="view-stats" class="view-section hidden space-y-6">
+        <!-- VISTA ESTADÍSTICAS -->
+        <section id="view-stats" class="view-section space-y-6">
             <div class="bg-slate-850 p-6 rounded-2xl border border-slate-800 shadow-xl">
-                <h2 class="text-2xl font-black text-white mb-2"><i class="fa-solid fa-chart-line text-amber-400"></i> Analítica de Rendimiento Neto</h2>
-                <p class="text-xs text-slate-400">Métricas puras extraídas de tu aparato fonador en las sesiones activas de los últimos días.</p>
+                <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-chart-line text-amber-400"></i> Analítica de Rendimiento</h2>
+                <p class="text-xs text-slate-400">Métricas de tus sesiones activas. Solo cuenta mientras practicas.</p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
-                    <span class="text-xs font-bold text-slate-400 uppercase block">Racha de Constancia</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase block">Racha</span>
                     <span id="stat-streak" class="text-3xl font-black text-amber-400">0 Días</span>
                 </div>
                 <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
-                    <span class="text-xs font-bold text-slate-400 uppercase block">Impactos Totales (Repeticiones)</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase block">Repeticiones Totales</span>
                     <span id="stat-total-reps" class="text-3xl font-black text-emerald-400">0</span>
                 </div>
                 <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
@@ -256,34 +327,35 @@
             </div>
 
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Registro Cronológico Semanal</h3>
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Registro Semanal</h3>
                 <div id="stats-days-graph" class="space-y-3"></div>
             </div>
         </section>
 
-        <section id="view-sync" class="view-section hidden max-w-2xl mx-auto">
+        <!-- VISTA SINCRONIZACIÓN -->
+        <section id="view-sync" class="view-section max-w-2xl mx-auto">
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-6">
                 <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-purple-400"></i> Protocolo de Sincronización</h2>
-                    <p class="text-xs text-slate-400 mt-1">Transfiere tu base de datos local entre tu PC, tablet y smartphone de forma limpia a través de Google Drive.</p>
+                    <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-purple-400"></i> Sincronización</h2>
+                    <p class="text-xs text-slate-400 mt-1">Copia de seguridad y transferencia entre dispositivos.</p>
                 </div>
 
                 <div class="space-y-4">
                     <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div class="text-left w-full">
-                            <h4 class="font-bold text-sm text-slate-200">Exportación Estructurada</h4>
-                            <p class="text-xs text-slate-400">Genera el archivo JSON maestro con tus estadísticas y Satzinseln.</p>
+                        <div>
+                            <h4 class="font-bold text-sm">Exportar Base de Datos</h4>
+                            <p class="text-xs text-slate-400">Descarga todas tus islas, progreso y ajustes en un JSON.</p>
                         </div>
-                        <div class="flex gap-2 w-full sm:w-auto shrink-0">
+                        <div class="flex gap-2">
                             <button onclick="exportDatabaseFile()" class="bg-purple-600 hover:bg-purple-500 text-xs font-bold px-4 py-2.5 rounded-lg transition">Descargar JSON</button>
-                            <button onclick="copyJsonToClipboard()" class="bg-slate-700 hover:bg-slate-600 text-xs font-bold px-3 py-2.5 rounded-lg transition" title="Copiar al portapapeles"><i class="fa-solid fa-copy"></i></button>
+                            <button onclick="copyJsonToClipboard()" class="bg-slate-700 hover:bg-slate-600 text-xs font-bold px-3 py-2.5 rounded-lg transition"><i class="fa-solid fa-copy"></i></button>
                         </div>
                     </div>
 
                     <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
-                        <div class="text-left">
-                            <h4 class="font-bold text-sm text-slate-200">Importación Remota</h4>
-                            <p class="text-xs text-slate-400">Carga el archivo JSON descargado de Drive para restaurar tu progreso al 100%.</p>
+                        <div>
+                            <h4 class="font-bold text-sm">Importar Base de Datos</h4>
+                            <p class="text-xs text-slate-400">Carga un archivo JSON previamente guardado.</p>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">
                             <input type="file" id="import-file-field" accept=".json" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-slate-200 cursor-pointer">
@@ -293,69 +365,149 @@
                 </div>
             </div>
         </section>
-
     </main>
 
     <footer class="bg-slate-950 border-t border-slate-800 p-4 text-center text-xs text-slate-500">
-        Plataforma Muller Satzinseln Pro v2.5 • Diseñada para la Consolidación Destructiva del TELC B1. Sin rastro de círculos de color.
+        Profesor Plaza Müller Pro X · Satzinseln blindados para fluidez TELC · <span id="practice-timer-live">00:00</span> (tiempo en sesión actual)
     </footer>
 
     <script>
-        // BASE DE DATOS DE LA APLICACIÓN
+        // ==================== BASE DE DATOS Y ESTADO GLOBAL ====================
         let appData = {
             islands: [],
+            conversations: [],   // { id, name, phrases: [{de, es}] }
             stats: {
                 dailyRepetitions: {},
-                dailyTime: {},
+                dailyTime: {},      // segundos por día
                 streak: 0,
                 lastPracticeDate: null
+            },
+            settings: {
+                flowType: 'manual',
+                order: 'sequential',
+                loops: 2,
+                pause: 4,
+                speed: 0.9
             }
         };
 
-        // MATRIZ DE ESTADOS TEMPORALES DEL MOTOR
         let currentActiveIslandId = null;
         let trainingQueue = [];
         let currentTrainIndex = 0;
-        let trainingDirection = 'normal'; // 'normal' (ES -> DE) | 'inverse' (DE -> ES)
+        let trainingDirection = 'normal';
         let localGrammarRating = 0;
         let localFluencyRating = 0;
         let activePlaybackTimeout = null;
         let sessionTimerInterval = null;
         let sessionStartTime = null;
-
-        // FILTROS DE VISIBILIDAD DE LISTADOS EN DETALLES
+        let sessionActive = false;          // bandera para que el timer solo corra en entrenamiento
         let hideGermanList = false;
         let hideSpanishList = false;
 
+        // Reconocimiento de voz
+        let recognition = null;
+        let isRecognizing = false;
+
+        // ==================== INICIALIZACIÓN ====================
         window.onload = function() {
-            if (localStorage.getItem('muller_pro_db')) {
-                try { 
-                    appData = JSON.parse(localStorage.getItem('muller_pro_db')); 
-                    // Asegurar migración de propiedades de estadísticas si faltan
-                    if(!appData.stats) appData.stats = { dailyRepetitions: {}, dailyTime: {}, streak: 0, lastPracticeDate: null };
-                } catch(e) { 
-                    saveDatabaseToLocalStorage(); 
-                }
-            } else { 
-                saveDatabaseToLocalStorage(); 
-            }
+            loadAppData();
+            loadSettings();
+            applyTheme();
             switchView('islands');
             checkAndUpdateStreak();
+            updatePracticeTimerDisplay();
+            // Precargar conversaciones si no existen
+            if (!appData.conversations || appData.conversations.length === 0) {
+                seedConversations();
+            }
+            // Atajos de teclado
+            document.addEventListener('keydown', handleKeyboardShortcuts);
         };
 
-        function saveDatabaseToLocalStorage() {
-            localStorage.setItem('muller_pro_db', JSON.stringify(appData));
+        function loadAppData() {
+            if (localStorage.getItem('muller_pro_x_db')) {
+                try {
+                    appData = JSON.parse(localStorage.getItem('muller_pro_x_db'));
+                    if (!appData.stats) appData.stats = { dailyRepetitions: {}, dailyTime: {}, streak: 0, lastPracticeDate: null };
+                    if (!appData.conversations) appData.conversations = [];
+                } catch(e) {
+                    saveDatabaseToLocalStorage();
+                }
+            } else {
+                saveDatabaseToLocalStorage();
+            }
         }
 
+        function loadSettings() {
+            if (localStorage.getItem('muller_pro_x_settings')) {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('muller_pro_x_settings'));
+                    appData.settings = { ...appData.settings, ...saved };
+                } catch(e) {}
+            }
+            // Aplicar a interfaz
+            document.getElementById('cfg-flow-type').value = appData.settings.flowType;
+            document.getElementById('cfg-order').value = appData.settings.order;
+            document.getElementById('cfg-loops').value = appData.settings.loops;
+            document.getElementById('cfg-pause').value = appData.settings.pause;
+            document.getElementById('cfg-speed').value = appData.settings.speed;
+        }
+
+        function saveSettings() {
+            appData.settings.flowType = document.getElementById('cfg-flow-type').value;
+            appData.settings.order = document.getElementById('cfg-order').value;
+            appData.settings.loops = parseInt(document.getElementById('cfg-loops').value) || 2;
+            appData.settings.pause = parseInt(document.getElementById('cfg-pause').value) || 4;
+            appData.settings.speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
+            localStorage.setItem('muller_pro_x_settings', JSON.stringify(appData.settings));
+        }
+
+        function saveDatabaseToLocalStorage() {
+            localStorage.setItem('muller_pro_x_db', JSON.stringify(appData));
+        }
+
+        // ==================== TEMAS ====================
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function applyTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            }
+        }
+
+        // ==================== NAVEGACIÓN ====================
         function switchView(viewName) {
-            document.querySelectorAll('.view-section').forEach(section => section.classList.add('hidden'));
-            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`view-${viewName}`);
+            if (target) target.classList.add('active');
             stopAudioAndTimers();
-            
             if (viewName === 'islands') {
                 renderIslandsGrid();
             } else if (viewName === 'stats') {
                 renderAdvancedStatistics();
+            } else if (viewName === 'conversations') {
+                renderConversationsGrid();
+            }
+            // Si no estamos en entrenamiento, detener timer
+            if (viewName !== 'training') {
+                if (sessionActive) pauseTrainingTimer();
+                sessionActive = false;
             }
         }
 
@@ -365,7 +517,47 @@
             if (sessionTimerInterval) {
                 clearInterval(sessionTimerInterval);
                 sessionTimerInterval = null;
+                if (sessionActive) {
+                    trackNetPracticeTime();
+                }
+            }
+        }
+
+        // ==================== TIMER DE PRÁCTICA (SOLO ENTRENAMIENTO) ====================
+        function startTrainingTimer() {
+            if (sessionStartTime === null) {
+                sessionStartTime = Date.now();
+                sessionActive = true;
+                sessionTimerInterval = setInterval(() => {
+                    updatePracticeTimerDisplay();
+                }, 1000);
+                updatePracticeTimerDisplay();
+            }
+        }
+
+        function pauseTrainingTimer() {
+            if (sessionTimerInterval) {
+                clearInterval(sessionTimerInterval);
+                sessionTimerInterval = null;
+            }
+            if (sessionActive && sessionStartTime) {
                 trackNetPracticeTime();
+            }
+            sessionStartTime = null;
+            sessionActive = false;
+            updatePracticeTimerDisplay();
+        }
+
+        function updatePracticeTimerDisplay() {
+            const display = document.getElementById('practice-timer-live');
+            if (!display) return;
+            if (sessionActive && sessionStartTime) {
+                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
+                const secs = (elapsed % 60).toString().padStart(2,'0');
+                display.textContent = `${mins}:${secs}`;
+            } else {
+                display.textContent = '00:00';
             }
         }
 
@@ -427,9 +619,7 @@
             saveDatabaseToLocalStorage();
         }
 
-        // ==========================================
-        // LÓGICA DEL PANEL DE ISLAS Y DIAGNÓSTICO LÉXICO
-        // ==========================================
+        // ==================== GESTIÓN DE ISLAS ====================
         function createIsland() {
             const nameInput = document.getElementById('new-island-name');
             const name = nameInput.value.trim();
@@ -442,7 +632,7 @@
 
         function deleteIsland(id, event) {
             event.stopPropagation();
-            if (!confirm("⚠️ ¿Estás seguro de eliminar esta isla completa? Esta acción destruirá todas sus oraciones.")) return;
+            if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
             appData.islands = appData.islands.filter(isl => isl.id !== id);
             saveDatabaseToLocalStorage();
             renderIslandsGrid();
@@ -453,20 +643,19 @@
             const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
             container.innerHTML = '';
 
-            let totalPhrasesScanned = 0;
+            let totalPhrases = 0;
             let lexA = 0, lexB1 = 0, lexB2 = 0, lexVerbs = 0, lexAkk = 0, lexDat = 0;
 
-            // Análisis sintáctico léxico de todas las frases de la base de datos
             appData.islands.forEach(isl => {
                 isl.phrases.forEach(p => {
-                    totalPhrasesScanned++;
-                    const rawText = (p.de + " " + (p.tags || "")).toLowerCase();
-                    if (rawText.includes('#a1') || rawText.includes('#a2')) lexA++;
-                    if (rawText.includes('#b1')) lexB1++;
-                    if (rawText.includes('#b2')) lexB2++;
-                    if (rawText.includes('#verb')) lexVerbs++;
-                    if (rawText.includes('#prep-akk')) lexAkk++;
-                    if (rawText.includes('#prep-dat')) lexDat++;
+                    totalPhrases++;
+                    const raw = (p.de + " " + (p.tags || "")).toLowerCase();
+                    if (raw.includes('#a1') || raw.includes('#a2')) lexA++;
+                    if (raw.includes('#b1')) lexB1++;
+                    if (raw.includes('#b2')) lexB2++;
+                    if (raw.includes('#verb')) lexVerbs++;
+                    if (raw.includes('#prep-akk')) lexAkk++;
+                    if (raw.includes('#prep-dat')) lexDat++;
                 });
             });
 
@@ -477,62 +666,60 @@
             document.getElementById('lex-count-akk').innerText = lexAkk;
             document.getElementById('lex-count-dat').innerText = lexDat;
 
-            // Generación de islas dinámicas virtuales (Foco Intensivo y Favoritos)
-            let virtualIslands = [
-                { id: 'virtual_fav', name: "⭐ Oraciones Favoritas", isVirtual: true, count: countVirtualPhrases('fav') },
-                { id: 'virtual_foco', name: "🔥 Isla de Foco Intensivo", isVirtual: true, count: countVirtualPhrases('foco') }
-            ];
+            // Islas virtuales
+            const favCount = countVirtualPhrases('fav');
+            const focoCount = countVirtualPhrases('foco');
+            if (favCount > 0 && !searchQuery) {
+                container.appendChild(createVirtualIslandCard('virtual_fav', '⭐ Favoritas', favCount, 'amber'));
+            }
+            if (focoCount > 0 && !searchQuery) {
+                container.appendChild(createVirtualIslandCard('virtual_foco', '🔥 Foco Intensivo', focoCount, 'rose'));
+            }
 
-            virtualIslands.forEach(vi => {
-                if(vi.count > 0 && searchQuery === "") {
-                    const card = document.createElement('div');
-                    card.className = "bg-gradient-to-br from-slate-800 to-slate-850 border-2 border-dashed border-amber-500/40 rounded-2xl p-5 hover:border-amber-400 transition cursor-pointer flex flex-col justify-between shadow-xl relative";
-                    card.setAttribute('onclick', `openIslandDetail('${vi.id}')`);
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start gap-2 mb-3">
-                            <h3 class="font-black text-base text-amber-400 tracking-wide">${vi.name}</h3>
-                            <span class="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded uppercase tracking-wider border border-amber-500/30">Auto-Filtro</span>
-                        </div>
-                        <span class="text-xs bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-lg border border-slate-700 w-fit">${vi.count} Estructuras Críticas</span>
-                    `;
-                    container.appendChild(card);
-                }
-            });
-
-            // Renderizado de las islas estándar físicas de la BD
-            let displayedPhysicalIslands = 0;
             appData.islands.forEach(island => {
-                let phrasesToDisplay = island.phrases;
-                if (searchQuery !== "") {
-                    phrasesToDisplay = island.phrases.filter(p => 
+                let phrasesToShow = island.phrases;
+                if (searchQuery) {
+                    phrasesToShow = island.phrases.filter(p => 
                         p.de.toLowerCase().includes(searchQuery) || 
                         p.es.toLowerCase().includes(searchQuery) ||
                         (p.tags && p.tags.toLowerCase().includes(searchQuery))
                     );
                 }
+                if (searchQuery && phrasesToShow.length === 0) return;
 
-                if (searchQuery !== "" && phrasesToDisplay.length === 0) return;
-
-                displayedPhysicalIslands++;
                 const card = document.createElement('div');
                 card.className = "bg-slate-800 border border-slate-700/80 rounded-2xl p-5 hover:border-slate-600 transition cursor-pointer flex flex-col justify-between shadow-lg hover:shadow-xl";
                 card.setAttribute('onclick', `openIslandDetail('${island.id}')`);
                 card.innerHTML = `
                     <div class="flex justify-between items-start gap-2 mb-4">
-                        <h3 class="font-bold text-base text-slate-100 tracking-tight leading-snug">${island.name}</h3>
+                        <h3 class="font-bold text-base tracking-tight">${island.name}</h3>
                         <button onclick="deleteIsland('${island.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                     <div class="flex justify-between items-center mt-2">
-                        <span class="text-xs bg-slate-900 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700 font-bold">${phrasesToDisplay.length} oraciones</span>
+                        <span class="text-xs bg-slate-900 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700 font-bold">${phrasesToShow.length} oraciones</span>
                         ${searchQuery ? '<span class="text-[10px] text-amber-400 font-bold bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/40">Coincidencias</span>' : ''}
                     </div>
                 `;
                 container.appendChild(card);
             });
 
-            if (appData.islands.length === 0 && displayedPhysicalIslands === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-16 text-slate-500 text-sm border-2 border-dashed border-slate-800 rounded-2xl font-medium">No tienes islas activas en tu base de datos local. Crea tu primer Satzinsel arriba.</div>`;
+            if (appData.islands.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-16 text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl">Crea tu primera isla para comenzar.</div>`;
             }
+        }
+
+        function createVirtualIslandCard(id, name, count, color) {
+            const div = document.createElement('div');
+            div.className = `bg-gradient-to-br from-slate-800 to-slate-850 border-2 border-dashed border-${color}-500/40 rounded-2xl p-5 hover:border-${color}-400 transition cursor-pointer flex flex-col justify-between shadow-xl`;
+            div.setAttribute('onclick', `openIslandDetail('${id}')`);
+            div.innerHTML = `
+                <div class="flex justify-between items-start gap-2 mb-3">
+                    <h3 class="font-black text-base text-${color}-400 tracking-wide">${name}</h3>
+                    <span class="text-[10px] bg-${color}-500/20 text-${color}-300 font-extrabold px-2 py-0.5 rounded uppercase tracking-wider border border-${color}-500/30">Auto-Filtro</span>
+                </div>
+                <span class="text-xs bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-lg border border-slate-700 w-fit">${count} Estructuras</span>
+            `;
+            return div;
         }
 
         function countVirtualPhrases(type) {
@@ -546,36 +733,21 @@
             return count;
         }
 
-        // ==========================================
-        // ADMINISTRACIÓN INTERNA DE LA ISLA SELECCIONADA
-        // ==========================================
-        function toggleVisibilityMatrix(type) {
-            if(type === 'de') hideGermanList = !hideGermanList;
-            if(type === 'es') hideSpanishList = !hideSpanishList;
-            renderPhrasesList();
-        }
-
         function openIslandDetail(islandId) {
             currentActiveIslandId = islandId;
             let title = "";
-            let phraseCount = 0;
-
-            if (islandId === 'virtual_fav') {
-                title = "⭐ Oraciones Favoritas";
-            } else if (islandId === 'virtual_foco') {
-                title = "🔥 Foco Intensivo (Errores Recurrentes)";
-            } else {
+            if (islandId === 'virtual_fav') title = "⭐ Favoritas";
+            else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
+            else {
                 const island = appData.islands.find(isl => isl.id === islandId);
                 if (!island) return;
                 title = island.name;
             }
-
             document.getElementById('detail-island-title').innerText = title;
             renderPhrasesList();
 
-            // Configurar disparadores del motor de entrenamiento
-            document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
-            document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
+            document.getElementById('btn-start-training-normal').onclick = () => initiateTrainingSession(islandId, 'normal');
+            document.getElementById('btn-start-training-inverse').onclick = () => initiateTrainingSession(islandId, 'inverse');
 
             switchView('island-detail');
         }
@@ -596,24 +768,20 @@
         }
 
         function addSinglePhrase() {
-            const deText = document.getElementById('phrase-de').value.trim();
-            const esText = document.getElementById('phrase-es').value.trim();
-            const tagsText = document.getElementById('phrase-tags').value.trim();
-            if (!deText || !esText) return;
-
+            const de = document.getElementById('phrase-de').value.trim();
+            const es = document.getElementById('phrase-es').value.trim();
+            const tags = document.getElementById('phrase-tags').value.trim();
+            if (!de || !es) return;
             const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) { alert("No puedes insertar oraciones directamente en una isla virtual."); return; }
-
+            if (!island) { alert("No puedes añadir a islas virtuales."); return; }
             island.phrases.push({
                 id: 'phrase_' + Date.now(),
-                de: deText,
-                es: esText,
-                tags: tagsText,
+                de, es, tags,
                 starsGrammarNormal: 0, starsFluencyNormal: 0,
                 starsGrammarInverse: 0, starsFluencyInverse: 0,
-                isFavorite: false, isFocus: false
+                isFavorite: false, isFocus: false,
+                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
             });
-
             saveDatabaseToLocalStorage();
             document.getElementById('phrase-de').value = '';
             document.getElementById('phrase-es').value = '';
@@ -624,51 +792,41 @@
         function addBulkPhrasesBlock() {
             const bulkText = document.getElementById('bulk-phrases').value.trim();
             if (!bulkText) return;
-
             const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) { alert("Selecciona una isla física real para realizar la importación en bloque."); return; }
-
+            if (!island) { alert("Selecciona una isla real."); return; }
             const lines = bulkText.split('\n');
-            let successCount = 0;
-
+            let count = 0;
             lines.forEach((line, i) => {
                 if (!line.trim()) return;
-                const coreParts = line.split('//');
-                if (coreParts.length === 2) {
-                    let dePart = coreParts[0].trim();
-                    let esRaw = coreParts[1].trim();
-                    
-                    // Regex extractor de etiquetas [#tag]
+                const parts = line.split('//');
+                if (parts.length === 2) {
+                    let de = parts[0].trim();
+                    let esRaw = parts[1].trim();
                     let tags = "";
-                    const tagRegex = /\[([^\]]+)\]/;
-                    const match = esRaw.match(tagRegex);
-                    if (match) {
-                        tags = match[1].trim();
-                        esRaw = esRaw.replace(tagRegex, '').trim();
+                    const tagMatch = esRaw.match(/\[([^\]]+)\]/);
+                    if (tagMatch) {
+                        tags = tagMatch[1].trim();
+                        esRaw = esRaw.replace(tagMatch[0], '').trim();
                     }
-
-                    if (dePart && esRaw) {
+                    if (de && esRaw) {
                         island.phrases.push({
                             id: 'phrase_' + Date.now() + '_' + i,
-                            de: dePart,
-                            es: esRaw,
-                            tags: tags,
+                            de, es: esRaw, tags,
                             starsGrammarNormal: 0, starsFluencyNormal: 0,
                             starsGrammarInverse: 0, starsFluencyInverse: 0,
-                            isFavorite: false, isFocus: false
+                            isFavorite: false, isFocus: false,
+                            interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
                         });
-                        successCount++;
+                        count++;
                     }
                 }
             });
-
             saveDatabaseToLocalStorage();
             document.getElementById('bulk-phrases').value = '';
             openIslandDetail(currentActiveIslandId);
         }
 
         function deletePhrase(phraseId) {
-            // Permitir borrado cruzado localizando la isla madre
             appData.islands.forEach(isl => {
                 isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
             });
@@ -678,31 +836,20 @@
 
         function togglePhraseFeature(phraseId, type) {
             appData.islands.forEach(isl => {
-                const target = isl.phrases.find(p => p.id === phraseId);
-                if (target) {
-                    if (type === 'fav') target.isFavorite = !target.isFavorite;
-                    if (type === 'foco') target.isFocus = !target.isFocus;
+                const phrase = isl.phrases.find(p => p.id === phraseId);
+                if (phrase) {
+                    if (type === 'fav') phrase.isFavorite = !phrase.isFavorite;
+                    if (type === 'foco') phrase.isFocus = !phrase.isFocus;
                 }
             });
             saveDatabaseToLocalStorage();
             renderPhrasesList();
         }
 
-        function fireLocalSentenceSpeak(deText) {
-            window.speechSynthesis.cancel();
-            const maxLoops = parseInt(document.getElementById('cfg-loops').value) || 2;
-            const speedValue = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
-            
-            let executed = 0;
-            function run() {
-                if(executed >= maxLoops) return;
-                const utterance = new SpeechSynthesisUtterance(deText);
-                utterance.lang = 'de-DE';
-                utterance.rate = speedValue;
-                utterance.onend = () => { executed++; setTimeout(run, 400); };
-                window.speechSynthesis.speak(utterance);
-            }
-            run();
+        function toggleVisibilityMatrix(type) {
+            if (type === 'de') hideGermanList = !hideGermanList;
+            if (type === 'es') hideSpanishList = !hideSpanishList;
+            renderPhrasesList();
         }
 
         function renderPhrasesList() {
@@ -710,84 +857,170 @@
             const phrases = getPhrasesArrayForIsland(currentActiveIslandId);
             document.getElementById('phrase-count').innerText = phrases.length;
             container.innerHTML = '';
-
             if (phrases.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Esta sección no contiene oraciones indexadas en este momento.</div>`;
+                container.innerHTML = `<div class="text-center py-8 text-slate-500">Sin oraciones.</div>`;
                 return;
             }
-
-            phrases.forEach((phrase, index) => {
+            phrases.forEach((phrase, idx) => {
                 const row = document.createElement('div');
                 row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
-                
-                const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
-                const esClass = hideSpanishList ? "hidden-content" : "text-xs text-slate-400 italic";
-                const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
-
+                const deClass = hideGermanList ? "hidden-content" : "font-bold";
+                const esClass = hideSpanishList ? "hidden-content" : "text-xs italic";
                 row.innerHTML = `
                     <div class="space-y-1 flex-grow">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
+                            <span class="text-xs font-mono font-bold text-slate-500">${idx+1}.</span>
                             <p class="${deClass}">${phrase.de}</p>
-                            ${tagsBadge}
+                            ${phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : ''}
                         </div>
                         <p class="${esClass}">"${phrase.es}"</p>
                     </div>
-                    <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                        <button onclick="fireLocalSentenceSpeak('${phrase.de.replace(/'/g, "\\'")}')" class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition" title="Escuchar ráfaga local"><i class="fa-solid fa-volume-high"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg transition ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40 border border-amber-900' : 'text-slate-500 hover:text-amber-400'}" title="Marcar Favorita"><i class="fa-solid fa-star"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg transition ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40 border border-rose-900' : 'text-slate-500 hover:text-rose-400'}" title="Enviar a Foco Intensivo"><i class="fa-solid fa-fire"></i></button>
-                        <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="fireLocalSentenceSpeak('${phrase.de.replace(/'/g, "\\'")}')" class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg"><i class="fa-solid fa-volume-high"></i></button>
+                        <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40' : 'text-slate-500'}"><i class="fa-solid fa-star"></i></button>
+                        <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40' : 'text-slate-500'}"><i class="fa-solid fa-fire"></i></button>
+                        <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 `;
                 container.appendChild(row);
             });
         }
 
-        // ==========================================
-        // CORE ENGINE: MOTOR MULTI-MODAL DE ENTRENAMIENTO
-        // ==========================================
-        function initiateTrainingSession(islandId, direction) {
-            const sourcePhrases = getPhrasesArrayForIsland(islandId);
-            if (sourcePhrases.length === 0) { alert("Inserta oraciones antes de iniciar el motor fonético."); return; }
+        function fireLocalSentenceSpeak(deText) {
+            window.speechSynthesis.cancel();
+            const speed = appData.settings.speed || 0.9;
+            const utter = new SpeechSynthesisUtterance(deText);
+            utter.lang = 'de-DE';
+            utter.rate = speed;
+            window.speechSynthesis.speak(utter);
+        }
 
-            trainingQueue = [...sourcePhrases];
+        // ==================== CONVERSACIONES ====================
+        function seedConversations() {
+            appData.conversations = [
+                {
+                    id: 'conv_1',
+                    name: 'Sich vorstellen (Presentarse)',
+                    phrases: [
+                        {de: 'Hallo, ich heiße Max Müller.', es: 'Hola, me llamo Max Müller.'},
+                        {de: 'Ich komme aus Spanien.', es: 'Vengo de España.'},
+                        {de: 'Ich wohne in Madrid.', es: 'Vivo en Madrid.'},
+                        {de: 'Ich bin 25 Jahre alt.', es: 'Tengo 25 años.'},
+                        {de: 'Ich arbeite als Ingenieur.', es: 'Trabajo como ingeniero.'},
+                        {de: 'Meine Hobbys sind Lesen und Schwimmen.', es: 'Mis hobbies son leer y nadar.'}
+                    ]
+                },
+                {
+                    id: 'conv_2',
+                    name: 'Im Restaurant (En el restaurante)',
+                    phrases: [
+                        {de: 'Ich hätte gern einen Tisch für zwei Personen.', es: 'Quisiera una mesa para dos personas.'},
+                        {de: 'Die Speisekarte, bitte.', es: 'La carta, por favor.'},
+                        {de: 'Ich möchte das Schnitzel mit Pommes.', es: 'Quisiera el schnitzel con patatas fritas.'},
+                        {de: 'Zahlen, bitte!', es: '¡La cuenta, por favor!'},
+                        {de: 'Das Essen war sehr lecker.', es: 'La comida estaba muy rica.'}
+                    ]
+                },
+                {
+                    id: 'conv_3',
+                    name: 'Nach dem Weg fragen (Preguntar direcciones)',
+                    phrases: [
+                        {de: 'Entschuldigung, wo ist der Bahnhof?', es: 'Disculpe, ¿dónde está la estación de tren?'},
+                        {de: 'Gehen Sie geradeaus und dann links.', es: 'Vaya recto y luego a la izquierda.'},
+                        {de: 'Ist es weit von hier?', es: '¿Está lejos de aquí?'},
+                        {de: 'Vielen Dank für Ihre Hilfe.', es: 'Muchas gracias por su ayuda.'}
+                    ]
+                }
+            ];
+            saveDatabaseToLocalStorage();
+        }
+
+        function renderConversationsGrid() {
+            const grid = document.getElementById('conversations-grid');
+            grid.innerHTML = '';
+            appData.conversations.forEach(conv => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 hover:border-cyan-400 transition cursor-pointer shadow-lg";
+                card.onclick = () => openConversationIsland(conv);
+                card.innerHTML = `
+                    <h3 class="font-bold text-lg text-cyan-400 mb-2">${conv.name}</h3>
+                    <p class="text-xs text-slate-400">${conv.phrases.length} frases</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openConversationIsland(conv) {
+            // Crear una isla temporal virtual con esas frases y abrir su detalle
+            const virtualId = 'conv_virtual_' + conv.id;
+            // Añadir isla virtual a appData.islands temporalmente (pero mejor crear un array paralelo)
+            // Para simplificar, clonamos las frases en una nueva isla no persistente? 
+            // Mejor: manejamos conv como fuente para entrenamiento directamente.
+            // Pero para reutilizar lógica, creamos una isla virtual con id especial y frases del conv.
+            if (!appData.islands.find(isl => isl.id === virtualId)) {
+                appData.islands.push({
+                    id: virtualId,
+                    name: '💬 ' + conv.name,
+                    phrases: conv.phrases.map(p => ({
+                        id: 'conv_' + Date.now() + Math.random(),
+                        de: p.de, es: p.es, tags: '',
+                        starsGrammarNormal: 0, starsFluencyNormal: 0,
+                        starsGrammarInverse: 0, starsFluencyInverse: 0,
+                        isFavorite: false, isFocus: false,
+                        interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
+                    }))
+                });
+                saveDatabaseToLocalStorage();
+            }
+            openIslandDetail(virtualId);
+        }
+
+        // ==================== ENTRENAMIENTO ====================
+        function initiateTrainingSession(islandId, direction) {
+            saveSettings(); // guardar ajustes actuales antes de empezar
+            let sourcePhrases = getPhrasesArrayForIsland(islandId);
+            if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
+
+            // Aplicar orden
+            const order = document.getElementById('cfg-order').value;
+            if (order === 'random') {
+                sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
+            } else if (order === 'worst') {
+                sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+            }
+
+            trainingQueue = sourcePhrases;
             currentTrainIndex = 0;
             trainingDirection = direction;
-
             document.getElementById('train-total-index').innerText = trainingQueue.length;
-            document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES ➔ DE)" : "COMPRENSION (DE ➔ ES)";
+            document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES→DE)" : "COMPRENSIÓN (DE→ES)";
             
-            // Forzar interfaz ciega inicial
-            document.getElementById('label-stimulus-type').innerText = direction === 'normal' ? "Tu estímulo en español:" : "Estímulo auditivo/escrito alemán:";
-            document.getElementById('label-target-type').innerText = direction === 'normal' ? "Estructura Alemana Correcta:" : "Significado real en español:";
-
-            // Iniciar contadores de tiempo neto de estudio
-            sessionStartTime = Date.now();
-            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-            sessionTimerInterval = setInterval(() => { /* Mantiene la sesión viva */ }, 1000);
+            // Iniciar timer de práctica
+            startTrainingTimer();
 
             setupTrainingSlideStructure();
             switchView('training');
         }
 
         function exitTrainingSession() {
+            pauseTrainingTimer();
             stopAudioAndTimers();
-            openIslandDetail(currentActiveIslandId);
+            if (currentActiveIslandId && currentActiveIslandId.startsWith('conv_virtual_')) {
+                // Eliminar isla virtual de conversación al salir
+                appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
+                saveDatabaseToLocalStorage();
+            }
+            switchView('islands');
         }
 
         function setupTrainingSlideStructure() {
             if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
             window.speechSynthesis.cancel();
-
             const phrase = trainingQueue[currentTrainIndex];
             document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
-            
-            const indicator = document.getElementById('train-status-indicator');
-            indicator.innerText = "Listo";
-            indicator.className = "text-xs uppercase font-black tracking-widest text-blue-400";
+            document.getElementById('train-status-indicator').innerText = "Listo";
+            document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
 
-            // Inyección de textos dependiendo de la dualidad seleccionada
             if (trainingDirection === 'normal') {
                 document.getElementById('train-text-stimulus').innerText = phrase.es;
                 document.getElementById('train-text-target').innerText = phrase.de;
@@ -796,17 +1029,20 @@
                 document.getElementById('train-text-target').innerText = phrase.es;
             }
 
-            // Ocultar paneles de evaluación y respuestas
-            document.getElementById('train-target-container').style.opacity = 0;
+            document.getElementById('train-target-container').style.opacity = '0';
             document.getElementById('evaluation-panel').classList.add('hidden');
             document.getElementById('btn-reveal').classList.add('hidden');
+            document.getElementById('btn-voice-input').classList.add('hidden');
+            document.getElementById('btn-typing-input').classList.add('hidden');
             document.getElementById('btn-trigger-audio').classList.remove('hidden');
             document.getElementById('btn-trigger-audio').disabled = false;
+            document.getElementById('voice-feedback').classList.add('hidden');
+            document.getElementById('typing-input-area').classList.add('hidden');
 
             localGrammarRating = 0; localFluencyRating = 0;
-            renderDynamicRatingStars('grammar', 0); renderDynamicRatingStars('fluency', 0);
+            renderDynamicRatingStars('grammar', 0);
+            renderDynamicRatingStars('fluency', 0);
 
-            // Automatización inmediata si está activado el Modo Manos Libres (Coche)
             const flowType = document.getElementById('cfg-flow-type').value;
             if (flowType === 'auto') {
                 activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
@@ -815,18 +1051,19 @@
 
         function navigateTrainingQueue(step) {
             stopAudioAndTimers();
-            let tempIndex = currentTrainIndex + step;
-            if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
-                currentTrainIndex = tempIndex;
+            let newIdx = currentTrainIndex + step;
+            if (newIdx >= 0 && newIdx < trainingQueue.length) {
+                currentTrainIndex = newIdx;
                 setupTrainingSlideStructure();
-            } else if (tempIndex < 0) {
-                alert("Te encuentras en la primera oración de la cola.");
+            } else if (newIdx < 0) {
+                // nada
             } else {
                 handleIslandTransitionOrLoop();
             }
         }
 
         function handleFlowTypeChange() {
+            saveSettings();
             stopAudioAndTimers();
             setupTrainingSlideStructure();
         }
@@ -834,63 +1071,54 @@
         function executePlaybackChain() {
             const triggerBtn = document.getElementById('btn-trigger-audio');
             triggerBtn.disabled = true;
-
             const phrase = trainingQueue[currentTrainIndex];
-            const maxLoops = parseInt(document.getElementById('cfg-loops').value) || 2;
-            const pauseSeconds = parseInt(document.getElementById('cfg-pause').value) || 4;
-            const speedValue = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
+            const loops = parseInt(document.getElementById('cfg-loops').value) || 2;
+            const pause = parseInt(document.getElementById('cfg-pause').value) || 4;
+            const speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
             const flowType = document.getElementById('cfg-flow-type').value;
 
-            let completedLoops = 0;
+            let completed = 0;
             const indicator = document.getElementById('train-status-indicator');
-            
-            indicator.innerText = "Sombreado Fonético Activo...";
-            indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500 animate-pulse";
+            indicator.innerText = "Audio activo...";
+            indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
 
             function runCycle() {
-                if (completedLoops >= maxLoops) {
-                    indicator.innerText = "¡Habla Ahora (Voz Alta)!";
-                    indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400 animate-bounce";
-                    
+                if (completed >= loops) {
+                    indicator.innerText = "¡Tu turno!";
+                    indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
                     if (flowType === 'auto') {
-                        // En modo automático el software auto-revela y transiciona solo
+                        logRepetitionImpact();
                         activePlaybackTimeout = setTimeout(() => {
                             revealTargetStructure();
-                            // Guardar logs automáticos de 5 estrellas en modo coche
-                            logRepetitionImpact();
-                            activePlaybackTimeout = setTimeout(() => {
-                                advanceNextAutomaticIteration();
-                            }, pauseSeconds * 1000);
-                        }, 1000);
+                            activePlaybackTimeout = setTimeout(() => advanceNextAutomaticIteration(), pause * 1000);
+                        }, 500);
                     } else {
                         triggerBtn.classList.add('hidden');
+                        document.getElementById('btn-voice-input').classList.remove('hidden');
+                        document.getElementById('btn-typing-input').classList.remove('hidden');
                         document.getElementById('btn-reveal').classList.remove('hidden');
                     }
                     return;
                 }
-
                 window.speechSynthesis.cancel();
-                // Siempre lee en alemán nativo para la fijación neuronal del oído
-                const utterance = new SpeechSynthesisUtterance(phrase.de);
-                utterance.lang = 'de-DE';
-                utterance.rate = speedValue;
-                
-                utterance.onend = () => {
-                    completedLoops++;
-                    logRepetitionImpact(); // Guarda repetición en analíticas diarias
-                    activePlaybackTimeout = setTimeout(runCycle, pauseSeconds * 1000);
+                const utter = new SpeechSynthesisUtterance(phrase.de);
+                utter.lang = 'de-DE';
+                utter.rate = speed;
+                utter.onend = () => {
+                    completed++;
+                    logRepetitionImpact();
+                    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
                 };
-
-                window.speechSynthesis.speak(utterance);
+                window.speechSynthesis.speak(utter);
             }
-
             runCycle();
         }
 
         function revealTargetStructure() {
-            document.getElementById('train-target-container').style.opacity = 1;
+            document.getElementById('train-target-container').style.opacity = '1';
             document.getElementById('btn-reveal').classList.add('hidden');
-            
+            document.getElementById('btn-voice-input').classList.add('hidden');
+            document.getElementById('btn-typing-input').classList.add('hidden');
             const flowType = document.getElementById('cfg-flow-type').value;
             if (flowType === 'manual') {
                 document.getElementById('evaluation-panel').classList.remove('hidden');
@@ -906,60 +1134,44 @@
             }
         }
 
-        // ==========================================
-        // ALGORITMO SUPER PREMIUM DE ROTACIÓN INTER-ISLAS
-        // ==========================================
         function handleIslandTransitionOrLoop() {
             stopAudioAndTimers();
-            // Validar si estamos en islas virtuales
-            if (currentActiveIslandId.startsWith('virtual_')) {
-                alert("🏁 Fin de la Cola Virtual. Reiniciando bucle continuo.");
+            if (currentActiveIslandId.startsWith('virtual_') || currentActiveIslandId.startsWith('conv_virtual_')) {
                 currentTrainIndex = 0;
                 setupTrainingSlideStructure();
                 return;
             }
-
-            // Localizar índice de la isla física actual
-            const currentIslandIndex = appData.islands.findIndex(isl => isl.id === currentActiveIslandId);
-            
-            if (currentIslandIndex !== -1 && currentIslandIndex + 1 < appData.islands.length) {
-                // Existe otra isla física, saltamos a ella automáticamente
-                const nextIsland = appData.islands[currentIslandIndex + 1];
-                currentActiveIslandId = nextIsland.id;
-                trainingQueue = [...nextIsland.phrases];
+            const idx = appData.islands.findIndex(isl => isl.id === currentActiveIslandId);
+            if (idx !== -1 && idx + 1 < appData.islands.length) {
+                const next = appData.islands[idx + 1];
+                currentActiveIslandId = next.id;
+                trainingQueue = [...next.phrases];
                 currentTrainIndex = 0;
-                
                 if (trainingQueue.length === 0) {
-                    // Si la siguiente isla está vacía, reevalúa el salto
                     handleIslandTransitionOrLoop();
                     return;
                 }
-
                 document.getElementById('train-total-index').innerText = trainingQueue.length;
-                document.getElementById('detail-island-title').innerText = nextIsland.name;
-                alert(`🚗 Transición Automática Manos Libres: Saltando a Isla "${nextIsland.name}"`);
+                document.getElementById('detail-island-title').innerText = next.name;
                 setupTrainingSlideStructure();
             } else {
-                // No hay más islas físicas, volvemos a la primera de la base de datos (Bucle Infinito)
                 if (appData.islands.length > 0) {
-                    const firstIsland = appData.islands[0];
-                    currentActiveIslandId = firstIsland.id;
-                    trainingQueue = [...firstIsland.phrases];
+                    const first = appData.islands[0];
+                    currentActiveIslandId = first.id;
+                    trainingQueue = [...first.phrases];
                     currentTrainIndex = 0;
                     document.getElementById('train-total-index').innerText = trainingQueue.length;
-                    document.getElementById('detail-island-title').innerText = firstIsland.name;
-                    alert(`🔄 Bucle de Base de Datos: Volviendo a la primera isla "${firstIsland.name}"`);
+                    document.getElementById('detail-island-title').innerText = first.name;
                     setupTrainingSlideStructure();
                 } else {
-                    alert("Fin de la práctica.");
                     exitTrainingSession();
                 }
             }
         }
 
+        // ==================== EVALUACIÓN MANUAL Y ESTRELLAS ====================
         function renderDynamicRatingStars(type, score) {
-            const containerId = type === 'grammar' ? 'stars-grammar' : 'stars-fluency';
-            const container = document.getElementById(containerId);
+            const container = document.getElementById(type === 'grammar' ? 'stars-grammar' : 'stars-fluency');
             container.innerHTML = '';
             for (let i = 1; i <= 5; i++) {
                 const star = document.createElement('span');
@@ -976,12 +1188,10 @@
         }
 
         function submitPerformanceScores() {
-            if (localGrammarRating === 0 || localFluencyRating === 0) { alert("Asigna puntuación a ambos campos analíticos."); return; }
-            
-            // Guardar puntuaciones en la oración real de la base de datos local
-            const currentPhraseId = trainingQueue[currentTrainIndex].id;
+            if (localGrammarRating === 0 || localFluencyRating === 0) { alert("Asigna puntuación a ambos campos."); return; }
+            const phrase = trainingQueue[currentTrainIndex];
             appData.islands.forEach(isl => {
-                const target = isl.phrases.find(p => p.id === currentPhraseId);
+                const target = isl.phrases.find(p => p.id === phrase.id);
                 if (target) {
                     if (trainingDirection === 'normal') {
                         target.starsGrammarNormal = localGrammarRating;
@@ -990,118 +1200,254 @@
                         target.starsGrammarInverse = localGrammarRating;
                         target.starsFluencyInverse = localFluencyRating;
                     }
-                    
-                    // Auto-Detección Inteligente de Foco Intensivo: si saca 1 o 2 en gramática, va a Foco
-                    if(localGrammarRating <= 2) target.isFocus = true;
+                    if (localGrammarRating <= 2) target.isFocus = true;
+                    // Ajustar SRS
+                    if (localGrammarRating >= 4) {
+                        target.interval = Math.min(target.interval * target.easeFactor, 365);
+                    } else if (localGrammarRating === 3) {
+                        target.interval = Math.max(1, target.interval);
+                    } else {
+                        target.interval = 1;
+                    }
+                    target.easeFactor = Math.max(1.3, target.easeFactor + (0.1 - (5 - localGrammarRating) * (0.08 + (5 - localGrammarRating) * 0.02)));
+                    const d = new Date();
+                    d.setDate(d.getDate() + Math.ceil(target.interval));
+                    target.nextReviewDate = d.toISOString().split('T')[0];
                 }
             });
-
             saveDatabaseToLocalStorage();
             advanceNextAutomaticIteration();
         }
 
-        // ==========================================
-        // SISTEMA DE ESTADÍSTICAS AVANZADAS (CSS GRAPHS)
-        // ==========================================
+        // ==================== ENTRADA DE VOZ Y ESCRITURA ====================
+        function initSpeechRecognition() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+                return false;
+            }
+            recognition = new SR();
+            recognition.lang = 'de-DE';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.continuous = false;
+            return true;
+        }
+
+        function startVoiceRecognition(callback) {
+            if (!recognition && !initSpeechRecognition()) return;
+            if (isRecognizing) return;
+            isRecognizing = true;
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript.trim();
+                isRecognizing = false;
+                callback(transcript);
+            };
+            recognition.onerror = function(event) {
+                isRecognizing = false;
+                callback(null, event.error);
+            };
+            recognition.start();
+        }
+
+        function levenshtein(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    matrix[i][j] = b.charAt(i-1) === a.charAt(j-1) 
+                        ? matrix[i-1][j-1] 
+                        : Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        function computePronunciationScore(spoken, target) {
+            const norm = str => str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s{2,}/g, ' ').trim();
+            const s1 = norm(spoken);
+            const s2 = norm(target);
+            if (!s1 || !s2) return 0;
+            const dist = levenshtein(s1, s2);
+            const maxLen = Math.max(s1.length, s2.length);
+            return Math.round((1 - dist / maxLen) * 100);
+        }
+
+        function startVoiceInput() {
+            if (trainingDirection !== 'normal') return;
+            const target = trainingQueue[currentTrainIndex].de;
+            document.getElementById('btn-voice-input').disabled = true;
+            document.getElementById('voice-feedback').classList.add('hidden');
+            startVoiceRecognition((transcript, error) => {
+                document.getElementById('btn-voice-input').disabled = false;
+                if (error) {
+                    alert('Error de micrófono: ' + error);
+                    return;
+                }
+                const score = computePronunciationScore(transcript, target);
+                document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+                document.getElementById('voice-feedback').classList.remove('hidden');
+                localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+                localFluencyRating = 3;
+                renderDynamicRatingStars('grammar', localGrammarRating);
+                renderDynamicRatingStars('fluency', localFluencyRating);
+                revealTargetStructure();
+            });
+        }
+
+        function startTypingInput() {
+            document.getElementById('typing-input-area').classList.remove('hidden');
+            document.getElementById('typing-answer').value = '';
+            document.getElementById('typing-feedback').classList.add('hidden');
+            document.getElementById('typing-answer').focus();
+        }
+
+        function submitTypingAnswer() {
+            const userAnswer = document.getElementById('typing-answer').value.trim();
+            if (!userAnswer) return;
+            const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+            const score = computePronunciationScore(userAnswer, target);
+            document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
+            document.getElementById('typing-feedback').classList.remove('hidden');
+            document.getElementById('typing-input-area').classList.add('hidden');
+            localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+            localFluencyRating = 4;
+            renderDynamicRatingStars('grammar', localGrammarRating);
+            renderDynamicRatingStars('fluency', localFluencyRating);
+            revealTargetStructure();
+        }
+
+        // ==================== ATAJOS DE TECLADO ====================
+        function handleKeyboardShortcuts(e) {
+            const trainingView = document.getElementById('view-training');
+            if (!trainingView.classList.contains('active')) return;
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    executePlaybackChain();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    navigateTrainingQueue(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    navigateTrainingQueue(1);
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    revealTargetStructure();
+                    break;
+                case '1': case '2': case '3': case '4': case '5':
+                    e.preventDefault();
+                    const score = parseInt(e.key);
+                    registerLocalScoreScore('grammar', score);
+                    registerLocalScoreScore('fluency', score);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (document.getElementById('evaluation-panel').classList.contains('hidden')) {
+                        submitTypingAnswer();
+                    } else {
+                        submitPerformanceScores();
+                    }
+                    break;
+                default: break;
+            }
+        }
+
+        // ==================== ESTADÍSTICAS ====================
         function renderAdvancedStatistics() {
             document.getElementById('stat-streak').innerText = `${appData.stats.streak || 0} Días`;
-            
-            let grandTotalReps = 0;
-            Object.values(appData.stats.dailyRepetitions).forEach(v => grandTotalReps += v);
-            document.getElementById('stat-total-reps').innerText = grandTotalReps;
+            let totalReps = 0;
+            Object.values(appData.stats.dailyRepetitions).forEach(v => totalReps += v);
+            document.getElementById('stat-total-reps').innerText = totalReps;
 
-            let grandTotalSeconds = 0;
-            Object.values(appData.stats.dailyTime).forEach(v => grandTotalSeconds += v);
-            
-            let minutes = Math.floor(grandTotalSeconds / 60);
-            let seconds = grandTotalSeconds % 60;
-            document.getElementById('stat-total-time').innerText = `${minutes}m ${seconds}s`;
+            let totalSecs = 0;
+            Object.values(appData.stats.dailyTime).forEach(v => totalSecs += v);
+            const hrs = Math.floor(totalSecs / 3600);
+            const mins = Math.floor((totalSecs % 3600) / 60);
+            const secs = totalSecs % 60;
+            document.getElementById('stat-total-time').innerText = `${hrs}h ${mins}m ${secs}s`;
 
-            // Generación de Gráfico Semanal Nativo
             const graphContainer = document.getElementById('stats-days-graph');
             graphContainer.innerHTML = '';
-
-            // Generar métricas de los últimos 7 días reales cronológicos
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                let month = '' + (d.getMonth() + 1);
-                let day = '' + d.getDate();
-                let year = d.getFullYear();
-                if (month.length < 2) month = '0' + month;
-                if (day.length < 2) day = '0' + day;
-                const dateKey = [year, month, day].join('-');
-
+                const dateKey = getTodayDateStringOffset(i);
                 const dailyReps = appData.stats.dailyRepetitions[dateKey] || 0;
                 const dailySecs = appData.stats.dailyTime[dateKey] || 0;
                 const dailyMin = Math.floor(dailySecs / 60);
                 const dailySec = dailySecs % 60;
-
-                const row = document.createElement('div');
-                row.className = "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800";
-                
-                // Formatear etiquetas de días legibles
                 const options = { weekday: 'long', day: 'numeric', month: 'short' };
                 const labelDia = d.toLocaleDateString('es-ES', options);
-
-                // Cálculo proporcional para la barra visual (Max 200 repeticiones como 100%)
-                const percentageBar = Math.min(100, Math.max(5, (dailyReps / 200) * 100));
-
+                const barPercent = Math.min(100, Math.max(5, (dailyReps / 100) * 100));
+                const row = document.createElement('div');
+                row.className = "flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800";
                 row.innerHTML = `
                     <span class="w-36 font-bold text-slate-400 capitalize shrink-0">${labelDia}</span>
                     <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
-                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full transition-all duration-500" style="width: ${percentageBar}%"></div>
+                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-full rounded-full" style="width:${barPercent}%"></div>
                     </div>
-                    <div class="flex gap-2 shrink-0 font-mono text-[11px] text-slate-300">
-                        <span class="bg-emerald-950/60 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-bold">${dailyReps} reps</span>
-                        <span class="bg-blue-950/60 text-blue-400 px-2 py-0.5 rounded border border-blue-900/60 font-bold">${dailyMin}m ${dailySec}s</span>
+                    <div class="flex gap-2 shrink-0 font-mono text-[11px]">
+                        <span class="bg-emerald-950/60 text-emerald-400 px-2 py-0.5 rounded">${dailyReps} reps</span>
+                        <span class="bg-blue-950/60 text-blue-400 px-2 py-0.5 rounded">${dailyMin}m ${dailySec}s</span>
                     </div>
                 `;
                 graphContainer.appendChild(row);
             }
         }
 
-        // ==========================================
-        // CRIPTOGRAFÍA Y RESPALDOS DIRECTOS PARA DRIVE
-        // ==========================================
+        function getTodayDateStringOffset(daysAgo) {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            let year = d.getFullYear();
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+            return [year, month, day].join('-');
+        }
+
+        // ==================== SINCRONIZACIÓN ====================
         function exportDatabaseFile() {
-            trackNetPracticeTime(); // Asegura guardar tiempos antes de empaquetar
+            trackNetPracticeTime();
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "Muller_Satzinseln_MasterBackup.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
+            const anchor = document.createElement('a');
+            anchor.href = dataStr;
+            anchor.download = "Muller_Satzinseln_ProX_Backup.json";
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
         }
 
         function copyJsonToClipboard() {
             trackNetPracticeTime();
             navigator.clipboard.writeText(JSON.stringify(appData)).then(() => {
-                alert("📋 ¡Copia Maestra copiada en tu portapapeles con éxito! Pégala en un bloc de notas de Google Drive para sincronizar rápidamente.");
-            }).catch(err => {
-                alert("Error al acceder al portapapeles del dispositivo.");
+                alert("📋 Copia maestra en portapapeles.");
             });
         }
 
         function importDatabaseFile() {
             const fileField = document.getElementById('import-file-field');
-            if (fileField.files.length === 0) { alert("Selecciona un archivo .json válido previamente descargado de tu Google Drive."); return; }
-            
+            if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const parsedData = JSON.parse(e.target.result);
-                    if (parsedData && (Array.isArray(parsedData.islands) || parsedData.stats)) {
-                        appData = parsedData;
+                    const data = JSON.parse(e.target.result);
+                    if (data && data.islands) {
+                        appData = data;
                         saveDatabaseToLocalStorage();
-                        alert("✅ Inyección de Base de Datos Exitosa. Todos tus minutos, rachas e islas se han sincronizado.");
+                        loadSettings();
+                        alert("✅ Base de datos inyectada con éxito.");
                         switchView('islands');
                     } else {
-                        alert("Estructura JSON corrupta o inválida.");
+                        alert("JSON inválido.");
                     }
                 } catch(err) {
-                    alert("Error crítico en la lectura del archivo JSON.");
+                    alert("Error al leer el archivo.");
                 }
             };
             reader.readAsText(fileField.files[0]);
