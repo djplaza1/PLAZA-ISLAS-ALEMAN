@@ -1570,19 +1570,21 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
 }
 
 function startVoiceInput() {
-    const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
-    const lang = trainingDirection === 'normal' ? 'de-DE' : 'es-ES';
+    const isNormal = (trainingDirection === 'normal');
+    // 🟢 FORZAMOS ESTRICTAMENTE EL CÓDIGO DE IDIOMA Y LA ETIQUETA VISUAL
+    const target = isNormal ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+    const langCode = isNormal ? 'de-DE' : 'es-ES';
+    const langLabel = isNormal ? 'Alemán 🇩🇪' : 'Español 🇪🇸';
 
     const btn = document.getElementById('btn-voice-input');
     btn.disabled = true;
 
     document.getElementById('voice-feedback').classList.remove('hidden');
-    // 🟢 UI MEJORADA CON BOTÓN DE DETENER MANUAL
     document.getElementById('voice-feedback').innerHTML = `
         <div class="flex items-center justify-between w-full">
             <div class="flex items-center gap-3 truncate">
                 <i class="fa-solid fa-microphone text-rose-400 animate-pulse shrink-0"></i>
-                <span id="live-speech-text" class="text-slate-300 truncate">🎤 Escuchando...</span>
+                <span id="live-speech-text" class="text-slate-300 truncate font-bold">🎤 Escuchando en ${langLabel}...</span>
             </div>
             <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-700 transition shrink-0 ml-2">Detener</button>
         </div>
@@ -1595,14 +1597,14 @@ function startVoiceInput() {
             return;
         }
         const score = computeScore(transcript, target);
-        document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+        document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste (${langLabel}): "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
         
         localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
         localFluencyRating = 3;
         renderDynamicStars('grammar', localGrammarRating);
         renderDynamicStars('fluency', localFluencyRating);
         revealTargetStructure();
-    }, lang);
+    }, langCode); // <-- Aquí le pasamos la orden estricta 'de-DE'
 }
 
 function cancelVoiceRecognition() {
