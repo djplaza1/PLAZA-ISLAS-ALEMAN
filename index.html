@@ -1484,27 +1484,26 @@ function initSpeechRecognition(lang = 'de-DE') {
 }
 
 function startVoiceRecognition(callback, lang = 'de-DE') {
-    if (voiceCancelFn) {
-        voiceCancelFn();
-        voiceCancelFn = null;
-    }
+    if (voiceCancelFn) voiceCancelFn();
     if (voiceTimeout) clearTimeout(voiceTimeout);
 
-    if (!recognition || recognition.lang !== lang) {
-        if (!initSpeechRecognition(lang)) {
-            callback(null, 'not-supported');
-            return;
-        }
-    }
-
-    if (isRecognizing) {
-        callback(null, 'Ya hay una grabación en curso.');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        callback(null, 'Tu navegador no soporta voz.');
         return;
     }
 
-    // 🟢 ELIMINADO getUserMedia(). Dejamos que SpeechRecognition controle el hardware
+    // 🔵 INSTANCIA LIMPIA Y CORTE DE AUDIO PREVIO (Evita colisiones)
+    window.speechSynthesis.cancel(); 
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang;
+    recognition.interimResults = true; // 🟢 VITAL: Fuerza los resultados en vivo
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
     isRecognizing = true;
-    let hasResult = false;
+    let capturedText = '';
+    let hasFiredCallback = false;
 
     voiceCancelFn = () => {
         clearTimeout(voiceTimeout);
@@ -1514,54 +1513,60 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     };
 
     voiceTimeout = setTimeout(() => {
-        if (!hasResult) {
+        if (!hasFiredCallback) {
             voiceCancelFn();
-            callback(null, 'No se detectó voz. Intenta de nuevo.');
+            hasFiredCallback = true;
+            callback(null, 'Tiempo agotado. Intenta de nuevo.');
         }
-    }, 15000);
+    }, 12000);
 
     recognition.onresult = (event) => {
-        hasResult = true;
         clearTimeout(voiceTimeout);
-        recognition.stop();
-        isRecognizing = false;
-        voiceCancelFn = null;
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                capturedText += event.results[i][0].transcript;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+        
+        // 🟢 ACTUALIZACIÓN EN VIVO (Verás lo que dices al instante)
+        const currentText = (capturedText + interim).trim();
+        const textDisplay = document.getElementById('live-speech-text');
+        if (textDisplay && currentText) {
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${currentText}</span>`;
+        }
+    };
 
-        const last = event.results.length - 1;
-        const transcript = event.results[last][0].transcript.trim();
-        callback(transcript);
+    recognition.onend = () => {
+        clearTimeout(voiceTimeout);
+        isRecognizing = false;
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            
+            // 🔵 RESCATE DE DATOS: Si el motor de Chrome muere, leemos el DOM
+            const textDisplay = document.getElementById('live-speech-text');
+            const fallbackText = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').trim() : '';
+            const final = capturedText.trim() || fallbackText;
+            
+            if (final) callback(final);
+            else callback(null, 'No se detectó voz clara. Habla más alto.');
+        }
     };
 
     recognition.onerror = (event) => {
         clearTimeout(voiceTimeout);
         isRecognizing = false;
-        voiceCancelFn = null;
-
-        if (event.error === 'aborted') return;
-        let msg = event.error;
-        if (event.error === 'not-allowed') msg = 'Permiso de micrófono denegado.';
-        else if (event.error === 'no-speech') msg = 'No se detectó voz. Habla más fuerte.';
-        else if (event.error === 'audio-capture') msg = 'No se encontró micrófono.';
-        callback(null, msg);
-    };
-
-    recognition.onend = () => {
-        if (!hasResult && isRecognizing) {
-            clearTimeout(voiceTimeout);
-            isRecognizing = false;
-            voiceCancelFn = null;
-            callback(null, 'No se detectó voz. Intenta de nuevo.');
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            if (event.error === 'aborted') return;
+            callback(null, 'Error de micrófono: ' + event.error);
         }
     };
 
-    try {
-        recognition.start();
-    } catch(e) {
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-        voiceCancelFn = null;
-        callback(null, 'Error al iniciar micrófono.');
-    }
+    try { recognition.start(); } 
+    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar motor.'); } }
 }
 
 function startVoiceInput() {
@@ -1572,10 +1577,14 @@ function startVoiceInput() {
     btn.disabled = true;
 
     document.getElementById('voice-feedback').classList.remove('hidden');
+    // 🟢 UI MEJORADA CON BOTÓN DE DETENER MANUAL
     document.getElementById('voice-feedback').innerHTML = `
-        <div class="flex items-center gap-3">
-            <i class="fa-solid fa-microphone text-rose-400 animate-pulse"></i>
-            <span>🎤 Escuchando... <button onclick="cancelVoiceRecognition()" class="text-xs underline text-slate-400 hover:text-white ml-2">Cancelar</button></span>
+        <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-microphone text-rose-400 animate-pulse shrink-0"></i>
+                <span id="live-speech-text" class="text-slate-300 truncate">🎤 Escuchando...</span>
+            </div>
+            <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-700 transition shrink-0 ml-2">Detener</button>
         </div>
     `;
 
@@ -1585,8 +1594,6 @@ function startVoiceInput() {
             document.getElementById('voice-feedback').innerHTML = `⚠️ ${error}`;
             return;
         }
-        
-        // 🟢 AHORA SÍ EXISTE COMPUTESCORE
         const score = computeScore(transcript, target);
         document.getElementById('voice-feedback').innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
         
