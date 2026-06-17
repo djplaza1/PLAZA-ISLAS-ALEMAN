@@ -185,17 +185,25 @@
                 </div>
                 <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
                     <span class="text-slate-400 font-bold block text-[10px] uppercase">Dativo</span>
-                    <span id="lex-count-dat" class="text-lg font-black text-sky-400">0</span>
+<span id="lex-count-dat" class="text-lg font-black text-sky-400">0</span>
                 </div>
             </div>
+
+            <div id="bulk-move-panel" class="bg-slate-800 p-4 rounded-xl border border-blue-500/50 mb-4 items-center justify-between gap-4 hidden shadow-lg">
+                <span class="text-sm font-bold text-slate-300">Seleccionadas: <span id="selected-count" class="text-blue-400 font-black text-lg">0</span></span>
+                <div class="flex gap-2 w-full max-w-md">
+                    <select id="bulk-parent-select" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-full focus:border-blue-500 outline-none">
+                        </select>
+                    <button onclick="moveSelectedIslands()" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md">Mover Masivo</button>
+                </div>
+            </div>
+
             <div class="relative">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
                 <input type="text" id="global-search-field" oninput="renderIslandsGrid()" placeholder="Buscar en islas (ej: 'mit', '#B2', 'Chef')..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500">
             </div>
-            <div id="islands-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </section>
-
-        <!-- VISTA CONVERSACIONES -->
+            <div id="islands-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
+        </section>        <!-- VISTA CONVERSACIONES -->
         <section id="view-conversations" class="view-section space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-comments text-cyan-400"></i> Conversaciones</h2>
