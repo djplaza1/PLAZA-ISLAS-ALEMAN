@@ -1002,7 +1002,6 @@ function openIslandDetail(islandId) {
     let isGroup = false;
     let item = null;
 
-    // 1. Identificamos si es Virtual (Fav/Foco) o Física (Isla/Grupo)
     if (islandId === 'virtual_fav') title = "⭐ Favoritas";
     else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
     else {
@@ -1012,66 +1011,69 @@ function openIslandDetail(islandId) {
         isGroup = item.type === 'group';
     }
 
-    document.getElementById('detail-island-title').innerText = title;
+    const titleEl = document.getElementById('detail-island-title');
+    if (titleEl) titleEl.innerText = title;
 
-    // 2. Eventos de los botones de entrenamiento
-    document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
-    document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
+    const btnNorm = document.getElementById('btn-start-training-normal');
+    const btnInv = document.getElementById('btn-start-training-inverse');
+    if (btnNorm) btnNorm.onclick = function() { initiateTrainingSession(islandId, 'normal'); };
+    if (btnInv) btnInv.onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
 
-    // 3. Selectores SEGUROS (sin usar clases de Tailwind que rompen JS)
     const trainingButtons = document.querySelectorAll('#btn-start-training-normal, #btn-start-training-inverse');
-    const bulkImportArea = document.getElementById('bulk-phrases')?.parentElement; 
-    const phraseInputs = document.getElementById('phrase-de')?.closest('details');
+    const bulkEl = document.getElementById('bulk-phrases');
+    const phraseEl = document.getElementById('phrase-de');
 
-    // 4. Lógica de mostrar/ocultar interfaz
     if (isGroup) {
-        // Si es GRUPO: Ocultamos herramientas de oraciones
         trainingButtons.forEach(b => b.style.display = 'none');
-        if(bulkImportArea) bulkImportArea.style.display = 'none';
-        if(phraseInputs) phraseInputs.style.display = 'none';
+        if (bulkEl) bulkEl.parentElement.style.display = 'none';
+        if (phraseEl) phraseEl.closest('details').style.display = 'none';
         
-        // Renderizamos las islas hijas
-        renderChildIslands(islandId);
+        if (typeof renderChildIslands === 'function') renderChildIslands(islandId);
     } else {
-        // Si es ISLA: Mostramos herramientas
         trainingButtons.forEach(b => b.style.display = 'flex');
-        if(bulkImportArea) bulkImportArea.style.display = 'block';
-        if(phraseInputs) phraseInputs.style.display = 'block';
+        if (bulkEl) bulkEl.parentElement.style.display = 'block';
+        if (phraseEl) phraseEl.closest('details').style.display = 'block';
         
-        renderPhrasesList();
+        if (typeof renderPhrasesList === 'function') renderPhrasesList();
     }
 
-    // 5. Inyectar selector de Mover a Grupo (Solo para islas físicas)
     const oldContainer = document.getElementById('move-island-container');
     if (oldContainer) oldContainer.remove();
 
     if (islandId !== 'virtual_fav' && islandId !== 'virtual_foco' && item) {
-        const container = document.createElement('div');
-        container.id = 'move-island-container';
-        container.className = "mt-4 p-4 bg-slate-900 rounded-xl border border-slate-700";
-        
-        const groupOptions = appData.islands
-            .filter(i => i.type === 'group' && i.id !== islandId)
-            .map(g => `<option value="${g.id}" ${item.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
-            .join('');
+        try {
+            const container = document.createElement('div');
+            container.id = 'move-island-container';
+            container.className = "mt-4 p-4 bg-slate-900 rounded-xl border border-slate-700";
+            
+            const groupOptions = appData.islands
+                .filter(i => i.type === 'group' && i.id !== islandId)
+                .map(g => `<option value="${g.id}" ${item.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
+                .join('');
 
-        container.innerHTML = `
-            <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
-            <select id="move-parent-select" 
-                    onclick="event.stopPropagation()" 
-                    onchange="changeParent('${islandId}', event)" 
-                    class="bg-slate-800 text-white p-2 rounded-lg w-full">
-                <option value="root" ${!item.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
-                ${groupOptions}
-            </select>
-        `;
-        
-        document.querySelector('#view-island-detail .bg-slate-800').appendChild(container);
+            container.innerHTML = `
+                <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
+                <select id="move-parent-select" 
+                        onclick="event.stopPropagation()" 
+                        onchange="if(typeof changeParent === 'function') changeParent('${islandId}', event)" 
+                        class="bg-slate-800 text-white p-2 rounded-lg w-full">
+                    <option value="root" ${!item.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
+                    ${groupOptions}
+                </select>
+            `;
+            
+            // Buscamos el contenedor seguro para inyectar
+            const targetArea = document.getElementById('detail-island-title')?.closest('.bg-slate-800');
+            if (targetArea) targetArea.appendChild(container);
+            
+        } catch(e) {
+            console.error("Error seguro ignorado al inyectar selector de grupos.", e);
+        }
     }
 
+    // SIEMPRE ejecutará esto gracias al blindaje
     switchView('island-detail');
 }
-
 function getPhrasesArray(islandId) {
     if (islandId === 'virtual_fav') {
         let list = [];
