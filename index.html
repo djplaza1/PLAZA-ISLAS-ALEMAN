@@ -1020,56 +1020,35 @@ function renderIslandsGrid() {
 // ==================== DETALLE DE ISLA ====================
 function openIslandDetail(islandId) {
     currentActiveIslandId = islandId;
-    let title = "";
-    if (islandId === 'virtual_fav') title = "⭐ Favoritas";
-    else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
-    else {
-        const island = appData.islands.find(isl => isl.id === islandId);
-        if (!island) return;
-        title = island.name;
+    const item = appData.islands.find(i => i.id === islandId);
+    if (!item) return;
+
+    document.getElementById('detail-island-title').innerText = item.name;
+    
+    // Identificar si es Grupo o Isla
+    const isGroup = item.type === 'group';
+
+    // Ocultar/Mostrar elementos según sea Grupo o Isla
+    const trainingButtons = document.querySelectorAll('#btn-start-training-normal, #btn-start-training-inverse');
+    const bulkImportArea = document.querySelector('.bg-slate-900/60.border.border-slate-700'); // Área de importación
+    const phraseInputs = document.querySelector('details.bg-slate-900/40'); // Área de insertar frase
+
+    if (isGroup) {
+        // Si es GRUPO: Ocultamos herramientas de oraciones
+        trainingButtons.forEach(b => b.style.display = 'none');
+        if(bulkImportArea) bulkImportArea.style.display = 'none';
+        if(phraseInputs) phraseInputs.style.display = 'none';
+        
+        // Renderizamos las islas hijas
+        renderChildIslands(islandId);
+    } else {
+        // Si es ISLA: Mostramos herramientas
+        trainingButtons.forEach(b => b.style.display = 'flex');
+        if(bulkImportArea) bulkImportArea.style.display = 'block';
+        if(phraseInputs) phraseInputs.style.display = 'block';
+        
+        renderPhrasesList();
     }
-    document.getElementById('detail-island-title').innerText = title;
-    renderPhrasesList();
-
-    document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
-    document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
-
-    // --- INTEGRACIÓN: Selector de Mover a Grupo ---
-    // 1. Limpiamos cualquier selector anterior para evitar duplicados
-    const oldContainer = document.getElementById('move-island-container');
-    if (oldContainer) oldContainer.remove();
-
-    // 2. Solo mostramos el selector si es una isla real (no virtual)
-    if (islandId !== 'virtual_fav' && islandId !== 'virtual_foco') {
-        const container = document.createElement('div');
-        container.id = 'move-island-container';
-        container.className = "mt-4 p-4 bg-slate-900 rounded-xl border border-slate-700";
-        
-        const currentIsland = appData.islands.find(i => i.id === islandId);
-        
-        // Generamos las opciones filtrando grupos y marcando el padre actual
-        const groupOptions = appData.islands
-            .filter(i => i.type === 'group' && i.id !== islandId)
-            .map(g => `<option value="${g.id}" ${currentIsland.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
-            .join('');
-
-     // Cambia solo la línea del select dentro de openIslandDetail:
-
-container.innerHTML = `
-    <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
-    <select id="move-parent-select" 
-            onclick="event.stopPropagation()" 
-            onchange="changeParent('${islandId}')" 
-            class="bg-slate-800 text-white p-2 rounded-lg w-full">
-        <option value="root" ${!currentIsland.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
-        ${groupOptions}
-    </select>
-`;
-        
-        // Lo inyectamos dentro del contenedor principal de la vista de detalle
-        document.querySelector('#view-island-detail .bg-slate-800').appendChild(container);
-    }
-    // --- FIN INTEGRACIÓN ---
 
     switchView('island-detail');
 }
@@ -1907,6 +1886,29 @@ function createGroup() {
     saveDatabaseToLocalStorage();
     renderIslandsGrid();
 }
+
+function renderChildIslands(groupId) {
+    const container = document.getElementById('phrases-container');
+    container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>';
+    
+    const children = appData.islands.filter(i => i.parentId === groupId);
+    
+    if (children.length === 0) {
+        container.innerHTML += '<p class="text-slate-500 text-sm">Este grupo está vacío.</p>';
+        return;
+    }
+
+    children.forEach(child => {
+        const div = document.createElement('div');
+        div.className = "py-3 border-b border-slate-700 flex justify-between items-center";
+        div.innerHTML = `
+            <span class="font-bold text-emerald-400">${child.name}</span>
+            <button onclick="openIslandDetail('${child.id}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs">Abrir</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
  </script>
 </body>
 </html>
