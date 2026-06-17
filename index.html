@@ -1542,7 +1542,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     recognition.continuous = false;
 
     isRecognizing = true;
-    let finalTranscript = ''; // Guardaremos el resultado final aquí
+    let finalTranscript = '';
     let hasFiredCallback = false;
 
     voiceCancelFn = () => {
@@ -1560,25 +1560,27 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     }, 12000);
 
-    // 🟢 LÓGICA DE RECONSTRUCCIÓN TOTAL (Adiós a las palabras pegadas)
+    // 🟢 LÓGICA DE RECONSTRUCCIÓN FORENSE
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        let currentFullString = '';
+        let rawAccumulator = '';
         
-        // Barrido total: reconstruimos la frase desde cero con cada nuevo dato
+        // Iteramos sobre todos los resultados obtenidos hasta ahora
         for (let i = 0; i < event.results.length; ++i) {
-            currentFullString += event.results[i][0].transcript + ' ';
+            rawAccumulator += event.results[i][0].transcript + ' ';
         }
         
-        // Limpiamos espacios dobles y espacios en blanco al inicio/final
-        const displayStr = currentFullString.replace(/\s+/g, ' ').trim();
+        // 🟢 NORMALIZACIÓN RIGUROSA: 
+        // 1. Reemplazamos cualquier cosa que no sea espacio por un espacio simple.
+        // 2. Eliminamos espacios dobles.
+        // 3. Quitamos espacios iniciales y finales.
+        const cleanDisplay = rawAccumulator.replace(/\s+/g, ' ').trim();
         
-        // Guardamos para el callback final
-        finalTranscript = displayStr;
+        finalTranscript = cleanDisplay;
         
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay) {
-            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${displayStr}</span>`;
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${cleanDisplay}</span>`;
         }
     };
 
@@ -1587,8 +1589,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         isRecognizing = false;
         if (!hasFiredCallback) {
             hasFiredCallback = true;
-            
-            // Si el motor termina, enviamos el resultado limpio
+            // Enviamos el transcript final ya normalizado
             if (finalTranscript) callback(finalTranscript);
             else callback(null, 'No se detectó voz clara. Habla más alto.');
         }
@@ -1600,14 +1601,13 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         if (!hasFiredCallback) {
             hasFiredCallback = true;
             if (event.error === 'aborted') return;
-            callback(null, 'Error de micrófono: ' + event.error);
+            callback(null, 'Error: ' + event.error);
         }
     };
 
     try { recognition.start(); } 
-    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar motor.'); } }
+    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
 }
-
 function startVoiceInput() {
     const target = trainingQueue[currentTrainIndex].de;
     const langCode = 'de-DE';
