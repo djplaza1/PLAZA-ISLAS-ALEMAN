@@ -623,10 +623,16 @@
 function createIsland() {
     const name = document.getElementById('new-island-name').value.trim();
     if (!name) return;
-    appData.islands.push({ id: 'island_' + Date.now(), name: name, phrases: [] });
+    appData.islands.push({ 
+        id: 'island_' + Date.now(), 
+        name: name, 
+        phrases: [],
+        type: 'island',  // CRÍTICO AÑADIR ESTO
+        parentId: null   // CRÍTICO AÑADIR ESTO
+    });
     saveDatabaseToLocalStorage();
     document.getElementById('new-island-name').value = '';
-    renderIslandsGrid();
+    if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
 }
 
 function deleteIsland(id, event) {
