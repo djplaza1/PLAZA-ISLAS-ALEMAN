@@ -1942,6 +1942,58 @@ function renderChildIslands(groupId) {
         container.appendChild(div);
     });
 }
+
+// --- FUNCIONES DE MOVIMIENTO MASIVO ---
+function toggleBulkPanel() {
+    const checkboxes = document.querySelectorAll('.island-checkbox:checked');
+    const panel = document.getElementById('bulk-move-panel');
+    const countSpan = document.getElementById('selected-count');
+    
+    if (checkboxes.length > 0) {
+        countSpan.innerText = checkboxes.length;
+        panel.classList.remove('hidden');
+        panel.classList.add('flex'); // Muestra el panel
+        
+        // Rellenar el selector con los grupos actuales
+        const select = document.getElementById('bulk-parent-select');
+        const groups = appData.islands.filter(i => i.type === 'group');
+        select.innerHTML = '<option value="root">Ninguno (Raíz)</option>' + 
+            groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    } else {
+        panel.classList.add('hidden');
+        panel.classList.remove('flex'); // Oculta el panel
+    }
+}
+
+function moveSelectedIslands() {
+    const checkboxes = document.querySelectorAll('.island-checkbox:checked');
+    const targetGroupId = document.getElementById('bulk-parent-select').value;
+    const newParentId = targetGroupId === "root" ? null : targetGroupId;
+    
+    let movedCount = 0;
+    
+    // Cambiar de padre a todas las islas seleccionadas
+    checkboxes.forEach(cb => {
+        const island = appData.islands.find(i => i.id === cb.value);
+        if (island) {
+            island.parentId = newParentId;
+            movedCount++;
+        }
+    });
+    
+    if (movedCount > 0) {
+        saveDatabaseToLocalStorage();
+        alert(`${movedCount} islas movidas correctamente.`);
+        
+        // Ocultar el panel de nuevo
+        const panel = document.getElementById('bulk-move-panel');
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+        
+        // Refrescar la vista
+        renderIslandsGrid();
+    }
+}
  </script>
 </body>
 </html>
