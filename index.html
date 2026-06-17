@@ -1053,13 +1053,15 @@ function openIslandDetail(islandId) {
             .map(g => `<option value="${g.id}" ${currentIsland.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
             .join('');
 
-        container.innerHTML = `
-            <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
-            <select id="move-parent-select" onchange="changeParent('${islandId}')" class="bg-slate-800 text-white p-2 rounded-lg w-full">
-                <option value="root" ${!currentIsland.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
-                ${groupOptions}
-            </select>
-        `;
+     // Cambia solo la línea del select dentro de openIslandDetail:
+
+container.innerHTML = `
+    <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
+    <select id="move-parent-select" onchange="changeParent('${islandId}', event)" class="bg-slate-800 text-white p-2 rounded-lg w-full">
+        <option value="root" ${!currentIsland.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
+        ${groupOptions}
+    </select>
+`;
         
         // Lo inyectamos dentro del contenedor principal de la vista de detalle
         document.querySelector('#view-island-detail .bg-slate-800').appendChild(container);
@@ -1873,7 +1875,8 @@ function createGroup() {
     renderIslandsGrid();
 }
  
-function changeParent(islandId) {
+function changeParent(islandId, event) {
+    if (event) event.stopPropagation();
     const select = document.getElementById('move-parent-select');
     const newParentId = select.value === "root" ? null : select.value;
     const island = appData.islands.find(i => i.id === islandId);
