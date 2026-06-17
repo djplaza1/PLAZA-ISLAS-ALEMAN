@@ -429,6 +429,7 @@
         let sessionTimerInterval = null;
         let sessionStartTime = null;
         let sessionActive = false;
+        let autoSaveCounter = 0;
         let hideGermanList = false;
         let hideSpanishList = false;
         let recognition = null;
@@ -568,18 +569,26 @@
             sessionStartTime = null;
             updatePracticeTimerDisplay();
         }
-        function updatePracticeTimerDisplay() {
-            const display = document.getElementById('practice-timer-live');
-            if (!display) return;
-            if (sessionActive && sessionStartTime) {
-                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-                const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
-                const secs = (elapsed % 60).toString().padStart(2,'0');
-                display.textContent = `${mins}:${secs}`;
-            } else {
-                display.textContent = '00:00';
-            }
+function updatePracticeTimerDisplay() {
+    const display = document.getElementById('practice-timer-live');
+    if (!display) return;
+    
+    if (sessionActive && sessionStartTime) {
+        const elapsedTotal = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const mins = Math.floor(elapsedTotal / 60).toString().padStart(2,'0');
+        const secs = (elapsedTotal % 60).toString().padStart(2,'0');
+        display.textContent = `${mins}:${secs}`;
+
+        // Guardado automático cada 30 segundos
+        autoSaveCounter++;
+        if (autoSaveCounter >= 30) {
+            trackNetPracticeTime();
+            autoSaveCounter = 0;
         }
+    } else {
+        display.textContent = '00:00';
+    }
+}
 function trackNetPracticeTime() {
     if (sessionStartTime) {
         const now = Date.now();
@@ -588,8 +597,7 @@ function trackNetPracticeTime() {
             const today = getTodayDateString();
             appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
             saveDatabaseToLocalStorage();
-            // Actualizamos la marca de tiempo para no duplicar los segundos en la siguiente ejecución
-            sessionStartTime = now;
+            sessionStartTime = now; // Reiniciamos el contador para no sumar doble
         }
     }
 }
