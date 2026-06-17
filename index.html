@@ -998,19 +998,32 @@ function renderIslandsGrid() {
 // ==================== DETALLE DE ISLA ====================
 function openIslandDetail(islandId) {
     currentActiveIslandId = islandId;
-    const item = appData.islands.find(i => i.id === islandId);
-    if (!item) return;
+    let title = "";
+    let isGroup = false;
+    let item = null;
 
-    document.getElementById('detail-island-title').innerText = item.name;
-    
-    // Identificar si es Grupo o Isla
-    const isGroup = item.type === 'group';
+    // 1. Identificamos si es Virtual (Fav/Foco) o Física (Isla/Grupo)
+    if (islandId === 'virtual_fav') title = "⭐ Favoritas";
+    else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
+    else {
+        item = appData.islands.find(isl => isl.id === islandId);
+        if (!item) return;
+        title = item.name;
+        isGroup = item.type === 'group';
+    }
 
-    // Ocultar/Mostrar elementos según sea Grupo o Isla
+    document.getElementById('detail-island-title').innerText = title;
+
+    // 2. Eventos de los botones de entrenamiento
+    document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
+    document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
+
+    // 3. Selectores SEGUROS (sin usar clases de Tailwind que rompen JS)
     const trainingButtons = document.querySelectorAll('#btn-start-training-normal, #btn-start-training-inverse');
-    const bulkImportArea = document.querySelector('.bg-slate-900/60.border.border-slate-700'); // Área de importación
-    const phraseInputs = document.querySelector('details.bg-slate-900/40'); // Área de insertar frase
+    const bulkImportArea = document.getElementById('bulk-phrases')?.parentElement; 
+    const phraseInputs = document.getElementById('phrase-de')?.closest('details');
 
+    // 4. Lógica de mostrar/ocultar interfaz
     if (isGroup) {
         // Si es GRUPO: Ocultamos herramientas de oraciones
         trainingButtons.forEach(b => b.style.display = 'none');
@@ -1028,176 +1041,211 @@ function openIslandDetail(islandId) {
         renderPhrasesList();
     }
 
+    // 5. Inyectar selector de Mover a Grupo (Solo para islas físicas)
+    const oldContainer = document.getElementById('move-island-container');
+    if (oldContainer) oldContainer.remove();
+
+    if (islandId !== 'virtual_fav' && islandId !== 'virtual_foco' && item) {
+        const container = document.createElement('div');
+        container.id = 'move-island-container';
+        container.className = "mt-4 p-4 bg-slate-900 rounded-xl border border-slate-700";
+        
+        const groupOptions = appData.islands
+            .filter(i => i.type === 'group' && i.id !== islandId)
+            .map(g => `<option value="${g.id}" ${item.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
+            .join('');
+
+        container.innerHTML = `
+            <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
+            <select id="move-parent-select" 
+                    onclick="event.stopPropagation()" 
+                    onchange="changeParent('${islandId}', event)" 
+                    class="bg-slate-800 text-white p-2 rounded-lg w-full">
+                <option value="root" ${!item.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
+                ${groupOptions}
+            </select>
+        `;
+        
+        document.querySelector('#view-island-detail .bg-slate-800').appendChild(container);
+    }
+
     switchView('island-detail');
 }
-        function getPhrasesArray(islandId) {
-            if (islandId === 'virtual_fav') {
-                let list = [];
-                appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFavorite) list.push(p); }));
-                return list;
-            } else if (islandId === 'virtual_foco') {
-                let list = [];
-                appData.islands.forEach(isl => isl.phrases.forEach(p => { if(p.isFocus) list.push(p); }));
-                return list;
-            } else {
-                const island = appData.islands.find(isl => isl.id === islandId);
-                return island ? island.phrases : [];
-            }
-        }
 
-        function toggleVisibilityMatrix(type) {
-            if(type === 'de') hideGermanList = !hideGermanList;
-            if(type === 'es') hideSpanishList = !hideSpanishList;
-            renderPhrasesList();
-        }
+function getPhrasesArray(islandId) {
+    if (islandId === 'virtual_fav') {
+        let list = [];
+        // Comprobamos isl.phrases para que no de error en los grupos
+        appData.islands.forEach(isl => { if(isl.phrases) isl.phrases.forEach(p => { if(p.isFavorite) list.push(p); }) });
+        return list;
+    } else if (islandId === 'virtual_foco') {
+        let list = [];
+        appData.islands.forEach(isl => { if(isl.phrases) isl.phrases.forEach(p => { if(p.isFocus) list.push(p); }) });
+        return list;
+    } else {
+        const island = appData.islands.find(isl => isl.id === islandId);
+        return (island && island.phrases) ? island.phrases : [];
+    }
+}
 
-        function addSinglePhrase() {
-            const deText = document.getElementById('phrase-de').value.trim();
-            const esText = document.getElementById('phrase-es').value.trim();
-            const tagsText = document.getElementById('phrase-tags').value.trim();
-            if (!deText || !esText) return;
+function toggleVisibilityMatrix(type) {
+    if(type === 'de') hideGermanList = !hideGermanList;
+    if(type === 'es') hideSpanishList = !hideSpanishList;
+    renderPhrasesList();
+}
 
-            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) { alert("No puedes insertar oraciones directamente en una isla virtual."); return; }
+function addSinglePhrase() {
+    const deText = document.getElementById('phrase-de').value.trim();
+    const esText = document.getElementById('phrase-es').value.trim();
+    const tagsText = document.getElementById('phrase-tags').value.trim();
+    if (!deText || !esText) return;
 
-            island.phrases.push({
-                id: 'phrase_' + Date.now(),
-                de: deText,
-                es: esText,
-                tags: tagsText,
-                starsGrammarNormal: 0, starsFluencyNormal: 0,
-                starsGrammarInverse: 0, starsFluencyInverse: 0,
-                isFavorite: false, isFocus: false,
-                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
-            });
+    const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+    if (!island) { alert("No puedes insertar oraciones directamente en una isla virtual."); return; }
 
-            saveDatabaseToLocalStorage();
-            document.getElementById('phrase-de').value = '';
-            document.getElementById('phrase-es').value = '';
-            document.getElementById('phrase-tags').value = '';
-            openIslandDetail(currentActiveIslandId);
-        }
+    island.phrases.push({
+        id: 'phrase_' + Date.now(),
+        de: deText,
+        es: esText,
+        tags: tagsText,
+        starsGrammarNormal: 0, starsFluencyNormal: 0,
+        starsGrammarInverse: 0, starsFluencyInverse: 0,
+        isFavorite: false, isFocus: false,
+        interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
+    });
 
-        function addBulkPhrasesBlock() {
-            const bulkText = document.getElementById('bulk-phrases').value.trim();
-            if (!bulkText) return;
+    saveDatabaseToLocalStorage();
+    document.getElementById('phrase-de').value = '';
+    document.getElementById('phrase-es').value = '';
+    document.getElementById('phrase-tags').value = '';
+    openIslandDetail(currentActiveIslandId);
+}
 
-            const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
-            if (!island) { alert("Selecciona una isla física real para realizar la importación en bloque."); return; }
+function addBulkPhrasesBlock() {
+    const bulkText = document.getElementById('bulk-phrases').value.trim();
+    if (!bulkText) return;
 
-            const lines = bulkText.split('\n');
-            let successCount = 0;
+    const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+    if (!island) { alert("Selecciona una isla física real para realizar la importación en bloque."); return; }
 
-            lines.forEach((line, i) => {
-                if (!line.trim()) return;
-                const coreParts = line.split('//');
-                if (coreParts.length === 2) {
-                    let dePart = coreParts[0].trim();
-                    let esRaw = coreParts[1].trim();
-                    
-                    let tags = "";
-                    const tagRegex = /\[([^\]]+)\]/;
-                    const match = esRaw.match(tagRegex);
-                    if (match) {
-                        tags = match[1].trim();
-                        esRaw = esRaw.replace(tagRegex, '').trim();
-                    }
+    const lines = bulkText.split('\n');
+    let successCount = 0;
 
-                    if (dePart && esRaw) {
-                        island.phrases.push({
-                            id: 'phrase_' + Date.now() + '_' + i,
-                            de: dePart,
-                            es: esRaw,
-                            tags: tags,
-                            starsGrammarNormal: 0, starsFluencyNormal: 0,
-                            starsGrammarInverse: 0, starsFluencyInverse: 0,
-                            isFavorite: false, isFocus: false,
-                            interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
-                        });
-                        successCount++;
-                    }
-                }
-            });
-
-            saveDatabaseToLocalStorage();
-            document.getElementById('bulk-phrases').value = '';
-            openIslandDetail(currentActiveIslandId);
-        }
-
-        function deletePhrase(phraseId) {
-            appData.islands.forEach(isl => {
-                isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
-            });
-            saveDatabaseToLocalStorage();
-            openIslandDetail(currentActiveIslandId);
-        }
-
-        function togglePhraseFeature(phraseId, type) {
-            appData.islands.forEach(isl => {
-                const target = isl.phrases.find(p => p.id === phraseId);
-                if (target) {
-                    if (type === 'fav') target.isFavorite = !target.isFavorite;
-                    if (type === 'foco') target.isFocus = !target.isFocus;
-                }
-            });
-            saveDatabaseToLocalStorage();
-            renderPhrasesList();
-        }
-
-        function renderPhrasesList() {
-            const container = document.getElementById('phrases-container');
-            const phrases = getPhrasesArray(currentActiveIslandId);
-            document.getElementById('phrase-count').innerText = phrases.length;
-            container.innerHTML = '';
-
-            if (phrases.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Esta sección no contiene oraciones indexadas en este momento.</div>`;
-                return;
+    lines.forEach((line, i) => {
+        if (!line.trim()) return;
+        const coreParts = line.split('//');
+        if (coreParts.length === 2) {
+            let dePart = coreParts[0].trim();
+            let esRaw = coreParts[1].trim();
+            
+            let tags = "";
+            const tagRegex = /\[([^\]]+)\]/;
+            const match = esRaw.match(tagRegex);
+            if (match) {
+                tags = match[1].trim();
+                esRaw = esRaw.replace(tagRegex, '').trim();
             }
 
-            phrases.forEach((phrase, index) => {
-                const row = document.createElement('div');
-                row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
-                
-                const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
-                const esClass = hideSpanishList ? "hidden-content" : "text-xs text-slate-400 italic";
-                const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
-
-                row.innerHTML = `
-                    <div class="space-y-1 flex-grow">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-                            <p class="${deClass}">${wrapWordsInSpans(phrase.de, 'de')}</p>
-                            ${tagsBadge}
-                        </div>
-                        <p class="${esClass}">"${phrase.es}"</p>
-                    </div>
-                    <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                        <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg transition ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40 border border-amber-900' : 'text-slate-500 hover:text-amber-400'}" title="Marcar Favorita"><i class="fa-solid fa-star"></i></button>
-                        <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg transition ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40 border border-rose-900' : 'text-slate-500 hover:text-rose-400'}" title="Enviar a Foco Intensivo"><i class="fa-solid fa-fire"></i></button>
-                        <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-
-            document.querySelectorAll('.speak-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    fireLocalSpeak(this.getAttribute('data-text'));
+            if (dePart && esRaw) {
+                island.phrases.push({
+                    id: 'phrase_' + Date.now() + '_' + i,
+                    de: dePart,
+                    es: esRaw,
+                    tags: tags,
+                    starsGrammarNormal: 0, starsFluencyNormal: 0,
+                    starsGrammarInverse: 0, starsFluencyInverse: 0,
+                    isFavorite: false, isFocus: false,
+                    interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
                 });
-            });
+                successCount++;
+            }
         }
+    });
 
-        function fireLocalSpeak(deText) {
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(deText);
-            utter.lang = 'de-DE';
-            utter.rate = appData.settings.speed || 0.9;
-            window.speechSynthesis.speak(utter);
+    saveDatabaseToLocalStorage();
+    document.getElementById('bulk-phrases').value = '';
+    openIslandDetail(currentActiveIslandId);
+}
+
+function deletePhrase(phraseId) {
+    appData.islands.forEach(isl => {
+        // Protección para que no busque frases dentro de un Grupo
+        if (isl.phrases) {
+            isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
         }
+    });
+    saveDatabaseToLocalStorage();
+    openIslandDetail(currentActiveIslandId);
+}
 
+function togglePhraseFeature(phraseId, type) {
+    appData.islands.forEach(isl => {
+        // Protección para Grupos
+        if (isl.phrases) {
+            const target = isl.phrases.find(p => p.id === phraseId);
+            if (target) {
+                if (type === 'fav') target.isFavorite = !target.isFavorite;
+                if (type === 'foco') target.isFocus = !target.isFocus;
+            }
+        }
+    });
+    saveDatabaseToLocalStorage();
+    renderPhrasesList();
+}
+
+function renderPhrasesList() {
+    const container = document.getElementById('phrases-container');
+    const phrases = getPhrasesArray(currentActiveIslandId);
+    document.getElementById('phrase-count').innerText = phrases.length;
+    container.innerHTML = '';
+
+    if (phrases.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Esta sección no contiene oraciones indexadas en este momento.</div>`;
+        return;
+    }
+
+    phrases.forEach((phrase, index) => {
+        const row = document.createElement('div');
+        row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
+        
+        const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
+        const esClass = hideSpanishList ? "hidden-content" : "text-xs text-slate-400 italic";
+        const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
+
+        row.innerHTML = `
+            <div class="space-y-1 flex-grow">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
+                    <p class="${deClass}">${wrapWordsInSpans(phrase.de, 'de')}</p>
+                    ${tagsBadge}
+                </div>
+                <p class="${esClass}">"${phrase.es}"</p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
+                <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
+                <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg transition ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40 border border-amber-900' : 'text-slate-500 hover:text-amber-400'}" title="Marcar Favorita"><i class="fa-solid fa-star"></i></button>
+                <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg transition ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40 border border-rose-900' : 'text-slate-500 hover:text-rose-400'}" title="Enviar a Foco Intensivo"><i class="fa-solid fa-fire"></i></button>
+                <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+
+    document.querySelectorAll('.speak-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            fireLocalSpeak(this.getAttribute('data-text'));
+        });
+    });
+}
+
+function fireLocalSpeak(deText) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(deText);
+    utter.lang = 'de-DE';
+    utter.rate = appData.settings.speed || 0.9;
+    window.speechSynthesis.speak(utter);
+}
         // ==================== ENTRENAMIENTO ====================
         function initiateTrainingSession(islandId, direction) {
             saveSettings();
