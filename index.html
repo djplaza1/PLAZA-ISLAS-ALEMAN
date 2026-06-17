@@ -1057,7 +1057,10 @@ function openIslandDetail(islandId) {
 
 container.innerHTML = `
     <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
-    <select id="move-parent-select" onchange="changeParent('${islandId}', event)" class="bg-slate-800 text-white p-2 rounded-lg w-full">
+    <select id="move-parent-select" 
+            onclick="event.stopPropagation()" 
+            onchange="changeParent('${islandId}')" 
+            class="bg-slate-800 text-white p-2 rounded-lg w-full">
         <option value="root" ${!currentIsland.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
         ${groupOptions}
     </select>
@@ -1880,6 +1883,7 @@ function changeParent(islandId, event) {
     const select = document.getElementById('move-parent-select');
     const newParentId = select.value === "root" ? null : select.value;
     const island = appData.islands.find(i => i.id === islandId);
+    
     if (island) {
         island.parentId = newParentId;
         saveDatabaseToLocalStorage();
