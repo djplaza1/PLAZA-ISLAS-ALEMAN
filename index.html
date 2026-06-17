@@ -456,17 +456,22 @@
             document.addEventListener('keydown', handleKeyboardShortcuts);
         };
 
-        function loadAppData() {
-            const saved = localStorage.getItem('muller_c2_db');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    appData = { ...appData, ...parsed };
-                } catch(e) { saveDatabaseToLocalStorage(); }
-            } else { saveDatabaseToLocalStorage(); }
-            if (!appData.vocabulary) appData.vocabulary = [];
-            if (!appData.conversations) appData.conversations = [];
-        }
+       function loadAppData() {
+    const saved = localStorage.getItem('muller_c2_db');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            appData = { ...appData, ...parsed };
+            // Migración: Asegurar que las islas tengan tipo y parent
+            appData.islands.forEach(isl => {
+                if (!isl.type) isl.type = 'island';
+                if (isl.parentId === undefined) isl.parentId = null;
+            });
+        } catch(e) { saveDatabaseToLocalStorage(); }
+    } else { saveDatabaseToLocalStorage(); }
+    if (!appData.vocabulary) appData.vocabulary = [];
+    if (!appData.conversations) appData.conversations = [];
+}
 
         function loadSettings() {
             const saved = localStorage.getItem('muller_c2_settings');
@@ -629,66 +634,54 @@
             renderIslandsGrid();
         }
 
-        function renderIslandsGrid() {
-            const container = document.getElementById('islands-container');
-            const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
-            container.innerHTML = '';
+ function renderIslandsGrid() {
+    const container = document.getElementById('islands-container');
+    const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
+    container.innerHTML = '';
 
-            let lexA = 0, lexB1 = 0, lexB2 = 0, lexVerbs = 0, lexAkk = 0, lexDat = 0;
-            appData.islands.forEach(isl => {
-                isl.phrases.forEach(p => {
-                    const raw = (p.de + " " + (p.tags || "")).toLowerCase();
-                    if (raw.includes('#a1') || raw.includes('#a2')) lexA++;
-                    if (raw.includes('#b1')) lexB1++;
-                    if (raw.includes('#b2')) lexB2++;
-                    if (raw.includes('#verb')) lexVerbs++;
-                    if (raw.includes('#prep-akk')) lexAkk++;
-                    if (raw.includes('#prep-dat')) lexDat++;
-                });
-            });
+    // Lógica de filtrado visual: mostrar solo nivel raíz si no hay búsqueda
+    const visibleIslands = searchQuery ? appData.islands : appData.islands.filter(i => i.parentId === null);
 
-            document.getElementById('lex-count-a').innerText = lexA;
-            document.getElementById('lex-count-b1').innerText = lexB1;
-            document.getElementById('lex-count-b2').innerText = lexB2;
-            document.getElementById('lex-count-verbs').innerText = lexVerbs;
-            document.getElementById('lex-count-akk').innerText = lexAkk;
-            document.getElementById('lex-count-dat').innerText = lexDat;
-
-            const favCount = countVirtualPhrases('fav');
-            const focoCount = countVirtualPhrases('foco');
-            if (favCount > 0 && !searchQuery) container.appendChild(createVirtualCard('virtual_fav', '⭐ Favoritas', favCount, 'amber'));
-            if (focoCount > 0 && !searchQuery) container.appendChild(createVirtualCard('virtual_foco', '🔥 Foco Intensivo', focoCount, 'rose'));
-
-            appData.islands.forEach(island => {
-                let phrasesToShow = island.phrases;
-                if (searchQuery) {
-                    phrasesToShow = island.phrases.filter(p =>
-                        p.de.toLowerCase().includes(searchQuery) ||
-                        p.es.toLowerCase().includes(searchQuery) ||
-                        (p.tags && p.tags.toLowerCase().includes(searchQuery))
-                    );
-                }
-                if (searchQuery && phrasesToShow.length === 0) return;
-
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700/80 rounded-2xl p-5 hover:border-slate-600 transition cursor-pointer shadow-lg hover:shadow-xl";
-                card.onclick = () => openIslandDetail(island.id);
-                card.innerHTML = `
-                    <div class="flex justify-between items-start gap-2 mb-4">
-                        <h3 class="font-bold text-base tracking-tight">${island.name}</h3>
-                        <button onclick="deleteIsland('${island.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                    <div class="flex justify-between items-center mt-2">
-                        <span class="text-xs bg-slate-900 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700 font-bold">${phrasesToShow.length} oraciones</span>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-            if (appData.islands.length === 0) {
-                container.innerHTML = '<div class="col-span-full text-center py-16 text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl font-medium">Crea tu primera isla para comenzar.</div>';
-            }
+    visibleIslands.forEach(item => {
+        // Filtrado por búsqueda global
+        if (searchQuery) {
+            const raw = (item.name + " " + item.phrases.map(p => p.de).join(" ")).toLowerCase();
+            if (!raw.includes(searchQuery)) return;
         }
+
+        const isGroup = item.type === 'group';
+        const card = document.createElement('div');
+        card.className = `bg-slate-800 border ${isGroup ? 'border-amber-600/50' : 'border-slate-700'} rounded-2xl p-5 hover:border-emerald-500 transition cursor-pointer shadow-lg`;
+        
+        card.onclick = () => {
+            if (isGroup) {
+                // Aquí podrías implementar navegación de carpetas, 
+                // por ahora usamos el clic para abrir el detalle como cualquier isla
+                openIslandDetail(item.id); 
+            } else {
+                openIslandDetail(item.id);
+            }
+        };
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start gap-2 mb-4">
+                <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : ''}">
+                    ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-bolt"></i>'} ${item.name}
+                </h3>
+                <div class="flex gap-1">
+                    <button onclick="renameItem('${item.id}', event)" class="text-slate-500 hover:text-blue-400 p-1.5 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
+                    <button onclick="deleteIsland('${item.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs bg-slate-900 ${isGroup ? 'text-amber-400' : 'text-emerald-400'} px-3 py-1 rounded-lg border border-slate-700 font-bold">
+                    ${isGroup ? 'Carpeta' : item.phrases.length + ' oraciones'}
+                </span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
 
         function createVirtualCard(id, name, count, color) {
             const div = document.createElement('div');
@@ -1830,6 +1823,32 @@ function importDatabaseFile() {
     };
     reader.readAsText(fileField.files[0]);
 }
-    </script>
+ // --- NUEVAS FUNCIONES DE GESTIÓN ---
+function renameItem(id) {
+    const item = appData.islands.find(i => i.id === id);
+    if (!item) return;
+    const newName = prompt(`Renombrar ${item.type === 'group' ? 'grupo' : 'isla'}:`, item.name);
+    if (newName) {
+        item.name = newName;
+        saveDatabaseToLocalStorage();
+        renderIslandsGrid();
+    }
+}
+
+function createGroup() {
+    const name = prompt("Nombre del nuevo Grupo (Carpeta):");
+    if (!name) return;
+    appData.islands.push({ 
+        id: 'group_' + Date.now(), 
+        name: name, 
+        phrases: [], 
+        type: 'group', 
+        parentId: null 
+    });
+    saveDatabaseToLocalStorage();
+    renderIslandsGrid();
+}
+ 
+ </script>
 </body>
 </html>
