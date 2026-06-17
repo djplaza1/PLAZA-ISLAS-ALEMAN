@@ -1537,7 +1537,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     window.speechSynthesis.cancel(); 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = true; // Fuerza los resultados en vivo
+    recognition.interimResults = true; 
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
@@ -1562,19 +1562,27 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
 
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let currentFinal = '';
+        let currentInterim = '';
+        
+        // 🟢 RECONSTRUCCIÓN TOTAL: Iteramos siempre desde 0 e inyectamos espacios forzados
+        for (let i = 0; i < event.results.length; ++i) {
+            let chunk = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-                capturedText += event.results[i][0].transcript;
+                currentFinal += chunk + ' ';
             } else {
-                interim += event.results[i][0].transcript;
+                currentInterim += chunk + ' ';
             }
         }
         
-        const currentText = (capturedText + interim).trim();
+        capturedText = currentFinal;
+        
+        // 🟢 LIMPIEZA DE ESPACIOS: Borramos dobles espacios generados por la inyección
+        const displayStr = (currentFinal + currentInterim).replace(/\s+/g, ' ').trim();
+        
         const textDisplay = document.getElementById('live-speech-text');
-        if (textDisplay && currentText) {
-            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${currentText}</span>`;
+        if (textDisplay && displayStr) {
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${displayStr}</span>`;
         }
     };
 
@@ -1585,8 +1593,10 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
             hasFiredCallback = true;
             
             const textDisplay = document.getElementById('live-speech-text');
-            const fallbackText = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').trim() : '';
-            const final = capturedText.trim() || fallbackText;
+            const fallbackText = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').replace(/en Alemán 🇩🇪.../g, '').trim() : '';
+            
+            // 🟢 APLICAMOS LA MISMA LIMPIEZA AL RESULTADO FINAL
+            const final = (capturedText || fallbackText).replace(/\s+/g, ' ').trim();
             
             if (final) callback(final);
             else callback(null, 'No se detectó voz clara. Habla más alto.');
