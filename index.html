@@ -634,16 +634,15 @@
             renderIslandsGrid();
         }
 
- function renderIslandsGrid() {
+// Sustituye tu función renderIslandsGrid actual por esta:
+function renderIslandsGrid() {
     const container = document.getElementById('islands-container');
     const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
     container.innerHTML = '';
 
-    // Lógica de filtrado visual: mostrar solo nivel raíz si no hay búsqueda
     const visibleIslands = searchQuery ? appData.islands : appData.islands.filter(i => i.parentId === null);
 
     visibleIslands.forEach(item => {
-        // Filtrado por búsqueda global
         if (searchQuery) {
             const raw = (item.name + " " + item.phrases.map(p => p.de).join(" ")).toLowerCase();
             if (!raw.includes(searchQuery)) return;
@@ -653,15 +652,7 @@
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${isGroup ? 'border-amber-600/50' : 'border-slate-700'} rounded-2xl p-5 hover:border-emerald-500 transition cursor-pointer shadow-lg`;
         
-        card.onclick = () => {
-            if (isGroup) {
-                // Aquí podrías implementar navegación de carpetas, 
-                // por ahora usamos el clic para abrir el detalle como cualquier isla
-                openIslandDetail(item.id); 
-            } else {
-                openIslandDetail(item.id);
-            }
-        };
+        card.onclick = () => openIslandDetail(item.id);
 
         card.innerHTML = `
             <div class="flex justify-between items-start gap-2 mb-4">
@@ -669,8 +660,8 @@
                     ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-bolt"></i>'} ${item.name}
                 </h3>
                 <div class="flex gap-1">
-                    <button onclick="renameItem('${item.id}', event)" class="text-slate-500 hover:text-blue-400 p-1.5 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
-                    <button onclick="deleteIsland('${item.id}', event)" class="text-slate-500 hover:text-rose-400 p-1.5 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                    <button onclick="event.stopPropagation(); renameItem('${item.id}')" class="text-slate-500 hover:text-blue-400 p-2 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
+                    <button onclick="event.stopPropagation(); deleteIsland('${item.id}', event)" class="text-slate-500 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>
             <div class="flex justify-between items-center mt-2">
@@ -1891,6 +1882,21 @@ function changeParent(islandId) {
     }
 }
 
+
+// Función para crear grupos (carpetas)
+function createGroup() {
+    const name = prompt("Nombre del nuevo Grupo (Carpeta):");
+    if (!name) return;
+    appData.islands.push({ 
+        id: 'group_' + Date.now(), 
+        name: name, 
+        phrases: [], 
+        type: 'group', 
+        parentId: null 
+    });
+    saveDatabaseToLocalStorage();
+    renderIslandsGrid();
+}
  </script>
 </body>
 </html>
