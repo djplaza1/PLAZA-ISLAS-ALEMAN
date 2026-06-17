@@ -1270,7 +1270,7 @@ function renderPhrasesList() {
 function fireLocalSpeak(text) {
     if (!text) return;
     
-    // 1. Cancelamos cualquier audio anterior para que no se pisen las voces si haces clics rápidos
+    // 1. Cancelamos cualquier audio anterior para que no se pisen las voces
     window.speechSynthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -1295,15 +1295,14 @@ function fireLocalSpeak(text) {
         utterance.voice = premiumVoice ? premiumVoice : germanVoices[0];
     }
     
-    // 5. Ajustes de profesor: Velocidad un 10% más lenta para escuchar bien la declinación
-    utterance.rate = 0.9; 
-    utterance.pitch = 1.0; 
+    // Tu ajuste de velocidad original no se toca. 
+    // La app usará la velocidad global que ya tienes programada.
     
     window.speechSynthesis.speak(utterance);
 }
 
-// IMPORTANTE: Añade esto justo debajo de la función que acabas de pegar. 
-// Obliga al navegador a precargar las voces ocultas nada más abrir la app.
+// IMPORTANTE: Añade esto justo debajo de la función. 
+// Obliga al navegador a precargar las voces ocultas al abrir la app.
 if (speechSynthesis.onvoiceschanged !== undefined) {
     speechSynthesis.onvoiceschanged = function() {
         speechSynthesis.getVoices();
