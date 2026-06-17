@@ -1537,12 +1537,12 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     window.speechSynthesis.cancel(); 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = true; 
+    // 🟢 DESACTIVAMOS INTERIM: Solo queremos el resultado final cuando termines de hablar
+    recognition.interimResults = false; 
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
     isRecognizing = true;
-    let finalTranscript = '';
     let hasFiredCallback = false;
 
     voiceCancelFn = () => {
@@ -1560,39 +1560,26 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     }, 12000);
 
-    // 🟢 LÓGICA DE RECONSTRUCCIÓN FORENSE
+    // 🟢 LÓGICA DE RESULTADO FINAL (Mucho más estable)
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        let rawAccumulator = '';
-        
-        // Iteramos sobre todos los resultados obtenidos hasta ahora
-        for (let i = 0; i < event.results.length; ++i) {
-            rawAccumulator += event.results[i][0].transcript + ' ';
-        }
-        
-        // 🟢 NORMALIZACIÓN RIGUROSA: 
-        // 1. Reemplazamos cualquier cosa que no sea espacio por un espacio simple.
-        // 2. Eliminamos espacios dobles.
-        // 3. Quitamos espacios iniciales y finales.
-        const cleanDisplay = rawAccumulator.replace(/\s+/g, ' ').trim();
-        
-        finalTranscript = cleanDisplay;
+        // Cogemos el resultado final, que ya viene segmentado por el motor nativo
+        const transcript = event.results[0][0].transcript;
         
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay) {
-            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${cleanDisplay}</span>`;
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${transcript}</span>`;
+        }
+        
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            callback(transcript);
         }
     };
 
     recognition.onend = () => {
         clearTimeout(voiceTimeout);
         isRecognizing = false;
-        if (!hasFiredCallback) {
-            hasFiredCallback = true;
-            // Enviamos el transcript final ya normalizado
-            if (finalTranscript) callback(finalTranscript);
-            else callback(null, 'No se detectó voz clara. Habla más alto.');
-        }
     };
 
     recognition.onerror = (event) => {
@@ -1601,14 +1588,13 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         if (!hasFiredCallback) {
             hasFiredCallback = true;
             if (event.error === 'aborted') return;
-            callback(null, 'Error: ' + event.error);
+            callback(null, 'Error de micrófono: ' + event.error);
         }
     };
 
     try { recognition.start(); } 
     catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
-}
-function startVoiceInput() {
+}function startVoiceInput() {
     const target = trainingQueue[currentTrainIndex].de;
     const langCode = 'de-DE';
     const langLabel = 'Alemán 🇩🇪';
