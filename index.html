@@ -1537,7 +1537,10 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     window.speechSynthesis.cancel(); 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = true; 
+    
+    // 🟢 MODO ESTRICTO: Solo aceptamos el resultado final.
+    // Esto evita que el motor intente "adivinar" y nos devuelva fragmentos pegados.
+    recognition.interimResults = false; 
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
@@ -1559,38 +1562,27 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     }, 12000);
 
-    // 🟢 LÓGICA BLINDADA: Reconstrucción forzada de espacios
+    // 🟢 PROCESAMIENTO ÚNICO: capturamos el bloque final completo.
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
         
-        // Convertimos el objeto event.results en un array real y forzamos espacios
-        const transcript = Array.from(event.results)
-            .map(result => result[0])
-            .map(alternative => alternative.transcript)
-            .join(' ') // 🟢 AQUÍ ESTÁ EL TRUCO: Forzamos el espacio entre fragmentos
-            .replace(/\s+/g, ' ') // Eliminamos espacios dobles accidentales
-            .trim();
+        // Obtenemos el resultado final del primer índice (es lo que devuelve la API nativa)
+        const transcript = event.results[0][0].transcript.trim();
         
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay) {
             textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${transcript}</span>`;
+        }
+
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            callback(transcript);
         }
     };
 
     recognition.onend = () => {
         clearTimeout(voiceTimeout);
         isRecognizing = false;
-        
-        if (!hasFiredCallback) {
-            hasFiredCallback = true;
-            
-            // Obtenemos la última transcripción visible
-            const textDisplay = document.getElementById('live-speech-text');
-            const final = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').trim() : '';
-            
-            if (final) callback(final);
-            else callback(null, 'No se detectó voz clara. Habla más alto.');
-        }
     };
 
     recognition.onerror = (event) => {
@@ -1604,9 +1596,8 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     };
 
     try { recognition.start(); } 
-    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar motor.'); } }
+    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
 }
-
 function startVoiceInput() {
     const target = trainingQueue[currentTrainIndex].de;
     const langCode = 'de-DE';
