@@ -580,17 +580,19 @@
                 display.textContent = '00:00';
             }
         }
-        function trackNetPracticeTime() {
-            if (sessionStartTime) {
-                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-                if (elapsed > 0) {
-                    const today = getTodayDateString();
-                    appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
-                    saveDatabaseToLocalStorage();
-                }
-                sessionStartTime = null;
-            }
+function trackNetPracticeTime() {
+    if (sessionStartTime) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - sessionStartTime) / 1000);
+        if (elapsed > 0) {
+            const today = getTodayDateString();
+            appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
+            saveDatabaseToLocalStorage();
+            // Actualizamos la marca de tiempo para no duplicar los segundos en la siguiente ejecución
+            sessionStartTime = now;
         }
+    }
+}
         function getTodayDateString() {
             const d = new Date();
             return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
