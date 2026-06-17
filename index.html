@@ -1023,26 +1023,57 @@
             renderVocabularyList();
         }
 
-        // ==================== DETALLE DE ISLA ====================
-        function openIslandDetail(islandId) {
-            currentActiveIslandId = islandId;
-            let title = "";
-            if (islandId === 'virtual_fav') title = "⭐ Favoritas";
-            else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
-            else {
-                const island = appData.islands.find(isl => isl.id === islandId);
-                if (!island) return;
-                title = island.name;
-            }
-            document.getElementById('detail-island-title').innerText = title;
-            renderPhrasesList();
+// ==================== DETALLE DE ISLA ====================
+function openIslandDetail(islandId) {
+    currentActiveIslandId = islandId;
+    let title = "";
+    if (islandId === 'virtual_fav') title = "⭐ Favoritas";
+    else if (islandId === 'virtual_foco') title = "🔥 Foco Intensivo";
+    else {
+        const island = appData.islands.find(isl => isl.id === islandId);
+        if (!island) return;
+        title = island.name;
+    }
+    document.getElementById('detail-island-title').innerText = title;
+    renderPhrasesList();
 
-            document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
-            document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
+    document.getElementById('btn-start-training-normal').onclick = function() { initiateTrainingSession(islandId, 'normal'); };
+    document.getElementById('btn-start-training-inverse').onclick = function() { initiateTrainingSession(islandId, 'inverse'); };
 
-            switchView('island-detail');
-        }
+    // --- INTEGRACIÓN: Selector de Mover a Grupo ---
+    // 1. Limpiamos cualquier selector anterior para evitar duplicados
+    const oldContainer = document.getElementById('move-island-container');
+    if (oldContainer) oldContainer.remove();
 
+    // 2. Solo mostramos el selector si es una isla real (no virtual)
+    if (islandId !== 'virtual_fav' && islandId !== 'virtual_foco') {
+        const container = document.createElement('div');
+        container.id = 'move-island-container';
+        container.className = "mt-4 p-4 bg-slate-900 rounded-xl border border-slate-700";
+        
+        const currentIsland = appData.islands.find(i => i.id === islandId);
+        
+        // Generamos las opciones filtrando grupos y marcando el padre actual
+        const groupOptions = appData.islands
+            .filter(i => i.type === 'group' && i.id !== islandId)
+            .map(g => `<option value="${g.id}" ${currentIsland.parentId === g.id ? 'selected' : ''}>${g.name}</option>`)
+            .join('');
+
+        container.innerHTML = `
+            <label class="text-xs text-slate-400 font-bold block mb-2">Mover a grupo:</label>
+            <select id="move-parent-select" onchange="changeParent('${islandId}')" class="bg-slate-800 text-white p-2 rounded-lg w-full">
+                <option value="root" ${!currentIsland.parentId ? 'selected' : ''}>Ninguno (Raíz)</option>
+                ${groupOptions}
+            </select>
+        `;
+        
+        // Lo inyectamos dentro del contenedor principal de la vista de detalle
+        document.querySelector('#view-island-detail .bg-slate-800').appendChild(container);
+    }
+    // --- FIN INTEGRACIÓN ---
+
+    switchView('island-detail');
+}
         function getPhrasesArray(islandId) {
             if (islandId === 'virtual_fav') {
                 let list = [];
@@ -1690,12 +1721,15 @@ function submitTypingAnswer() {
 
 // ==================== ATAJOS DE TECLADO ====================
 function handleKeyboardShortcuts(e) {
+    // 🔴 BLOQUEO DE SEGURIDAD: Si el foco está en un input o textarea, NO hacemos nada.
+    // Esto permite que escribas frases sin que el sistema haga nada raro.
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        return;
+    }
+
     if (!document.getElementById('view-training').classList.contains('active')) return;
+
     switch(e.key) {
-        case ' ':
-            e.preventDefault();
-            executePlaybackChain();
-            break;
         case 'ArrowLeft':
             e.preventDefault();
             navigateTrainingQueue(-1);
@@ -1704,15 +1738,12 @@ function handleKeyboardShortcuts(e) {
             e.preventDefault();
             navigateTrainingQueue(1);
             break;
+        // Ahora la 'r' requiere ALT para activarse, así no jode al escribir
         case 'r':
-            e.preventDefault();
-            revealTargetStructure();
-            break;
-        case '1': case '2': case '3': case '4': case '5':
-            e.preventDefault();
-            const score = parseInt(e.key);
-            registerLocalScore('grammar', score);
-            registerLocalScore('fluency', score);
+            if (e.altKey) {
+                e.preventDefault();
+                revealTargetStructure();
+            }
             break;
         case 'Enter':
             e.preventDefault();
@@ -1725,7 +1756,6 @@ function handleKeyboardShortcuts(e) {
         default: break;
     }
 }
-
 // ==================== ESTADÍSTICAS ====================
 function renderAdvancedStatistics() {
     document.getElementById('stat-streak').innerText = `${appData.stats.streak || 0} Días`;
@@ -1849,6 +1879,18 @@ function createGroup() {
     renderIslandsGrid();
 }
  
+function changeParent(islandId) {
+    const select = document.getElementById('move-parent-select');
+    const newParentId = select.value === "root" ? null : select.value;
+    const island = appData.islands.find(i => i.id === islandId);
+    if (island) {
+        island.parentId = newParentId;
+        saveDatabaseToLocalStorage();
+        alert("Isla movida correctamente.");
+        renderIslandsGrid();
+    }
+}
+
  </script>
 </body>
 </html>
