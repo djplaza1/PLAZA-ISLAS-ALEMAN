@@ -1911,6 +1911,8 @@ function createGroup() {
 
 function renderChildIslands(groupId) {
     const container = document.getElementById('phrases-container');
+    if (!container) return;
+    
     container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>';
     
     const children = appData.islands.filter(i => i.parentId === groupId);
@@ -1930,7 +1932,6 @@ function renderChildIslands(groupId) {
         container.appendChild(div);
     });
 }
-
  </script>
 </body>
 </html>
