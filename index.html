@@ -619,25 +619,25 @@
             saveDatabaseToLocalStorage();
         }
 
-        // ==================== ISLAS ====================
-        function createIsland() {
-            const name = document.getElementById('new-island-name').value.trim();
-            if (!name) return;
-            appData.islands.push({ id: 'island_' + Date.now(), name: name, phrases: [] });
-            saveDatabaseToLocalStorage();
-            document.getElementById('new-island-name').value = '';
-            renderIslandsGrid();
-        }
+// ==================== ISLAS ====================
+function createIsland() {
+    const name = document.getElementById('new-island-name').value.trim();
+    if (!name) return;
+    appData.islands.push({ id: 'island_' + Date.now(), name: name, phrases: [] });
+    saveDatabaseToLocalStorage();
+    document.getElementById('new-island-name').value = '';
+    renderIslandsGrid();
+}
 
-        function deleteIsland(id, event) {
-            event.stopPropagation();
-            if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
-            appData.islands = appData.islands.filter(isl => isl.id !== id);
-            saveDatabaseToLocalStorage();
-            renderIslandsGrid();
-        }
+function deleteIsland(id, event) {
+    event.stopPropagation();
+    if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
+    appData.islands = appData.islands.filter(isl => isl.id !== id);
+    saveDatabaseToLocalStorage();
+    renderIslandsGrid();
+}
 
-// Sustituye tu función renderIslandsGrid actual por esta:
+// ESTA ES LA FUNCIÓN CORREGIDA
 function renderIslandsGrid() {
     const container = document.getElementById('islands-container');
     const searchQuery = document.getElementById('global-search-field').value.toLowerCase().trim();
@@ -647,7 +647,8 @@ function renderIslandsGrid() {
 
     visibleIslands.forEach(item => {
         if (searchQuery) {
-            const raw = (item.name + " " + item.phrases.map(p => p.de).join(" ")).toLowerCase();
+            // CORRECCIÓN 1: Si no hay frases, devuelve un texto vacío para evitar que rompa
+            const raw = (item.name + " " + (item.phrases ? item.phrases.map(p => p.de).join(" ") : "")).toLowerCase();
             if (!raw.includes(searchQuery)) return;
         }
 
@@ -669,36 +670,13 @@ function renderIslandsGrid() {
             </div>
             <div class="flex justify-between items-center mt-2">
                 <span class="text-xs bg-slate-900 ${isGroup ? 'text-amber-400' : 'text-emerald-400'} px-3 py-1 rounded-lg border border-slate-700 font-bold">
-                    ${isGroup ? 'Carpeta' : item.phrases.length + ' oraciones'}
+                    ${isGroup ? 'Carpeta' : (item.phrases ? item.phrases.length : 0) + ' oraciones'}
                 </span>
             </div>
         `;
         container.appendChild(card);
     });
 }
-
-        function createVirtualCard(id, name, count, color) {
-            const div = document.createElement('div');
-            div.className = `bg-gradient-to-br from-slate-800 to-slate-850 border-2 border-dashed border-${color}-500/40 rounded-2xl p-5 hover:border-${color}-400 transition cursor-pointer flex flex-col justify-between shadow-xl`;
-            div.onclick = () => openIslandDetail(id);
-            div.innerHTML = `
-                <h3 class="font-black text-base text-${color}-400 tracking-wide">${name}</h3>
-                <span class="text-xs bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-lg border border-slate-700 w-fit">${count} Estructuras Críticas</span>
-            `;
-            return div;
-        }
-
-        function countVirtualPhrases(type) {
-            let count = 0;
-            appData.islands.forEach(isl => {
-                isl.phrases.forEach(p => {
-                    if (type === 'fav' && p.isFavorite) count++;
-                    if (type === 'foco' && p.isFocus) count++;
-                });
-            });
-            return count;
-        }
-
         // ==================== CONVERSACIONES ====================
         function seedDefaultConversations() {
             appData.conversations = [
@@ -1843,19 +1821,7 @@ function renameItem(id) {
     }
 }
 
-function createGroup() {
-    const name = prompt("Nombre del nuevo Grupo (Carpeta):");
-    if (!name) return;
-    appData.islands.push({ 
-        id: 'group_' + Date.now(), 
-        name: name, 
-        phrases: [], 
-        type: 'group', 
-        parentId: null 
-    });
-    saveDatabaseToLocalStorage();
-    renderIslandsGrid();
-}
+
  
 function changeParent(islandId, event) {
     if (event) event.stopPropagation();
