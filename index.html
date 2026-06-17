@@ -1542,7 +1542,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     recognition.continuous = false;
 
     isRecognizing = true;
-    let capturedText = '';
+    let finalTranscript = ''; // Guardaremos el resultado final aquí
     let hasFiredCallback = false;
 
     voiceCancelFn = () => {
@@ -1560,28 +1560,24 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     }, 12000);
 
+    // 🟢 LÓGICA DE RECONSTRUCCIÓN TOTAL (Adiós a las palabras pegadas)
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        let currentFinal = '';
-        let currentInterim = '';
+        let currentFullString = '';
         
-        // 🟢 RECONSTRUCCIÓN TOTAL: Iteramos siempre desde 0 e inyectamos espacios forzados
+        // Barrido total: reconstruimos la frase desde cero con cada nuevo dato
         for (let i = 0; i < event.results.length; ++i) {
-            let chunk = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-                currentFinal += chunk + ' ';
-            } else {
-                currentInterim += chunk + ' ';
-            }
+            currentFullString += event.results[i][0].transcript + ' ';
         }
         
-        capturedText = currentFinal;
+        // Limpiamos espacios dobles y espacios en blanco al inicio/final
+        const displayStr = currentFullString.replace(/\s+/g, ' ').trim();
         
-        // 🟢 LIMPIEZA DE ESPACIOS: Borramos dobles espacios generados por la inyección
-        const displayStr = (currentFinal + currentInterim).replace(/\s+/g, ' ').trim();
+        // Guardamos para el callback final
+        finalTranscript = displayStr;
         
         const textDisplay = document.getElementById('live-speech-text');
-        if (textDisplay && displayStr) {
+        if (textDisplay) {
             textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${displayStr}</span>`;
         }
     };
@@ -1592,13 +1588,8 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         if (!hasFiredCallback) {
             hasFiredCallback = true;
             
-            const textDisplay = document.getElementById('live-speech-text');
-            const fallbackText = textDisplay ? textDisplay.innerText.replace('🎤 Escuchando...', '').replace(/en Alemán 🇩🇪.../g, '').trim() : '';
-            
-            // 🟢 APLICAMOS LA MISMA LIMPIEZA AL RESULTADO FINAL
-            const final = (capturedText || fallbackText).replace(/\s+/g, ' ').trim();
-            
-            if (final) callback(final);
+            // Si el motor termina, enviamos el resultado limpio
+            if (finalTranscript) callback(finalTranscript);
             else callback(null, 'No se detectó voz clara. Habla más alto.');
         }
     };
