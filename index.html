@@ -418,56 +418,80 @@
             settings: { flowType: 'manual', order: 'sequential', loops: 2, pause: 4, speed: 0.9 }
         };
 
-        let currentActiveIslandId = null;
-        let currentConversationId = null;
-        let trainingQueue = [];
-        let currentTrainIndex = 0;
-        let trainingDirection = 'normal';
-        let localGrammarRating = 0;
-        let localFluencyRating = 0;
-        let activePlaybackTimeout = null;
-        let sessionTimerInterval = null;
-        let sessionStartTime = null;
-        let sessionActive = false;
-        let autoSaveCounter = 0;
-        let hideGermanList = false;
-        let hideSpanishList = false;
-        let recognition = null;
-        let isRecognizing = false;
-        let voiceTimeout = null;
-        let voiceCancelFn = null;
+let currentActiveIslandId = null;
+let currentConversationId = null;
+let trainingQueue = [];
+let currentTrainIndex = 0;
+let trainingDirection = 'normal';
+let localGrammarRating = 0;
+let localFluencyRating = 0;
+let activePlaybackTimeout = null;
+let sessionTimerInterval = null;
+let sessionStartTime = null;
+let sessionActive = false;
+let autoSaveCounter = 0;
+let hideGermanList = false;
+let hideSpanishList = false;
+let recognition = null;
+let isRecognizing = false;
+let voiceTimeout = null;
+let voiceCancelFn = null;
 
-        let flashcardWords = [];
-        let currentFlashcardIndex = 0;
-        let isFlipped = false;
+let flashcardWords = [];
+let currentFlashcardIndex = 0;
+let isFlipped = false;
 
-        const de_es_dict = {
-            "hallo":"hola","ich":"yo","heiße":"me llamo","komme":"vengo","aus":"de","spanien":"España",
-            "wohne":"vivo","in":"en","madrid":"Madrid","bin":"soy/estoy","jahre":"años","alt":"viejo/a",
-            "arbeite":"trabajo","als":"como","ingenieur":"ingeniero","meine":"mi/mis","hobbys":"pasatiempos",
-            "sind":"son","lesen":"leer","und":"y","schwimmen":"nadar","mit":"con","ihm":"él (dativo)",
-            "befreundet":"amigo/a","das":"eso/esto","stimmt":"es cierto","nicht":"no","gut":"bueno",
-            "schlecht":"malo","groß":"grande","klein":"pequeño","viel":"mucho","wenig":"poco",
-            "gehen":"ir","kommen":"venir","machen":"hacer","sagen":"decir","wissen":"saber",
-            "sehen":"ver","hören":"oír","sprechen":"hablar","verstehen":"entender","lernen":"aprender",
-            "fragen":"preguntar","antworten":"responder","danke":"gracias","bitte":"por favor",
-            "entschuldigung":"disculpa","ja":"sí","nein":"no","vielleicht":"quizás","immer":"siempre",
-            "nie":"nunca","oft":"a menudo","manchmal":"a veces","heute":"hoy","morgen":"mañana",
-            "gestern":"ayer","jetzt":"ahora","später":"más tarde","uhr":"hora/en punto"
-        };
-        let translationCache = {};
+// ==================== CACHÉ DE VOZ ALEMANA ====================
+let cachedGermanVoice = null;
 
-        window.onload = function() {
-            loadAppData();
-            loadSettings();
-            applyTheme();
-            initVoices();
-            switchView('islands');
-            checkAndUpdateStreak();
-            updatePracticeTimerDisplay();
-            if (!appData.conversations || appData.conversations.length === 0) seedDefaultConversations();
-            document.addEventListener('keydown', handleKeyboardShortcuts);
-        };
+function getBestGermanVoice() {
+    if (cachedGermanVoice) return cachedGermanVoice;
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return null;
+    const preferred = voices.filter(v => v.lang.startsWith('de'));
+    cachedGermanVoice = preferred.find(v => v.name.includes('Google')) ||
+                        preferred.find(v => v.name.includes('Premium')) ||
+                        preferred.find(v => v.name.includes('Enhanced')) ||
+                        preferred[0] || null;
+    return cachedGermanVoice;
+}
+
+function initVoices() {
+    window.speechSynthesis.onvoiceschanged = () => {
+        cachedGermanVoice = null;
+        getBestGermanVoice();
+        console.log("🎤 Voces listas. Mejor voz alemana:", cachedGermanVoice?.name || "no encontrada");
+    };
+    getBestGermanVoice();
+}
+
+const de_es_dict = {
+    "hallo":"hola","ich":"yo","heiße":"me llamo","komme":"vengo","aus":"de","spanien":"España",
+    "wohne":"vivo","in":"en","madrid":"Madrid","bin":"soy/estoy","jahre":"años","alt":"viejo/a",
+    "arbeite":"trabajo","als":"como","ingenieur":"ingeniero","meine":"mi/mis","hobbys":"pasatiempos",
+    "sind":"son","lesen":"leer","und":"y","schwimmen":"nadar","mit":"con","ihm":"él (dativo)",
+    "befreundet":"amigo/a","das":"eso/esto","stimmt":"es cierto","nicht":"no","gut":"bueno",
+    "schlecht":"malo","groß":"grande","klein":"pequeño","viel":"mucho","wenig":"poco",
+    "gehen":"ir","kommen":"venir","machen":"hacer","sagen":"decir","wissen":"saber",
+    "sehen":"ver","hören":"oír","sprechen":"hablar","verstehen":"entender","lernen":"aprender",
+    "fragen":"preguntar","antworten":"responder","danke":"gracias","bitte":"por favor",
+    "entschuldigung":"disculpa","ja":"sí","nein":"no","vielleicht":"quizás","immer":"siempre",
+    "nie":"nunca","oft":"a menudo","manchmal":"a veces","heute":"hoy","morgen":"mañana",
+    "gestern":"ayer","jetzt":"ahora","später":"más tarde","uhr":"hora/en punto"
+};
+let translationCache = {};
+
+window.onload = function() {
+    loadAppData();
+    loadSettings();
+    applyTheme();
+    initVoices();   // ← activa el sistema de voz alemana
+    switchView('islands');
+    checkAndUpdateStreak();
+    updatePracticeTimerDisplay();
+    if (!appData.conversations || appData.conversations.length === 0) seedDefaultConversations();
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+};
 
        function loadAppData() {
     const saved = localStorage.getItem('muller_c2_db');
