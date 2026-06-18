@@ -539,8 +539,8 @@ window.onload = function() {
     document.addEventListener('keydown', handleKeyboardShortcuts);
 };
 
-       function loadAppData() {
-    const saved = localStorage.getItem('muller_c2_db');
+async function loadAppData() {
+    const saved = await loadFromIDB('muller_c2_db', null);
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
@@ -550,8 +550,12 @@ window.onload = function() {
                 if (!isl.type) isl.type = 'island';
                 if (isl.parentId === undefined) isl.parentId = null;
             });
-        } catch(e) { saveDatabaseToLocalStorage(); }
-    } else { saveDatabaseToLocalStorage(); }
+        } catch(e) { 
+            await saveDatabase(); // si falla, guarda una copia limpia
+        }
+    } else { 
+        await saveDatabase(); 
+    }
     if (!appData.vocabulary) appData.vocabulary = [];
     if (!appData.conversations) appData.conversations = [];
 }
