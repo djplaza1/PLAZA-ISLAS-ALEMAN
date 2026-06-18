@@ -583,9 +583,9 @@ async function loadAppData() {
             localStorage.setItem('muller_c2_settings', JSON.stringify(appData.settings));
         }
 
-        function saveDatabaseToLocalStorage() {
-            localStorage.setItem('muller_c2_db', JSON.stringify(appData));
-        }
+async function saveDatabase() {
+    await saveToIDB('muller_c2_db', JSON.stringify(appData));
+}
 
         function toggleTheme() {
             const html = document.documentElement;
