@@ -1307,46 +1307,12 @@ function renderPhrasesList() {
     });
 }
 
-function fireLocalSpeak(text) {
-    if (!text) return;
-    
-    // 1. Cancelamos cualquier audio anterior para que no se pisen las voces
+function fireLocalSpeak(deText) {
     window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // 2. Obtenemos todas las voces disponibles en tu dispositivo/navegador
-    const voices = window.speechSynthesis.getVoices();
-    
-    // 3. Filtramos estrictamente para usar SOLO voces en alemán
-    const germanVoices = voices.filter(voice => voice.lang.includes('de-DE') || voice.lang === 'de_DE');
-    
-    if (germanVoices.length > 0) {
-        // 4. Buscamos voces de alta calidad (Google, Premium, Natural...)
-        const premiumVoice = germanVoices.find(voice => 
-            voice.name.includes('Premium') || 
-            voice.name.includes('Google') || 
-            voice.name.includes('Natural') ||
-            voice.name.includes('Enhanced') ||
-            voice.name.includes('Online') // En algunos móviles Android
-        );
-        
-        // Asignamos la voz premium si existe; si no, la primera alemana que haya
-        utterance.voice = premiumVoice ? premiumVoice : germanVoices[0];
-    }
-    
-    // Tu ajuste de velocidad original no se toca. 
-    // La app usará la velocidad global que ya tienes programada.
-    
-    window.speechSynthesis.speak(utterance);
-}
-
-// IMPORTANTE: Añade esto justo debajo de la función. 
-// Obliga al navegador a precargar las voces ocultas al abrir la app.
-if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = function() {
-        speechSynthesis.getVoices();
-    };
+    const utter = new SpeechSynthesisUtterance(deText);
+    utter.lang = 'de-DE';
+    utter.rate = appData.settings.speed || 0.9;
+    window.speechSynthesis.speak(utter);
 }
         // ==================== ENTRENAMIENTO ====================
         function initiateTrainingSession(islandId, direction) {
