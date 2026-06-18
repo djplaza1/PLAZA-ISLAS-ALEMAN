@@ -1727,14 +1727,11 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         return;
     }
 
-    window.speechSynthesis.cancel(); 
+    window.speechSynthesis.cancel();
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    
-    // 🟢 MODO ESTRICTO: Solo aceptamos el resultado final.
-    // Esto evita que el motor intente "adivinar" y nos devuelva fragmentos pegados.
-    recognition.interimResults = false; 
-    recognition.maxAlternatives = 1;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;           // pedimos 3 posibles transcripciones
     recognition.continuous = false;
 
     isRecognizing = true;
@@ -1755,21 +1752,22 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     }, 12000);
 
-    // 🟢 PROCESAMIENTO ÚNICO: capturamos el bloque final completo.
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        
-        // Obtenemos el resultado final del primer índice (es lo que devuelve la API nativa)
-        const transcript = event.results[0][0].transcript.trim();
-        
+        // Recogemos todas las alternativas (hasta 3)
+        const alternatives = [];
+        for (let i = 0; i < event.results[0].length; i++) {
+            alternatives.push(event.results[0][i].transcript.trim());
+        }
+        // Mostramos la primera alternativa en tiempo real
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay) {
-            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${transcript}</span>`;
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${alternatives[0]}</span>`;
         }
-
         if (!hasFiredCallback) {
             hasFiredCallback = true;
-            callback(transcript);
+            // Pasamos todas las alternativas al callback
+            callback(alternatives);
         }
     };
 
@@ -1788,7 +1786,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         }
     };
 
-    try { recognition.start(); } 
+    try { recognition.start(); }
     catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
 }
 function startVoiceInput() {
