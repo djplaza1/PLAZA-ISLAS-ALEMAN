@@ -532,22 +532,18 @@ async function saveAudioBlob(phraseId, blob) {
 
 function playAudioBlob(blob, rate = 1.0, onended = null) {
     if (!blob) return;
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        audioContext.decodeAudioData(e.target.result, function(buffer) {
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.playbackRate.value = rate; // controla la velocidad
-            source.connect(audioContext.destination);
-            source.onended = () => {
-                audioContext.close();
-                if (onended) onended();
-            };
-            source.start(0);
-        });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.playbackRate = rate;
+    audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (onended) onended();
     };
-    reader.readAsArrayBuffer(blob);
+    audio.play().catch(err => {
+        console.warn('Error al reproducir audio:', err);
+        URL.revokeObjectURL(url);
+        if (onended) onended();
+    });
 }
 async function playRecordingPreview(phraseId) {
     const blob = await getAudioBlob(phraseId);
