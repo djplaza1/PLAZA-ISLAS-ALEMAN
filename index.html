@@ -527,11 +527,13 @@ const de_es_dict = {
 };
 let translationCache = {};
 
-window.onload = function() {
-    loadAppData();
-    loadSettings();
+window.onload = async function() {
+    await openDatabase();          // ← abre la base de datos
+    await loadAppData();           // ← carga los datos principales
+    await loadSettings();          // ← carga los ajustes
+
     applyTheme();
-    initVoices();   // ← activa el sistema de voz alemana
+    initVoices();
     switchView('islands');
     checkAndUpdateStreak();
     updatePracticeTimerDisplay();
