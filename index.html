@@ -1736,57 +1736,75 @@ function fireLocalSpeak(text) {
             setupTrainingSlide();
         }
 
-        function executePlaybackChain() {
-            const triggerBtn = document.getElementById('btn-trigger-audio');
-            triggerBtn.disabled = true;
+function executePlaybackChain() {
+    const triggerBtn = document.getElementById('btn-trigger-audio');
+    triggerBtn.disabled = true;
 
-            const phrase = trainingQueue[currentTrainIndex];
-            const loops = parseInt(document.getElementById('cfg-loops').value) || 2;
-            const pause = parseInt(document.getElementById('cfg-pause').value) || 4;
-            const speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
-            const flowType = document.getElementById('cfg-flow-type').value;
+    const phrase = trainingQueue[currentTrainIndex];
+    const loops = parseInt(document.getElementById('cfg-loops').value) || 2;
+    const pause = parseInt(document.getElementById('cfg-pause').value) || 4;
+    const speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
+    const flowType = document.getElementById('cfg-flow-type').value;
+    const voiceSource = document.getElementById('cfg-voice-source').value;
 
-            let completedLoops = 0;
-            const indicator = document.getElementById('train-status-indicator');
-            indicator.innerText = "Audio activo...";
-            indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
+    let completedLoops = 0;
+    const indicator = document.getElementById('train-status-indicator');
+    indicator.innerText = "Audio activo...";
+    indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
 
-            function runCycle() {
-                if (completedLoops >= loops) {
-                    indicator.innerText = "¡Tu turno!";
-                    indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
-                    if (flowType === 'auto') {
-                        logRepetitionImpact();
-                        activePlaybackTimeout = setTimeout(() => {
-                            revealTargetStructure();
-                            activePlaybackTimeout = setTimeout(advanceAuto, pause * 1000);
-                        }, 500);
-                    } else {
-                        triggerBtn.classList.add('hidden');
-                        document.getElementById('btn-voice-input').classList.remove('hidden');
-                        document.getElementById('btn-typing-input').classList.remove('hidden');
-                        document.getElementById('btn-reveal').classList.remove('hidden');
-                    }
-                    return;
+    async function runCycle() {
+        if (completedLoops >= loops) {
+            indicator.innerText = "¡Tu turno!";
+            indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
+            if (flowType === 'auto') {
+                logRepetitionImpact();
+                activePlaybackTimeout = setTimeout(() => {
+                    revealTargetStructure();
+                    activePlaybackTimeout = setTimeout(advanceAuto, pause * 1000);
+                }, 500);
+            } else {
+                triggerBtn.classList.add('hidden');
+                document.getElementById('btn-voice-input').classList.remove('hidden');
+                document.getElementById('btn-typing-input').classList.remove('hidden');
+                document.getElementById('btn-reveal').classList.remove('hidden');
+                // Mostrar el botón de grabar solo si es manual
+                if (flowType === 'manual') {
+                    document.getElementById('btn-record').classList.remove('hidden');
                 }
+            }
+            return;
+        }
 
-              window.speechSynthesis.cancel();
-const utterance = new SpeechSynthesisUtterance(phrase.de);
-const voice = getBestGermanVoice();
-if (voice) utterance.voice = voice;
-utterance.lang = 'de-DE';
-utterance.rate = speed;
-                utterance.onend = () => {
+        // Decidir qué audio reproducir
+        if (voiceSource === 'user') {
+            const blob = await getAudioBlob(phrase.id);
+            if (blob) {
+                // Reproducir grabación del usuario
+                playAudioBlob(blob, speed, () => {
                     completedLoops++;
                     logRepetitionImpact();
                     activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
-                };
-                window.speechSynthesis.speak(utterance);
+                });
+                return;
             }
-
-            runCycle();
         }
+        // Fallback a TTS
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(phrase.de);
+        const voice = getBestGermanVoice();
+        if (voice) utterance.voice = voice;
+        utterance.lang = 'de-DE';
+        utterance.rate = speed;
+        utterance.onend = () => {
+            completedLoops++;
+            logRepetitionImpact();
+            activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+        };
+        window.speechSynthesis.speak(utterance);
+    }
 
+    runCycle();
+}
         function revealTargetStructure() {
             document.getElementById('train-target-container').style.opacity = '1';
             document.getElementById('btn-reveal').classList.add('hidden');
