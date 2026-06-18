@@ -1731,7 +1731,10 @@ function exitTrainingSession() {
     pauseTrainingTimer();
     stopAudioAndTimers();
     console.log('Saliendo de entrenamiento. currentActiveIslandId:', currentActiveIslandId);
-    if (currentActiveIslandId && (currentActiveIslandId.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual' || currentActiveIslandId.startsWith('srs_review_'))) {
+    if (currentActiveIslandId && 
+        (currentActiveIslandId.startsWith('conv_virtual_') || 
+         currentActiveIslandId === 'vocab_virtual' || 
+         currentActiveIslandId.startsWith('srs_review_'))) {
         appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
         saveDatabase();
         console.log('Isla virtual eliminada:', currentActiveIslandId);
