@@ -521,6 +521,7 @@ let recognition = null;
 let isRecognizing = false;
 let voiceTimeout = null;
 let voiceCancelFn = null;
+let currentAudioElement = null; // Referencia al <audio> activo de grabaciones
 
 let flashcardWords = [];
 let currentFlashcardIndex = 0;
@@ -541,16 +542,29 @@ async function saveAudioBlob(phraseId, blob) {
 
 function playAudioBlob(blob, rate = 1.0, onended = null) {
     if (!blob) return;
+    // Detener cualquier audio anterior en reproducción
+    if (currentAudioElement) {
+        currentAudioElement.pause();
+        currentAudioElement = null;
+    }
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    currentAudioElement = audio; // Registrar el nuevo audio
     audio.playbackRate = rate;
     audio.onended = () => {
         URL.revokeObjectURL(url);
+        currentAudioElement = null;
+        if (onended) onended();
+    };
+    audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        currentAudioElement = null;
         if (onended) onended();
     };
     audio.play().catch(err => {
         console.warn('Error al reproducir audio:', err);
         URL.revokeObjectURL(url);
+        currentAudioElement = null;
         if (onended) onended();
     });
 }
