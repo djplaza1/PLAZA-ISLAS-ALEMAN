@@ -587,6 +587,11 @@ function startRecordingFromUI() {
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
     const phrase = trainingQueue[currentTrainIndex];
     if (!phrase) return;
+    const btn = document.getElementById('btn-record');
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-microphone-alt"></i> Grabando...';
+        btn.classList.add('recording-active');
+    }
     startRecording(phrase.id);
 }
 
