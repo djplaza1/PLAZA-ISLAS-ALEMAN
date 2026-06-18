@@ -1647,7 +1647,7 @@ function renderPhrasesList() {
             <div class="space-y-1 flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-<p class="${deClass}">${wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de')}</p>                    ${tagsBadge}
+<p class="${deClass}">${highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de'))}</p>                   ${tagsBadge}
                 </div>
                 <p class="${esClass}">"${phrase.es}"</p>
             </div>
@@ -1749,8 +1749,8 @@ function exitTrainingSession() {
             document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
             document.getElementById('train-status-indicator').innerText = "Listo";
             document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
-            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de');
-            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de') : phrase.es;
+            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de'));
+            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de')) : phrase.es;
             document.getElementById('train-target-container').style.opacity = '0';
             document.getElementById('evaluation-panel').classList.add('hidden');
             document.getElementById('btn-reveal').classList.add('hidden');
