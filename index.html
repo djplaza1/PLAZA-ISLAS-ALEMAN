@@ -362,7 +362,13 @@
     <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa (s):</label><input type="number" id="cfg-pause" value="4" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400"></div>
     <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Veloc.:</label><input type="number" id="cfg-speed" value="0.9" step="0.1" min="0.5" max="1.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400"></div>
     <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Voz:</label><select id="cfg-voice-source" onchange="saveSettings()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200"><option value="app">🤖 App</option><option value="user">🎙️ Mía</option></select></div>
-</div>                <div class="my-auto space-y-6">
+</div>
+<div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 text-center shadow-2xl relative min-h-[340px] flex flex-col justify-between">
+    <div class="flex justify-between items-center border-b border-slate-700/50 pb-3 mb-4">
+        <span id="train-status-indicator" class="text-xs uppercase font-black tracking-widest text-blue-400">Listo</span>
+        <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded">Ficha <span id="train-current-index">1</span>/<span id="train-total-index">1</span></span>
+    </div>
+    <div class="my-auto space-y-6">
                     <div><span id="label-stimulus-type" class="text-[10px] text-slate-400 block uppercase tracking-widest mb-1 font-bold">Estímulo:</span><p id="train-text-stimulus" class="text-xl md:text-2xl font-bold px-4"></p></div>
                     <div id="train-target-container" class="opacity-0 transition-opacity duration-300 border-t border-slate-700/60 pt-4"><span id="label-target-type" class="text-[10px] text-emerald-400 block uppercase tracking-widest mb-1 font-bold">Respuesta:</span><p id="train-text-target" class="text-2xl md:text-3xl font-black text-emerald-400 tracking-wide px-4"></p></div>
                 </div>
