@@ -508,23 +508,9 @@
             localStorage.setItem('muller_c2_settings', JSON.stringify(appData.settings));
         }
 
-function saveDatabaseToLocalStorage() {
-    // 1. Guardado de seguridad en el sitio antiguo (por si acaso)
-    localStorage.setItem('PlazaMuller_Satzinseln_DB', JSON.stringify(appData));
-
-    // 2. Guardado MAESTRO en IndexedDB (Sin límite de megas)
-    if (!db) return; 
-    const transaction = db.transaction(["appConfig"], "readwrite");
-    const store = transaction.objectStore("appConfig");
-    const putRequest = store.put(appData, "mainData");
-
-    putRequest.onsuccess = () => {
-        // console.log("💾 Guardado en IndexedDB con éxito.");
-    };
-    putRequest.onerror = () => {
-        console.error("❌ Error crítico al guardar en IndexedDB");
-    };
-}
+        function saveDatabaseToLocalStorage() {
+            localStorage.setItem('muller_c2_db', JSON.stringify(appData));
+        }
 
         function toggleTheme() {
             const html = document.documentElement;
@@ -583,55 +569,6 @@ function saveDatabaseToLocalStorage() {
             sessionStartTime = null;
             updatePracticeTimerDisplay();
         }
-// --- SISTEMA DE ALMACENAMIENTO MASIVO (IndexedDB) ---
-let db;
-const request = indexedDB.open("IslasPlazaDB", 1);
-
-// Se ejecuta si es la primera vez que se abre la app o hay cambios de versión
-request.onupgradeneeded = (e) => {
-    db = e.target.result;
-    if (!db.objectStoreNames.contains("appConfig")) {
-        db.createObjectStore("appConfig");
-    }
-};
-
-// Se ejecuta cuando la conexión es exitosa
-request.onsuccess = (e) => {
-    db = e.target.result;
-    console.log("✅ Base de datos IndexedDB lista.");
-    loadDataFromIndexedDB(); // Esta función la definiremos ahora
-};
-
-// Función para leer los datos al arrancar
-function loadDataFromIndexedDB() {
-    const transaction = db.transaction(["appConfig"], "readonly");
-    const store = transaction.objectStore("appConfig");
-    const getRequest = store.get("mainData");
-
-    getRequest.onsuccess = () => {
-        if (getRequest.result) {
-            // Caso 1: Ya hay datos en la Base Gigante (IndexedDB)
-            appData = getRequest.result;
-            console.log("✅ Datos cargados desde IndexedDB");
-            if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
-        } else {
-            // Caso 2: La Base Gigante está vacía, miramos en el antiguo LocalStorage
-            console.log("ℹ️ IndexedDB vacío. Buscando en LocalStorage para migrar...");
-            const oldData = localStorage.getItem('PlazaMuller_Satzinseln_DB'); // Ajusta este nombre si el tuyo es diferente
-            
-            if (oldData) {
-                appData = JSON.parse(oldData);
-                console.log("🚀 ¡Migración exitosa! Moviendo datos a IndexedDB...");
-                saveDatabaseToLocalStorage(); // Esto los guardará en la nueva DB
-                if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
-            } else {
-                console.log("ℹ️ No hay datos en ningún sitio. Cargando ejemplos...");
-                if (typeof seedDefaultConversations === 'function') seedDefaultConversations();
-            }
-        }
-    };
-}
-
 function updatePracticeTimerDisplay() {
     const display = document.getElementById('practice-timer-live');
     if (!display) return;
@@ -1330,46 +1267,12 @@ function renderPhrasesList() {
     });
 }
 
-function fireLocalSpeak(text) {
-    if (!text) return;
-    
-    // 1. Cancelamos cualquier audio anterior para que no se pisen las voces
+function fireLocalSpeak(deText) {
     window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // 2. Obtenemos todas las voces disponibles en tu dispositivo/navegador
-    const voices = window.speechSynthesis.getVoices();
-    
-    // 3. Filtramos estrictamente para usar SOLO voces en alemán
-    const germanVoices = voices.filter(voice => voice.lang.includes('de-DE') || voice.lang === 'de_DE');
-    
-    if (germanVoices.length > 0) {
-        // 4. Buscamos voces de alta calidad (Google, Premium, Natural...)
-        const premiumVoice = germanVoices.find(voice => 
-            voice.name.includes('Premium') || 
-            voice.name.includes('Google') || 
-            voice.name.includes('Natural') ||
-            voice.name.includes('Enhanced') ||
-            voice.name.includes('Online') // En algunos móviles Android
-        );
-        
-        // Asignamos la voz premium si existe; si no, la primera alemana que haya
-        utterance.voice = premiumVoice ? premiumVoice : germanVoices[0];
-    }
-    
-    // Tu ajuste de velocidad original no se toca. 
-    // La app usará la velocidad global que ya tienes programada.
-    
-    window.speechSynthesis.speak(utterance);
-}
-
-// IMPORTANTE: Añade esto justo debajo de la función. 
-// Obliga al navegador a precargar las voces ocultas al abrir la app.
-if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = function() {
-        speechSynthesis.getVoices();
-    };
+    const utter = new SpeechSynthesisUtterance(deText);
+    utter.lang = 'de-DE';
+    utter.rate = appData.settings.speed || 0.9;
+    window.speechSynthesis.speak(utter);
 }
         // ==================== ENTRENAMIENTO ====================
         function initiateTrainingSession(islandId, direction) {
