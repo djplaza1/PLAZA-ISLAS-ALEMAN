@@ -1633,8 +1633,8 @@ function fireLocalSpeak(text) {
             document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
             document.getElementById('train-status-indicator').innerText = "Listo";
             document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
-            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : wrapWordsInSpans(phrase.de, 'de');
-            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? wrapWordsInSpans(phrase.de, 'de') : phrase.es;
+            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de');
+            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de') : phrase.es;
             document.getElementById('train-target-container').style.opacity = '0';
             document.getElementById('evaluation-panel').classList.add('hidden');
             document.getElementById('btn-reveal').classList.add('hidden');
