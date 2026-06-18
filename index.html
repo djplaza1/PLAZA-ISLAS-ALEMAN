@@ -1609,6 +1609,32 @@ function deletePhrase(phraseId) {
     openIslandDetail(currentActiveIslandId);
 }
 
+function editPhrase(phraseId) {
+    // Buscar la frase en todas las islas
+    let found = null;
+    for (let isl of appData.islands) {
+        if (isl.phrases) {
+            const p = isl.phrases.find(p => p.id === phraseId);
+            if (p) { found = p; break; }
+        }
+    }
+    if (!found) return;
+    
+    const newDe = prompt("Editar frase en alemán:", found.de);
+    if (newDe === null) return; // Cancelar
+    const newEs = prompt("Editar traducción español:", found.es);
+    if (newEs === null) return;
+    const newTags = prompt("Editar etiquetas (ej: #verb #B1):", found.tags || "");
+    if (newTags === null) return;
+    
+    found.de = newDe.trim();
+    found.es = newEs.trim();
+    found.tags = newTags.trim();
+    saveDatabase();
+    // Refrescar la vista actual
+    if (currentActiveIslandId) openIslandDetail(currentActiveIslandId);
+}
+
 function togglePhraseFeature(phraseId, type) {
     appData.islands.forEach(isl => {
         // Protección para Grupos
@@ -1655,6 +1681,7 @@ function renderPhrasesList() {
                 <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
                 <button onclick="togglePhraseFeature('${phrase.id}', 'fav')" class="p-2 text-xs rounded-lg transition ${phrase.isFavorite ? 'text-amber-400 bg-amber-950/40 border border-amber-900' : 'text-slate-500 hover:text-amber-400'}" title="Marcar Favorita"><i class="fa-solid fa-star"></i></button>
                 <button onclick="togglePhraseFeature('${phrase.id}', 'foco')" class="p-2 text-xs rounded-lg transition ${phrase.isFocus ? 'text-rose-400 bg-rose-950/40 border border-rose-900' : 'text-slate-500 hover:text-rose-400'}" title="Enviar a Foco Intensivo"><i class="fa-solid fa-fire"></i></button>
+                <button onclick="editPhrase('${phrase.id}')" class="text-slate-500 hover:text-amber-400 p-2 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
                 <button onclick="deletePhrase('${phrase.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
             </div>
         `;
