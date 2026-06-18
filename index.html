@@ -51,9 +51,18 @@
         border-bottom: 1px dashed rgba(16, 185, 129, 0.4);
         transition: all 0.2s;
     }
+    .clickable-word {
+        cursor: pointer;
+        border-bottom: 1px dashed rgba(16, 185, 129, 0.4);
+        transition: all 0.2s;
+    }
     .clickable-word:hover {
         color: #10b981;
         border-bottom-color: #10b981;
+    }
+    .verb-highlight .clickable-word,
+    .prep-highlight .clickable-word {
+        border-bottom: none;
     }
     .flashcard {
         perspective: 1000px;
