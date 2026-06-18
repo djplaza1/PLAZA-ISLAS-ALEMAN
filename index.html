@@ -1772,7 +1772,24 @@ function exitTrainingSession() {
             if (document.getElementById('cfg-flow-type').value === 'auto') {
                 activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
             }
+        // Mostrar/ocultar el botón de "Mi voz" según exista grabación
+const btnMyVoice = document.getElementById('btn-play-my-recording');
+if (btnMyVoice) {
+    const phrase = trainingQueue[currentTrainIndex];
+    if (phrase) {
+        getAudioBlob(phrase.id).then(blob => {
+            if (blob) {
+                btnMyVoice.classList.remove('hidden');
+            } else {
+                btnMyVoice.classList.add('hidden');
+            }
+        });
+    } else {
+        btnMyVoice.classList.add('hidden');
+    }
+}
         }
+    
 
         function navigateTrainingQueue(step) {
             stopAudioAndTimers();
