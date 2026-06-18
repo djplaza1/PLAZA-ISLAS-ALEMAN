@@ -549,7 +549,12 @@ function playAudioBlob(blob, rate = 1.0, onended = null) {
     };
     reader.readAsDataURL(blob);
 }
-
+async function playRecordingPreview(phraseId) {
+    const blob = await getAudioBlob(phraseId);
+    if (blob) {
+        playAudioBlob(blob, 1.0); // velocidad normal para preview
+    }
+}
 function startRecording(phraseId) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Tu navegador no soporta grabación de audio.');
@@ -564,17 +569,26 @@ function startRecording(phraseId) {
             audioChunks.push(event.data);
         };
 
-        mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            if (currentRecordingPhraseId) {
-                saveAudioBlob(currentRecordingPhraseId, audioBlob).then(() => {
-                    console.log('Grabación guardada para frase', currentRecordingPhraseId);
-                });
-            }
-            // detener el stream
-            stream.getTracks().forEach(track => track.stop());
-            mediaRecorder = null;
-        };
+ mediaRecorder.onstop = async () => {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    if (currentRecordingPhraseId) {
+        await saveAudioBlob(currentRecordingPhraseId, audioBlob);
+        console.log('Grabación guardada para frase', currentRecordingPhraseId);
+        // Mostrar reproductor inmediato
+        const area = document.getElementById('recording-playback-area');
+        if (area) {
+            area.classList.remove('hidden');
+            area.innerHTML = `
+                <div class="flex items-center gap-2 bg-slate-900 p-2 rounded-lg text-xs">
+                    <button onclick="playRecordingPreview('${currentRecordingPhraseId}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg"><i class="fa-solid fa-play"></i> Escuchar</button>
+                    <button onclick="document.getElementById('recording-playback-area').classList.add('hidden')" class="text-slate-400"><i class="fa-solid fa-check"></i> Vale</button>
+                </div>
+            `;
+        }
+    }
+    stream.getTracks().forEach(track => track.stop());
+    mediaRecorder = null;
+};
 
         mediaRecorder.start();
     }).catch(err => {
@@ -586,6 +600,7 @@ function startRecording(phraseId) {
 function stopRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
+        // El evento onstop se encargará de guardar y mostrar el reproductor
     }
 }
 function startRecordingFromUI() {
