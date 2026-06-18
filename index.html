@@ -125,6 +125,11 @@
         font-weight: bold;
         border-bottom: 2px solid #a78bfa;
     }
+    .recording-active {
+    background-color: #e11d48 !important;
+    border-color: #fda4af !important;
+    transform: scale(0.96);
+}
     .verb-prep-group {
         border: 1px dashed rgba(245, 158, 11, 0.4);
         border-radius: 4px;
@@ -372,18 +377,18 @@
             <div><span id="label-stimulus-type" class="text-[10px] text-slate-400 block uppercase tracking-widest mb-1 font-bold">Estímulo:</span><p id="train-text-stimulus" class="text-xl md:text-2xl font-bold px-4"></p></div>
             <div id="train-target-container" class="opacity-0 transition-opacity duration-300 border-t border-slate-700/60 pt-4"><span id="label-target-type" class="text-[10px] text-emerald-400 block uppercase tracking-widest mb-1 font-bold">Respuesta:</span><p id="train-text-target" class="text-2xl md:text-3xl font-black text-emerald-400 tracking-wide px-4"></p></div>
         </div>
-        <div class="flex justify-between items-center mt-6 border-t border-slate-700/40 pt-4">
-            <button onclick="navigateTrainingQueue(-1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-chevron-left"></i></button>
-            <div class="flex gap-2 flex-wrap justify-center">
-                <button onclick="executePlaybackChain()" id="btn-trigger-audio" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg"><i class="fa-solid fa-play"></i> Disparar</button>
-                <button onclick="startVoiceInput()" id="btn-voice-input" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Hablar</button>
-                <button onclick="startTypingInput()" id="btn-typing-input" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-keyboard"></i> Escribir</button>
-                <button onclick="revealTargetStructure()" id="btn-reveal" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-eye"></i> Revelar</button>
-                <button onmousedown="startRecordingFromUI()" onmouseup="stopRecordingFromUI()" onmouseleave="stopRecordingFromUI()" ontouchstart="startRecordingFromUI()" ontouchend="stopRecordingFromUI()" id="btn-record" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Grabar</button>
-            </div>
-            <button onclick="navigateTrainingQueue(1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
+    <div class="flex justify-between items-center mt-6 border-t border-slate-700/40 pt-4">
+    <button onclick="navigateTrainingQueue(-1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="flex gap-2 flex-wrap justify-center">
+        <button onclick="executePlaybackChain()" id="btn-trigger-audio" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg"><i class="fa-solid fa-play"></i> Disparar</button>
+        <button onclick="startVoiceInput()" id="btn-voice-input" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Hablar</button>
+        <button onclick="startTypingInput()" id="btn-typing-input" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-keyboard"></i> Escribir</button>
+        <button onclick="revealTargetStructure()" id="btn-reveal" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-eye"></i> Revelar</button>
+        <button onmousedown="startRecordingFromUI()" onmouseup="stopRecordingFromUI()" onmouseleave="stopRecordingFromUI()" ontouchstart="startRecordingFromUI()" ontouchend="stopRecordingFromUI()" id="btn-record" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Grabar</button>
     </div>
+    <button onclick="navigateTrainingQueue(1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-chevron-right"></i></button>
+</div>
+<div id="recording-playback-area" class="hidden mt-2"></div>
     <div id="voice-feedback" class="bg-slate-900 border border-emerald-700 p-3 rounded-xl text-sm hidden"></div>
     <div id="typing-input-area" class="bg-slate-900 border border-indigo-700 p-4 rounded-xl hidden space-y-2">
         <label class="text-xs font-bold text-indigo-300">Escribe tu respuesta:</label>
