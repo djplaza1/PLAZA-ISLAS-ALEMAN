@@ -560,17 +560,17 @@ async function loadAppData() {
     if (!appData.conversations) appData.conversations = [];
 }
 
-        function loadSettings() {
-            const saved = localStorage.getItem('muller_c2_settings');
-            if (saved) {
-                try { appData.settings = { ...appData.settings, ...JSON.parse(saved) }; } catch(e) {}
-            }
-            document.getElementById('cfg-flow-type').value = appData.settings.flowType;
-            document.getElementById('cfg-order').value = appData.settings.order;
-            document.getElementById('cfg-loops').value = appData.settings.loops;
-            document.getElementById('cfg-pause').value = appData.settings.pause;
-            document.getElementById('cfg-speed').value = appData.settings.speed;
-        }
+async function loadSettings() {
+    const saved = await loadFromIDB('muller_c2_settings', null);
+    if (saved) {
+        try { appData.settings = { ...appData.settings, ...JSON.parse(saved) }; } catch(e) {}
+    }
+    document.getElementById('cfg-flow-type').value = appData.settings.flowType;
+    document.getElementById('cfg-order').value = appData.settings.order;
+    document.getElementById('cfg-loops').value = appData.settings.loops;
+    document.getElementById('cfg-pause').value = appData.settings.pause;
+    document.getElementById('cfg-speed').value = appData.settings.speed;
+}
 
         function saveSettings() {
             appData.settings = {
