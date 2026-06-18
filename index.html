@@ -1730,15 +1730,17 @@ function initiateTrainingSession(islandId, direction) {
     switchView('training');
 }
 
-        function exitTrainingSession() {
-            pauseTrainingTimer();
-            stopAudioAndTimers();
-            if (currentActiveIslandId?.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual') {
-                appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
-                saveDatabase();
-            }
-            switchView('islands');
-        }
+function exitTrainingSession() {
+    pauseTrainingTimer();
+    stopAudioAndTimers();
+    console.log('Saliendo de entrenamiento. currentActiveIslandId:', currentActiveIslandId);
+    if (currentActiveIslandId && (currentActiveIslandId.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual' || currentActiveIslandId.startsWith('srs_review_'))) {
+        appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
+        saveDatabase();
+        console.log('Isla virtual eliminada:', currentActiveIslandId);
+    }
+    switchView('islands');
+}
 
         function setupTrainingSlide() {
             if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
