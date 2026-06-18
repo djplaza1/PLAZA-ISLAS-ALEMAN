@@ -940,15 +940,24 @@ async function saveDatabase() {
             }
         }
 
-        function stopAudioAndTimers() {
-            if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
-            window.speechSynthesis.cancel();
-            if (sessionTimerInterval) {
-                clearInterval(sessionTimerInterval);
-                sessionTimerInterval = null;
-                if (sessionActive) trackNetPracticeTime();
-            }
-        }
+function stopAudioAndTimers() {
+    // Detener cualquier TTS pendiente
+    if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
+    window.speechSynthesis.cancel();
+    
+    // Detener cualquier grabación en reproducción (Audio blob)
+    if (currentAudioElement) {
+        currentAudioElement.pause();
+        currentAudioElement = null;
+    }
+    
+    // Detener el temporizador de práctica
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+        if (sessionActive) trackNetPracticeTime();
+    }
+}
 
         // Timer práctica
         function startTrainingTimer() {
