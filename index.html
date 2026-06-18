@@ -572,16 +572,16 @@ async function loadSettings() {
     document.getElementById('cfg-speed').value = appData.settings.speed;
 }
 
-        function saveSettings() {
-            appData.settings = {
-                flowType: document.getElementById('cfg-flow-type').value,
-                order: document.getElementById('cfg-order').value,
-                loops: parseInt(document.getElementById('cfg-loops').value) || 2,
-                pause: parseInt(document.getElementById('cfg-pause').value) || 4,
-                speed: parseFloat(document.getElementById('cfg-speed').value) || 0.9
-            };
-            localStorage.setItem('muller_c2_settings', JSON.stringify(appData.settings));
-        }
+async function saveSettings() {
+    appData.settings = {
+        flowType: document.getElementById('cfg-flow-type').value,
+        order: document.getElementById('cfg-order').value,
+        loops: parseInt(document.getElementById('cfg-loops').value) || 2,
+        pause: parseInt(document.getElementById('cfg-pause').value) || 4,
+        speed: parseFloat(document.getElementById('cfg-speed').value) || 0.9
+    };
+    await saveToIDB('muller_c2_settings', JSON.stringify(appData.settings));
+}
 
 async function saveDatabase() {
     await saveToIDB('muller_c2_db', JSON.stringify(appData));
