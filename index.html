@@ -801,13 +801,22 @@ const verbPrepositionPatterns = [
 function highlightVerbPrepositions(text) {
     let html = text;
     verbPrepositionPatterns.forEach(({ regex }) => {
+        // Buscar coincidencias ignorando etiquetas HTML dentro del texto
         html = html.replace(regex, (match) => {
-            const words = match.split(/\s+/);
+            // Extraer solo el texto visible del match (sin HTML)
+            const plainMatch = match.replace(/<[^>]+>/g, '');
+            const words = plainMatch.split(/\s+/);
             if (words.length >= 2) {
-                // asumimos que el último elemento es la preposición, el resto es el verbo
                 const verbPart = words.slice(0, -1).join(' ');
                 const prepPart = words[words.length - 1];
-                return `<span class="verb-prep-group"><span class="verb-highlight">${verbPart}</span> <span class="prep-highlight">${prepPart}</span></span>`;
+                // Construir el reemplazo respetando el HTML que pueda haber
+                // Buscamos la posición del verbo y la preposición en el match original
+                const verbIndex = match.indexOf(verbPart);
+                const prepIndex = match.lastIndexOf(prepPart);
+                const beforeVerb = match.substring(0, verbIndex);
+                const between = match.substring(verbIndex + verbPart.length, prepIndex);
+                const afterPrep = match.substring(prepIndex + prepPart.length);
+                return beforeVerb + '<span class="verb-prep-group"><span class="verb-highlight">' + verbPart + '</span>' + between + '<span class="prep-highlight">' + prepPart + '</span></span>' + afterPrep;
             }
             return match;
         });
@@ -1673,7 +1682,7 @@ function renderPhrasesList() {
             <div class="space-y-1 flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-<p class="${deClass}">${wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de')}</p>                   ${tagsBadge}
+<p class="${deClass}">${highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de'))}</p>                  ${tagsBadge}
                 </div>
                 <p class="${esClass}">"${phrase.es}"</p>
             </div>
@@ -1776,8 +1785,8 @@ function exitTrainingSession() {
             document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
             document.getElementById('train-status-indicator').innerText = "Listo";
             document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
-            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de');
-            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de') : phrase.es;
+            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de'));
+            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? highlightVerbPrepositions(wrapWordsInSpans(phrase.de, 'de')) : phrase.es;
             document.getElementById('train-target-container').style.opacity = '0';
             document.getElementById('evaluation-panel').classList.add('hidden');
             document.getElementById('btn-reveal').classList.add('hidden');
