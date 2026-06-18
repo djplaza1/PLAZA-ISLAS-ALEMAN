@@ -2330,9 +2330,43 @@ function getTodayDateStringOffset(daysAgo) {
 }
 
 // ==================== SYNC ====================
-function exportDatabaseFile() {
+async function exportDatabaseFile() {
     trackNetPracticeTime();
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+
+    // 1. Copiar appData para no modificar el original
+    const exportData = JSON.parse(JSON.stringify(appData));
+
+    // 2. Recoger todos los audios guardados en IndexedDB
+    exportData._audioFiles = {};
+    if (db) {
+        const transaction = db.transaction('appState', 'readonly');
+        const store = transaction.objectStore('appState');
+        const request = store.getAll();
+
+        await new Promise((resolve, reject) => {
+            request.onsuccess = async () => {
+                const allItems = request.result;
+                for (let item of allItems) {
+                    if (item.key.startsWith('audio_') && item.value instanceof Blob) {
+                        // Convertir Blob a Base64
+                        const base64 = await new Promise((res) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => res(reader.result);
+                            reader.readAsDataURL(item.value);
+                        });
+                        // Guardar usando la misma clave
+                        exportData._audioFiles[item.key] = base64;
+                    }
+                }
+                resolve();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // 3. Crear y descargar el archivo
+    const jsonStr = JSON.stringify(exportData);
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
     const anchor = document.createElement('a');
     anchor.href = dataStr;
     anchor.download = "Muller_Satzinseln_ProX_Backup.json";
