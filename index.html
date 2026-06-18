@@ -569,6 +569,46 @@
             sessionStartTime = null;
             updatePracticeTimerDisplay();
         }
+// --- SISTEMA DE ALMACENAMIENTO MASIVO (IndexedDB) ---
+let db;
+const request = indexedDB.open("IslasPlazaDB", 1);
+
+// Se ejecuta si es la primera vez que se abre la app o hay cambios de versión
+request.onupgradeneeded = (e) => {
+    db = e.target.result;
+    if (!db.objectStoreNames.contains("appConfig")) {
+        db.createObjectStore("appConfig");
+    }
+};
+
+// Se ejecuta cuando la conexión es exitosa
+request.onsuccess = (e) => {
+    db = e.target.result;
+    console.log("✅ Base de datos IndexedDB lista.");
+    loadDataFromIndexedDB(); // Esta función la definiremos ahora
+};
+
+// Función para leer los datos al arrancar
+function loadDataFromIndexedDB() {
+    const transaction = db.transaction(["appConfig"], "readonly");
+    const store = transaction.objectStore("appConfig");
+    const getRequest = store.get("mainData");
+
+    getRequest.onsuccess = () => {
+        if (getRequest.result) {
+            // Sustituimos los datos locales con los de la base de datos potente
+            appData = getRequest.result;
+            console.log("✅ Datos cargados desde IndexedDB");
+            // Renderizamos la interfaz si la función existe
+            if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
+        } else {
+            console.log("ℹ️ No hay datos previos. Inicializando base por defecto...");
+            // Si la base está vacía, cargamos los datos de ejemplo que ya tienes
+            if (typeof seedDefaultConversations === 'function') seedDefaultConversations();
+        }
+    };
+}
+
 function updatePracticeTimerDisplay() {
     const display = document.getElementById('practice-timer-live');
     if (!display) return;
