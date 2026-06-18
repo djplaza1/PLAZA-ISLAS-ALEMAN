@@ -1671,28 +1671,28 @@ function fireLocalSpeak(text) {
     window.speechSynthesis.speak(utter);
 }
         // ==================== ENTRENAMIENTO ====================
-        function initiateTrainingSession(islandId, direction) {
-            saveSettings();
-            let sourcePhrases = getPhrasesArray(islandId);
-            if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
+function initiateTrainingSession(islandId, direction) {
+    saveSettings();
+    let sourcePhrases = getPhrasesArray(islandId);
+    if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
 
-            const order = document.getElementById('cfg-order').value;
-            if (order === 'random') {
-                sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
-            } else if (order === 'worst') {
-                sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
-            }
+    const order = document.getElementById('cfg-order').value;
+    if (order === 'random') {
+        sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
+    } else if (order === 'worst') {
+        sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+    }
 
-            trainingQueue = sourcePhrases;
-            currentTrainIndex = 0;
-            trainingDirection = direction;
-            document.getElementById('train-total-index').innerText = trainingQueue.length;
-            document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES ➔ DE)" : "COMPRENSION (DE ➔ ES)";
-            
-            startTrainingTimer();
-            setupTrainingSlide();
-            switchView('training');
-        }
+    trainingQueue = sourcePhrases;
+    currentTrainIndex = 0;
+    trainingDirection = direction;
+    document.getElementById('train-total-index').innerText = trainingQueue.length;
+    document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES ➔ DE)" : "COMPRENSION (DE ➔ ES)";
+    
+    startTrainingTimer();
+    setupTrainingSlide();
+    switchView('training');
+}
 
         function exitTrainingSession() {
             pauseTrainingTimer();
