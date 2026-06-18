@@ -597,6 +597,11 @@ function startRecordingFromUI() {
 
 function stopRecordingFromUI() {
     stopRecording();
+    const btn = document.getElementById('btn-record');
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Grabar';
+        btn.classList.remove('recording-active');
+    }
 }
 
 // ==================== CACHÉ DE VOZ ALEMANA ====================
