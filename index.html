@@ -1702,6 +1702,16 @@ function fireLocalSpeak(text) {
     utter.pitch = 1.0;
     window.speechSynthesis.speak(utter);
 }
+async function playMyRecording() {
+    const phrase = trainingQueue[currentTrainIndex];
+    if (!phrase) return;
+    const blob = await getAudioBlob(phrase.id);
+    if (blob) {
+        const speed = parseFloat(document.getElementById('cfg-speed').value) || 0.9;
+        playAudioBlob(blob, speed);
+    }
+}
+
         // ==================== ENTRENAMIENTO ====================
 function initiateTrainingSession(islandId, direction) {
     saveSettings();
