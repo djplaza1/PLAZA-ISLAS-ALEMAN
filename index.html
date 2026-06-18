@@ -1546,8 +1546,7 @@ function renderPhrasesList() {
             <div class="space-y-1 flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-                    <p class="${deClass}">${wrapWordsInSpans(phrase.de, 'de')}</p>
-                    ${tagsBadge}
+<p class="${deClass}">${wrapWordsInSpans(highlightVerbPrepositions(phrase.de), 'de')}</p>                    ${tagsBadge}
                 </div>
                 <p class="${esClass}">"${phrase.es}"</p>
             </div>
