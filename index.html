@@ -373,6 +373,7 @@
                         <button onclick="startVoiceInput()" id="btn-voice-input" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Hablar</button>
                         <button onclick="startTypingInput()" id="btn-typing-input" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-keyboard"></i> Escribir</button>
                         <button onclick="revealTargetStructure()" id="btn-reveal" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-eye"></i> Revelar</button>
+                        <button onmousedown="startRecordingFromUI()" onmouseup="stopRecordingFromUI()" onmouseleave="stopRecordingFromUI()" ontouchstart="startRecordingFromUI()" ontouchend="stopRecordingFromUI()" id="btn-record" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-6 py-3 rounded-xl text-xs uppercase transition shadow-lg hidden"><i class="fa-solid fa-microphone"></i> Grabar</button>
                     </div>
                     <button onclick="navigateTrainingQueue(1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
@@ -575,6 +576,16 @@ function stopRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
     }
+}
+function startRecordingFromUI() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') return;
+    const phrase = trainingQueue[currentTrainIndex];
+    if (!phrase) return;
+    startRecording(phrase.id);
+}
+
+function stopRecordingFromUI() {
+    stopRecording();
 }
 
 // ==================== CACHÉ DE VOZ ALEMANA ====================
