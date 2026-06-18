@@ -749,6 +749,17 @@ function startSRSReview() {
         alert("🎉 ¡No tienes frases pendientes de repaso hoy!");
         return;
     }
+    // Ordenar por puntuación más baja primero (peores primero)
+    reviewPhrases.sort((a, b) => {
+        const scoreA = (a.starsGrammarNormal || 0) + (a.starsGrammarInverse || 0);
+        const scoreB = (b.starsGrammarNormal || 0) + (b.starsGrammarInverse || 0);
+        return scoreA - scoreB;
+    });
+    // Limitar a 20 frases por sesión
+    const MAX_PHRASES = 20;
+    if (reviewPhrases.length > MAX_PHRASES) {
+        reviewPhrases = reviewPhrases.slice(0, MAX_PHRASES);
+    }
     const direction = confirm("¿Modo Producción (ES→DE)? Pulsa Cancelar para Comprensión (DE→ES).") ? 'normal' : 'inverse';
     const virtualId = 'srs_review_' + Date.now();
     appData.islands.push({
@@ -760,7 +771,6 @@ function startSRSReview() {
     });
     initiateTrainingSession(virtualId, direction);
 }
-
 function deleteIsland(id, event) {
     event.stopPropagation();
     if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
