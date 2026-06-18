@@ -2384,25 +2384,45 @@ function copyJsonToClipboard() {
     });
 }
 
-function importDatabaseFile() {
+async function importDatabaseFile() {
     const fileField = document.getElementById('import-file-field');
     if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             const data = JSON.parse(e.target.result);
             if (data && data.islands) {
+                // 1. Extraer y restaurar archivos de audio si existen
+                const audioFiles = data._audioFiles || {};
+                if (Object.keys(audioFiles).length > 0) {
+                    for (let [key, base64] of Object.entries(audioFiles)) {
+                        try {
+                            const response = await fetch(base64);
+                            const blob = await response.blob();
+                            await saveAudioBlob(key.replace('audio_', ''), blob);
+                        } catch (err) {
+                            console.warn('No se pudo restaurar audio:', key, err);
+                        }
+                    }
+                    console.log('✅ Audios restaurados:', Object.keys(audioFiles).length);
+                }
+                
+                // 2. Eliminar el campo _audioFiles para no guardarlo en los datos de la app
+                delete data._audioFiles;
+                
+                // 3. Cargar los datos principales
                 appData = data;
-                saveDatabase();
-                loadSettings();
-                alert("✅ Base de datos inyectada con éxito.");
+                await saveDatabase();
+                await loadSettings();
+                alert("✅ Base de datos inyectada con éxito (incluyendo audios si los había).");
                 switchView('islands');
             } else {
                 alert("JSON inválido.");
             }
         } catch(err) {
             alert("Error al leer el archivo.");
+            console.error(err);
         }
     };
     reader.readAsText(fileField.files[0]);
