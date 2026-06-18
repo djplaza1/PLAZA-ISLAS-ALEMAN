@@ -409,6 +409,52 @@
     </footer>
 
     <script>
+        // ==================== INDEXEDDB - ALMACENAMIENTO MASIVO ====================
+const DB_NAME = 'MullerC2ProDB';
+const DB_VERSION = 1;
+let db = null;
+
+function openDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+            const database = event.target.result;
+            if (!database.objectStoreNames.contains('appState')) {
+                database.createObjectStore('appState', { keyPath: 'key' });
+            }
+        };
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            resolve(db);
+        };
+        request.onerror = (event) => {
+            console.error('IndexedDB error:', event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+async function loadFromIDB(key, fallback = null) {
+    if (!db) await openDatabase();
+    return new Promise((resolve) => {
+        const transaction = db.transaction('appState', 'readonly');
+        const store = transaction.objectStore('appState');
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result ? request.result.value : fallback);
+        request.onerror = () => resolve(fallback);
+    });
+}
+
+async function saveToIDB(key, value) {
+    if (!db) await openDatabase();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('appState', 'readwrite');
+        const store = transaction.objectStore('appState');
+        store.put({ key, value });
+        transaction.oncomplete = resolve;
+        transaction.onerror = reject;
+    });
+}
         // ==================== DATOS GLOBALES ====================
         let appData = {
             islands: [],
