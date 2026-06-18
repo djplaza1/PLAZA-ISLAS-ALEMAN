@@ -508,9 +508,23 @@
             localStorage.setItem('muller_c2_settings', JSON.stringify(appData.settings));
         }
 
-        function saveDatabaseToLocalStorage() {
-            localStorage.setItem('muller_c2_db', JSON.stringify(appData));
-        }
+function saveDatabaseToLocalStorage() {
+    // 1. Guardado de seguridad en el sitio antiguo (por si acaso)
+    localStorage.setItem('PlazaMuller_Satzinseln_DB', JSON.stringify(appData));
+
+    // 2. Guardado MAESTRO en IndexedDB (Sin límite de megas)
+    if (!db) return; 
+    const transaction = db.transaction(["appConfig"], "readwrite");
+    const store = transaction.objectStore("appConfig");
+    const putRequest = store.put(appData, "mainData");
+
+    putRequest.onsuccess = () => {
+        // console.log("💾 Guardado en IndexedDB con éxito.");
+    };
+    putRequest.onerror = () => {
+        console.error("❌ Error crítico al guardar en IndexedDB");
+    };
+}
 
         function toggleTheme() {
             const html = document.documentElement;
