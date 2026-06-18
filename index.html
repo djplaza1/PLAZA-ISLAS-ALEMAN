@@ -671,7 +671,7 @@ function trackNetPracticeTime() {
         if (elapsed > 0) {
             const today = getTodayDateString();
             appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
-            saveDatabaseToLocalStorage();
+         saveDatabase();
             sessionStartTime = now; // Reiniciamos el contador para no sumar doble
         }
     }
@@ -691,7 +691,7 @@ function trackNetPracticeTime() {
             } else {
                 appData.stats.streak = 0;
             }
-            saveDatabaseToLocalStorage();
+            saveDatabase();
         }
         function logRepetitionImpact() {
             const today = getTodayDateString();
@@ -709,7 +709,7 @@ function trackNetPracticeTime() {
                 }
                 appData.stats.lastPracticeDate = today;
             }
-            saveDatabaseToLocalStorage();
+            saveDatabase();
         }
 
 // ==================== ISLAS ====================
@@ -723,7 +723,7 @@ function createIsland() {
         type: 'island',  // CRÍTICO AÑADIR ESTO
         parentId: null   // CRÍTICO AÑADIR ESTO
     });
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     document.getElementById('new-island-name').value = '';
     if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
 }
@@ -732,7 +732,7 @@ function deleteIsland(id, event) {
     event.stopPropagation();
     if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
     appData.islands = appData.islands.filter(isl => isl.id !== id);
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     renderIslandsGrid();
 }
 
@@ -803,7 +803,7 @@ function renderIslandsGrid() {
                     ]
                 }
             ];
-            saveDatabaseToLocalStorage();
+            saveDatabase();
         }
 
         function renderConversationsList() {
@@ -827,7 +827,7 @@ function renderIslandsGrid() {
             const name = prompt('Nombre de la conversación:');
             if (!name) return;
             appData.conversations.push({ id: 'conv_' + Date.now(), name, phrases: [] });
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             renderConversationsList();
         }
 
@@ -845,7 +845,7 @@ function renderIslandsGrid() {
         function deleteConversation() {
             if (!confirm('¿Eliminar esta conversación?')) return;
             appData.conversations = appData.conversations.filter(c => c.id !== currentConversationId);
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             switchView('conversations');
         }
 
@@ -869,7 +869,7 @@ function renderIslandsGrid() {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
             if (!conv) return;
             conv.phrases.push({ id: 'p_' + Date.now(), de, es });
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             document.getElementById('conv-phrase-de').value = '';
             document.getElementById('conv-phrase-es').value = '';
             renderConvPhrases();
@@ -879,7 +879,7 @@ function renderIslandsGrid() {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
             if (!conv) return;
             conv.phrases = conv.phrases.filter(p => p.id !== phraseId);
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             renderConvPhrases();
         }
 
@@ -899,7 +899,7 @@ function renderIslandsGrid() {
                     interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
                 }))
             });
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             initiateTrainingSession(virtualId, direction);
         }
 
@@ -1051,7 +1051,7 @@ function renderIslandsGrid() {
                 example_es: '',
                 added: getTodayDateString()
             });
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             document.querySelector('.popup-overlay')?.remove();
             if (document.getElementById('vocabulary-list-container').classList.contains('hidden') === false) {
                 renderVocabularyList();
@@ -1092,7 +1092,7 @@ function renderIslandsGrid() {
 
         function deleteVocabWord(word) {
             appData.vocabulary = appData.vocabulary.filter(v => v.word !== word);
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             renderVocabularyList();
         }
 
@@ -1217,7 +1217,7 @@ function addSinglePhrase() {
         interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5
     });
 
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     document.getElementById('phrase-de').value = '';
     document.getElementById('phrase-es').value = '';
     document.getElementById('phrase-tags').value = '';
@@ -1265,7 +1265,7 @@ function addBulkPhrasesBlock() {
         }
     });
 
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     document.getElementById('bulk-phrases').value = '';
     openIslandDetail(currentActiveIslandId);
 }
@@ -1277,7 +1277,7 @@ function deletePhrase(phraseId) {
             isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
         }
     });
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     openIslandDetail(currentActiveIslandId);
 }
 
@@ -1292,7 +1292,7 @@ function togglePhraseFeature(phraseId, type) {
             }
         }
     });
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     renderPhrasesList();
 }
 
@@ -1395,7 +1395,7 @@ function fireLocalSpeak(text) {
             stopAudioAndTimers();
             if (currentActiveIslandId?.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual') {
                 appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
-                saveDatabaseToLocalStorage();
+                saveDatabase();
             }
             switchView('islands');
         }
@@ -1595,7 +1595,7 @@ utterance.rate = speed;
                     target.nextReviewDate = d.toISOString().split('T')[0];
                 }
             });
-            saveDatabaseToLocalStorage();
+            saveDatabase();
             advanceAuto();
         }
 
@@ -1966,7 +1966,7 @@ function importDatabaseFile() {
             const data = JSON.parse(e.target.result);
             if (data && data.islands) {
                 appData = data;
-                saveDatabaseToLocalStorage();
+                saveDatabase();
                 loadSettings();
                 alert("✅ Base de datos inyectada con éxito.");
                 switchView('islands');
@@ -1986,7 +1986,7 @@ function renameItem(id) {
     const newName = prompt(`Renombrar ${item.type === 'group' ? 'grupo' : 'isla'}:`, item.name);
     if (newName) {
         item.name = newName;
-        saveDatabaseToLocalStorage();
+        saveDatabase();
         renderIslandsGrid();
     }
 }
@@ -2001,7 +2001,7 @@ function changeParent(islandId, event) {
     
     if (island) {
         island.parentId = newParentId;
-        saveDatabaseToLocalStorage();
+        saveDatabase();
         alert("Isla movida correctamente.");
         renderIslandsGrid();
     }
@@ -2019,7 +2019,7 @@ function createGroup() {
         type: 'group', 
         parentId: null 
     });
-    saveDatabaseToLocalStorage();
+    saveDatabase();
     renderIslandsGrid();
 }
 
@@ -2086,7 +2086,7 @@ function moveSelectedIslands() {
     });
     
     if (movedCount > 0) {
-        saveDatabaseToLocalStorage();
+        saveDatabase();
         alert(`${movedCount} islas movidas correctamente.`);
         
         // Ocultar el panel de nuevo
