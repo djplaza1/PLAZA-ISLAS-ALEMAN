@@ -1821,49 +1821,47 @@ function exitTrainingSession() {
     switchView('islands');
 }
 
-        function setupTrainingSlide() {
-            if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
-            window.speechSynthesis.cancel();
-            const phrase = trainingQueue[currentTrainIndex];
-            document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
-            document.getElementById('train-status-indicator').innerText = "Listo";
-            document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
-            document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de));
-            document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de)) : phrase.es;
-            document.getElementById('train-target-container').style.opacity = '0';
-            document.getElementById('evaluation-panel').classList.add('hidden');
-            document.getElementById('btn-reveal').classList.add('hidden');
-            document.getElementById('btn-voice-input').classList.add('hidden');
-            document.getElementById('btn-typing-input').classList.add('hidden');
-            document.getElementById('btn-trigger-audio').classList.remove('hidden');
-            document.getElementById('btn-trigger-audio').disabled = false;
-            document.getElementById('voice-feedback').classList.add('hidden');
-            document.getElementById('typing-input-area').classList.add('hidden');
-            localGrammarRating = 0; localFluencyRating = 0;
-            renderDynamicStars('grammar', 0); renderDynamicStars('fluency', 0);
-
-            if (document.getElementById('cfg-flow-type').value === 'auto') {
-                activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
-            }
-        // Mostrar/ocultar el botón de "Mi voz" según exista grabación
-const btnMyVoice = document.getElementById('btn-play-my-recording');
-if (btnMyVoice) {
+function setupTrainingSlide() {
+    if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
+    window.speechSynthesis.cancel();
     const phrase = trainingQueue[currentTrainIndex];
-    if (phrase) {
-        getAudioBlob(phrase.id).then(blob => {
-            if (blob) {
-                btnMyVoice.classList.remove('hidden');
-            } else {
-                btnMyVoice.classList.add('hidden');
-            }
-        });
-    } else {
-        btnMyVoice.classList.add('hidden');
+    document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
+    document.getElementById('train-status-indicator').innerText = "Listo";
+    document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
+    document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de));
+    document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de)) : phrase.es;
+    document.getElementById('train-target-container').style.opacity = '0';
+    document.getElementById('evaluation-panel').classList.add('hidden');
+    document.getElementById('btn-reveal').classList.add('hidden');
+    document.getElementById('btn-voice-input').classList.add('hidden');
+    document.getElementById('btn-typing-input').classList.add('hidden');
+    document.getElementById('btn-trigger-audio').classList.remove('hidden');
+    document.getElementById('btn-trigger-audio').disabled = false;
+    document.getElementById('voice-feedback').classList.add('hidden');
+    document.getElementById('typing-input-area').classList.add('hidden');
+    localGrammarRating = 0; localFluencyRating = 0;
+    renderDynamicStars('grammar', 0); renderDynamicStars('fluency', 0);
+
+    if (document.getElementById('cfg-flow-type').value === 'auto') {
+        activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
+    }
+
+    const btnMyVoice = document.getElementById('btn-play-my-recording');
+    if (btnMyVoice) {
+        const phrase = trainingQueue[currentTrainIndex];
+        if (phrase) {
+            getAudioBlob(phrase.id).then(blob => {
+                if (blob) {
+                    btnMyVoice.classList.remove('hidden');
+                } else {
+                    btnMyVoice.classList.add('hidden');
+                }
+            });
+        } else {
+            btnMyVoice.classList.add('hidden');
+        }
     }
 }
-        }
-    
-
         function navigateTrainingQueue(step) {
             stopAudioAndTimers();
             let tempIndex = currentTrainIndex + step;
