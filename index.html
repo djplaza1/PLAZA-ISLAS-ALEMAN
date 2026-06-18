@@ -547,7 +547,7 @@ function playAudioBlob(blob, rate = 1.0, onended = null) {
             source.start(0);
         });
     };
-    reader.readAsDataURL(blob);
+    reader.readAsArrayBuffer(blob);
 }
 async function playRecordingPreview(phraseId) {
     const blob = await getAudioBlob(phraseId);
