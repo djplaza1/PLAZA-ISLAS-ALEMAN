@@ -733,6 +733,34 @@ function createIsland() {
     if (typeof renderIslandsGrid === 'function') renderIslandsGrid();
 }
 
+function startSRSReview() {
+    const today = getTodayDateString();
+    let reviewPhrases = [];
+    appData.islands.forEach(isl => {
+        if (isl.phrases) {
+            isl.phrases.forEach(p => {
+                if (p.nextReviewDate && p.nextReviewDate <= today) {
+                    reviewPhrases.push(p);
+                }
+            });
+        }
+    });
+    if (reviewPhrases.length === 0) {
+        alert("🎉 ¡No tienes frases pendientes de repaso hoy!");
+        return;
+    }
+    const direction = confirm("¿Modo Producción (ES→DE)? Pulsa Cancelar para Comprensión (DE→ES).") ? 'normal' : 'inverse';
+    const virtualId = 'srs_review_' + Date.now();
+    appData.islands.push({
+        id: virtualId,
+        name: '🧠 Repaso SRS ' + today,
+        phrases: reviewPhrases.map(p => ({...p})),
+        type: 'island',
+        parentId: null
+    });
+    initiateTrainingSession(virtualId, direction);
+}
+
 function deleteIsland(id, event) {
     event.stopPropagation();
     if (!confirm("⚠️ ¿Eliminar esta isla y todas sus oraciones?")) return;
