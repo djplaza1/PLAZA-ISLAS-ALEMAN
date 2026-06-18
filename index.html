@@ -509,6 +509,78 @@ let voiceCancelFn = null;
 let flashcardWords = [];
 let currentFlashcardIndex = 0;
 let isFlipped = false;
+// ==================== GRABACIÓN Y REPRODUCCIÓN DE AUDIO ====================
+let mediaRecorder = null;
+let audioChunks = [];
+let currentRecordingPhraseId = null;
+
+async function getAudioBlob(phraseId) {
+    const stored = await loadFromIDB('audio_' + phraseId, null);
+    return stored; // stored es un Blob o null
+}
+
+async function saveAudioBlob(phraseId, blob) {
+    await saveToIDB('audio_' + phraseId, blob);
+}
+
+function playAudioBlob(blob, rate = 1.0, onended = null) {
+    if (!blob) return;
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        audioContext.decodeAudioData(e.target.result, function(buffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = rate; // controla la velocidad
+            source.connect(audioContext.destination);
+            source.onended = () => {
+                audioContext.close();
+                if (onended) onended();
+            };
+            source.start(0);
+        });
+    };
+    reader.readAsDataURL(blob);
+}
+
+function startRecording(phraseId) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no soporta grabación de audio.');
+        return false;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        currentRecordingPhraseId = phraseId;
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (currentRecordingPhraseId) {
+                saveAudioBlob(currentRecordingPhraseId, audioBlob).then(() => {
+                    console.log('Grabación guardada para frase', currentRecordingPhraseId);
+                });
+            }
+            // detener el stream
+            stream.getTracks().forEach(track => track.stop());
+            mediaRecorder = null;
+        };
+
+        mediaRecorder.start();
+    }).catch(err => {
+        alert('Error al acceder al micrófono: ' + err);
+    });
+    return true;
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+}
 
 // ==================== CACHÉ DE VOZ ALEMANA ====================
 let cachedGermanVoice = null;
