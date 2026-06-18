@@ -1268,10 +1268,31 @@ function renderPhrasesList() {
 }
 
 function fireLocalSpeak(deText) {
+    if (!deText) return;
+
+    // 1. Cancelamos cualquier voz en curso para evitar solapamientos
     window.speechSynthesis.cancel();
+
     const utter = new SpeechSynthesisUtterance(deText);
+    
+    // 2. Obtenemos todas las voces disponibles en el sistema
+    const voices = window.speechSynthesis.getVoices();
+    
+    // 3. BUSCADOR DE VOCES HUMANAS (Prioridad: Google o Natural)
+    // Buscamos una voz alemana que sea de Google o que el sistema marque como "Natural"
+    const selectedVoice = voices.find(v => v.lang === 'de-DE' && v.name.includes('Google')) || 
+                          voices.find(v => v.lang === 'de-DE' && v.name.includes('Natural')) ||
+                          voices.find(v => v.lang === 'de-DE');
+
+    if (selectedVoice) {
+        utter.voice = selectedVoice;
+    }
+
+    // 4. Configuración de idioma y velocidad
     utter.lang = 'de-DE';
-    utter.rate = appData.settings.speed || 0.9;
+    utter.rate = appData.settings.speed || 0.9; // Si no hay ajuste, 0.9 suena más humano que 1.0
+
+    // 5. ¡A hablar!
     window.speechSynthesis.speak(utter);
 }
         // ==================== ENTRENAMIENTO ====================
