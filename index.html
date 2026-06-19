@@ -1004,6 +1004,7 @@ async function loadAppData() {
     }
     if (!appData.vocabulary) appData.vocabulary = [];
     if (!appData.conversations) appData.conversations = [];
+    migrateVocabData();
     // Migración de vocabulario a nueva estructura SRS
 if (!appData.vocabFolders) appData.vocabFolders = [];
 if (appData.vocabulary && appData.vocabulary.length > 0) {
