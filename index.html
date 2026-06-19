@@ -273,46 +273,52 @@
             </div>
         </section>
 
-        <!-- VISTA VOCABULARIO (TARJETAS + LISTA) -->
-        <section id="view-vocabulary" class="view-section space-y-6">
-            <div class="flex flex-wrap justify-between items-center gap-4">
-                <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-book text-teal-400"></i> Vocabulario</h2>
-                <div class="flex gap-2 flex-wrap items-center">
-                    <button onclick="startFlashcardSession()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-flash"></i> Estudiar Tarjetas</button>
-                    <input type="text" id="vocab-search" oninput="renderVocabularyList()" placeholder="Buscar..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-500 w-40">
-                    <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition">Lista</button>
+<!-- VISTA VOCABULARIO (TARJETAS + LISTA) -->
+<section id="view-vocabulary" class="view-section space-y-6">
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-book text-teal-400"></i> Vocabulario</h2>
+        <div class="flex gap-2 flex-wrap items-center">
+            <button onclick="startFlashcardSession()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-flash"></i> Estudiar Tarjetas</button>
+            <input type="text" id="vocab-search" oninput="renderVocabularyList()" placeholder="Buscar..." class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-500 w-40">
+            <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition">Lista</button>
+        </div>
+    </div>
+    <!-- NUEVO: panel de carpetas y acciones -->
+    <div class="flex flex-wrap items-center gap-2 mb-2">
+        <button onclick="createVocabFolder()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva carpeta</button>
+        <button onclick="addVocabWordManually()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus"></i> Añadir palabra</button>
+        <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
+    </div>
+    <div id="flashcard-area" class="hidden space-y-4">
+        <div class="flex justify-between items-center max-w-lg mx-auto">
+            <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
+                <option value="de-es">Alemán → Español</option>
+                <option value="es-de">Español → Alemán</option>
+            </select>
+            <div class="flex gap-2">
+                <button onclick="prevFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="flashcard-index" class="text-xs font-mono self-center">1/1</span>
+                <button onclick="nextFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+        <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
+                    <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+                </div>
+                <div class="flashcard-back">
+                    <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
+                    <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
                 </div>
             </div>
-            <div id="flashcard-area" class="hidden space-y-4">
-                <div class="flex justify-between items-center max-w-lg mx-auto">
-                    <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
-                        <option value="de-es">Alemán → Español</option>
-                        <option value="es-de">Español → Alemán</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <button onclick="prevFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span id="flashcard-index" class="text-xs font-mono self-center">1/1</span>
-                        <button onclick="nextFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
-                    </div>
-                </div>
-                <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
-                    <div class="flashcard-inner">
-                        <div class="flashcard-front">
-                            <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
-                            <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
-                        </div>
-                        <div class="flashcard-back">
-                            <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
-                            <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mt-2">
-                    <button onclick="markKnownWord()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">La sé ✓</button>
-                </div>
-            </div>
-            <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
-        </section>
+        </div>
+        <div class="text-center mt-2">
+            <button onclick="markKnownWord()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">La sé ✓</button>
+        </div>
+    </div>
+    <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
+</section>
 
         <!-- VISTA DETALLE DE ISLA -->
         <section id="view-island-detail" class="view-section space-y-4">
@@ -1073,7 +1079,7 @@ async function saveDatabase() {
             stopAudioAndTimers();
             if (viewName === 'islands') renderIslandsGrid();
             else if (viewName === 'conversations') renderConversationsList();
-            else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabularyList(); }
+           else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
             else if (viewName === 'stats') renderAdvancedStatistics();
             if (viewName !== 'training') {
                 if (sessionActive) pauseTrainingTimer();
