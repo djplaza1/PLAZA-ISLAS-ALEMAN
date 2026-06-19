@@ -2152,8 +2152,10 @@ function initSpeechRecognition(lang = 'de-DE') {
 }
 
 function startVoiceRecognition(callback, lang = 'de-DE') {
+    // Limpiar cualquier instancia previa
     if (voiceCancelFn) voiceCancelFn();
     if (voiceTimeout) clearTimeout(voiceTimeout);
+    isRecognizing = false;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -2165,19 +2167,26 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 3;           // pedimos 3 posibles transcripciones
+    recognition.maxAlternatives = 3;
     recognition.continuous = false;
 
     isRecognizing = true;
     let hasFiredCallback = false;
 
+    // Función de cancelación que además libera el micrófono
     voiceCancelFn = () => {
         clearTimeout(voiceTimeout);
         try { recognition.abort(); } catch(e) {}
         isRecognizing = false;
         voiceCancelFn = null;
+        // Forzar cierre del stream de audio si existiera
+        if (micStream) {
+            micStream.getTracks().forEach(t => t.stop());
+            micStream = null;
+        }
     };
 
+    // Timeout de seguridad de 12 segundos
     voiceTimeout = setTimeout(() => {
         if (!hasFiredCallback) {
             voiceCancelFn();
@@ -2188,42 +2197,59 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
 
     recognition.onresult = (event) => {
         clearTimeout(voiceTimeout);
-        // Recogemos todas las alternativas (hasta 3)
         const alternatives = [];
         for (let i = 0; i < event.results[0].length; i++) {
             alternatives.push(event.results[0][i].transcript.trim());
         }
-        // Mostramos la primera alternativa en tiempo real
         const textDisplay = document.getElementById('live-speech-text');
         if (textDisplay) {
             textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${alternatives[0]}</span>`;
         }
         if (!hasFiredCallback) {
             hasFiredCallback = true;
-            // Pasamos todas las alternativas al callback
             callback(alternatives);
         }
-    };
-
-    recognition.onend = () => {
-        clearTimeout(voiceTimeout);
+        // Limpiar estado al obtener resultado
         isRecognizing = false;
+        voiceCancelFn = null;
     };
 
     recognition.onerror = (event) => {
         clearTimeout(voiceTimeout);
         isRecognizing = false;
+        if (event.error === 'aborted') {
+            voiceCancelFn = null;
+            return;
+        }
         if (!hasFiredCallback) {
             hasFiredCallback = true;
-            if (event.error === 'aborted') return;
             callback(null, 'Error de micrófono: ' + event.error);
         }
+        voiceCancelFn = null;
+    };
+
+    // **** CORRECCIÓN PRINCIPAL ****
+    recognition.onend = () => {
+        clearTimeout(voiceTimeout);
+        // Si terminó sin haber disparado el callback (ni resultado ni error), notificamos error
+        if (!hasFiredCallback && isRecognizing) {
+            hasFiredCallback = true;
+            isRecognizing = false;
+            voiceCancelFn = null;
+            callback(null, 'No se detectó voz. Intenta de nuevo.');
+        }
+        isRecognizing = false;
     };
 
     try { recognition.start(); }
-    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
-}
-function startVoiceInput() {
+    catch(e) { 
+        if(!hasFiredCallback) { 
+            hasFiredCallback = true; 
+            callback(null, 'Error al iniciar.'); 
+        }
+        isRecognizing = false;
+    }
+}function startVoiceInput() {
     const target = trainingQueue[currentTrainIndex].de;
     const langCode = 'de-DE';
     const langLabel = 'Alemán 🇩🇪';
