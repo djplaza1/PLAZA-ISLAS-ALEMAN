@@ -2076,62 +2076,8 @@ function executePlaybackChain() {
             advanceAuto();
         }
 
-// ==================== VOZ Y TEXTO (VERSIÓN ESTRICTA - C2 PRO) ====================
-
-// 🟢 1. EVALUADOR ESTRICTO PARA VOZ (Penaliza orden, omisiones y palabras inventadas)
-function computeStrictEvaluation(transcript, target) {
-    if (!transcript || !target) return { score: 0, diff: '<span class="text-rose-500">No se detectó audio útil.</span>' };
-    
-    const originalWords = transcript.trim().split(/\s+/);
-    const targetWords = target.trim().split(/\s+/);
-    
-    const cleanTrans = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
-    const cleanTarget = target.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
-    
-    let matches = 0;
-    let diffHtml = [];
-    const maxLen = Math.max(cleanTrans.length, cleanTarget.length);
-    
-    for (let i = 0; i < maxLen; i++) {
-        const tWord = cleanTrans[i] || '';
-        const tgtWord = cleanTarget[i] || '';
-        
-        if (tWord === tgtWord && tWord !== '') {
-            matches++;
-            // Palabra perfecta
-            diffHtml.push(`<span class="text-emerald-400 font-bold">${originalWords[i] || tWord}</span>`);
-        } else {
-            // Palabra fallada, omitida o inventada
-            let errorChunk = '';
-            if (tWord) {
-                errorChunk += `<span class="text-rose-400 line-through bg-rose-950/40 px-1.5 py-0.5 rounded shadow-sm">${originalWords[i] || tWord}</span>`;
-            }
-            if (tgtWord) {
-                errorChunk += `<span class="text-amber-400 border-b-2 border-amber-500/50 text-[10px] uppercase block leading-none mt-1.5 font-black tracking-widest">Era: ${targetWords[i] || tgtWord}</span>`;
-            }
-            diffHtml.push(`<span class="inline-flex flex-col items-center align-top mx-1 mb-2">${errorChunk}</span>`);
-        }
-    }
-    
-    return { 
-        score: Math.min(100, Math.round((matches / maxLen) * 100)), 
-        diff: diffHtml.join(' ') 
-    };
-}
-
-// 🔵 2. EVALUADOR CLÁSICO (Mantenido exclusivamente para la escritura manual)
-function computeScore(transcript, target) {
-    if (!transcript || !target) return 0;
-    const t1 = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
-    const t2 = target.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
-    if (t1 === t2) return 100;
-    
-    const words1 = t1.split(' ');
-    const words2 = t2.split(' ');
-    let matches = 0;
-    words1.forEach(w => { if (words2.includes(w)) matches++; });
-    return Math.min(100, Math.round((matches / Math.max(words1.length, words2.length)) * 100));
-}
+// ==================== VOZ Y TEXTO (CORRECCIÓN FINAL ROBUSTA) ====================
+let micStream = null;
 
 function initSpeechRecognition(lang = 'de-DE') {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2139,206 +2085,218 @@ function initSpeechRecognition(lang = 'de-DE') {
         alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
         return false;
     }
+    // Destruir instancia anterior completamente
     if (recognition) {
         try { recognition.abort(); } catch(e) {}
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
         recognition = null;
     }
     recognition = new SpeechRecognition();
     recognition.lang = lang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.continuous = false; 
+    recognition.continuous = false;
     return true;
 }
 
-function startVoiceRecognition(callback, lang = 'de-DE') {
-    if (voiceCancelFn) voiceCancelFn();
-    if (voiceTimeout) clearTimeout(voiceTimeout);
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        callback(null, 'Tu navegador no soporta voz.');
-        return;
+function limpiarEstadoVoz() {
+    clearTimeout(voiceTimeout);
+    voiceTimeout = null;
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
     }
-
-    window.speechSynthesis.cancel();
-    const recognition = new SpeechRecognition();
-    recognition.lang = lang;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;           // pedimos 3 posibles transcripciones
-    recognition.continuous = false;
-
-    isRecognizing = true;
-    let hasFiredCallback = false;
-
-    voiceCancelFn = () => {
-        clearTimeout(voiceTimeout);
-        try { recognition.abort(); } catch(e) {}
-        isRecognizing = false;
-        voiceCancelFn = null;
-    };
-
-    voiceTimeout = setTimeout(() => {
-        if (!hasFiredCallback) {
-            voiceCancelFn();
-            hasFiredCallback = true;
-            callback(null, 'Tiempo agotado. Intenta de nuevo.');
+    try { 
+        if (recognition) {
+            recognition.onresult = null;
+            recognition.onerror = null;
+            recognition.onend = null;
+            recognition.abort(); 
         }
-    }, 12000);
-
-    recognition.onresult = (event) => {
-        clearTimeout(voiceTimeout);
-        // Recogemos todas las alternativas (hasta 3)
-        const alternatives = [];
-        for (let i = 0; i < event.results[0].length; i++) {
-            alternatives.push(event.results[0][i].transcript.trim());
-        }
-        // Mostramos la primera alternativa en tiempo real
-        const textDisplay = document.getElementById('live-speech-text');
-        if (textDisplay) {
-            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${alternatives[0]}</span>`;
-        }
-        if (!hasFiredCallback) {
-            hasFiredCallback = true;
-            // Pasamos todas las alternativas al callback
-            callback(alternatives);
-        }
-    };
-
-    recognition.onend = () => {
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-    };
-
-    recognition.onerror = (event) => {
-        clearTimeout(voiceTimeout);
-        isRecognizing = false;
-        if (!hasFiredCallback) {
-            hasFiredCallback = true;
-            if (event.error === 'aborted') return;
-            callback(null, 'Error de micrófono: ' + event.error);
-        }
-    };
-
-    try { recognition.start(); }
-    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
+    } catch(e) {}
+    isRecognizing = false;
+    voiceCancelFn = null;
 }
+
+function startVoiceRecognition(callback, lang = 'de-DE') {
+    // Limpiar cualquier estado anterior
+    limpiarEstadoVoz();
+
+    // Pedir permiso de micrófono y mantener el stream abierto
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            micStream = stream; // Mantener vivo el micrófono
+
+            // Crear o reconfigurar el reconocedor
+            if (!recognition || recognition.lang !== lang) {
+                if (!initSpeechRecognition(lang)) {
+                    limpiarEstadoVoz();
+                    callback(null, 'not-supported');
+                    return;
+                }
+            }
+
+            if (isRecognizing) {
+                limpiarEstadoVoz();
+                callback(null, 'Ya hay una grabación en curso.');
+                return;
+            }
+
+            isRecognizing = true;
+            let hasResult = false;
+
+            // Función de cancelación
+            voiceCancelFn = () => {
+                limpiarEstadoVoz();
+                if (!hasResult) {
+                    callback(null, 'cancelado');
+                }
+            };
+
+            // Timeout de seguridad: 10 segundos
+            voiceTimeout = setTimeout(() => {
+                if (!hasResult) {
+                    limpiarEstadoVoz();
+                    callback(null, 'No se detectó voz. Intenta de nuevo.');
+                }
+            }, 10000);
+
+            recognition.onresult = (event) => {
+                hasResult = true;
+                clearTimeout(voiceTimeout);
+                voiceTimeout = null;
+                
+                // Tomar el resultado final
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript.trim();
+                
+                // Limpiar después de obtener resultado
+                if (micStream) {
+                    micStream.getTracks().forEach(track => track.stop());
+                    micStream = null;
+                }
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+                voiceCancelFn = null;
+                
+                callback(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                clearTimeout(voiceTimeout);
+                voiceTimeout = null;
+                
+                let msg = event.error;
+                if (event.error === 'not-allowed') msg = 'Permiso de micrófono denegado.';
+                else if (event.error === 'no-speech') msg = 'No se detectó voz. Habla más fuerte.';
+                else if (event.error === 'audio-capture') msg = 'No se encontró micrófono.';
+                else if (event.error === 'network') msg = 'Error de red. Comprueba tu conexión a Internet.';
+                else if (event.error === 'aborted') {
+                    // Cancelación manual, no hacer nada
+                    limpiarEstadoVoz();
+                    return;
+                }
+                
+                limpiarEstadoVoz();
+                callback(null, msg);
+            };
+
+            recognition.onend = () => {
+                // Solo actuar si no hubo resultado y seguimos en estado de escucha
+                if (!hasResult && isRecognizing) {
+                    clearTimeout(voiceTimeout);
+                    voiceTimeout = null;
+                    limpiarEstadoVoz();
+                    callback(null, 'No se detectó voz. Intenta de nuevo.');
+                }
+                // Si ya hubo resultado, la limpieza ya se hizo en onresult
+            };
+
+            try {
+                recognition.start();
+            } catch(e) {
+                limpiarEstadoVoz();
+                callback(null, 'Error al iniciar micrófono. Recarga la página.');
+            }
+        })
+        .catch(err => {
+            limpiarEstadoVoz();
+            callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
+        });
+}
+
 function startVoiceInput() {
-    const target = trainingQueue[currentTrainIndex].de;
-    const langCode = 'de-DE';
-    const langLabel = 'Alemán 🇩🇪';
+    const phrase = trainingQueue[currentTrainIndex];
+    if (!phrase) return;
+    
+    const target = trainingDirection === 'normal' ? phrase.de : phrase.es;
+    const lang = trainingDirection === 'normal' ? 'de-DE' : 'es-ES';
 
     const btn = document.getElementById('btn-voice-input');
-    if (btn) btn.disabled = true;
+    btn.disabled = true;
 
-    const evalPanel = document.getElementById('evaluation-panel');
-    if (evalPanel) evalPanel.classList.add('hidden');
-
-    document.getElementById('voice-feedback').classList.remove('hidden');
-    document.getElementById('voice-feedback').innerHTML = `
-        <div class="flex items-center justify-between w-full bg-slate-900 p-2 rounded-lg border border-slate-700">
-            <div class="flex items-center gap-3 truncate pl-2">
-                <i class="fa-solid fa-microphone text-rose-500 animate-pulse shrink-0 text-lg"></i>
-                <span id="live-speech-text" class="text-slate-300 truncate font-mono text-sm font-bold">🎤 Escuchando en ${langLabel}...</span>
+    const feedback = document.getElementById('voice-feedback');
+    feedback.classList.remove('hidden');
+    feedback.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-microphone text-rose-400 animate-pulse"></i>
+                <span>🎤 Escuchando...</span>
             </div>
-            <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-4 py-2 rounded-lg border border-slate-600 hover:bg-slate-700 hover:text-white transition shrink-0 ml-2 font-bold uppercase tracking-wider text-slate-400">Abortar</button>
+            <button onclick="cancelVoiceRecognition()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition">
+                Cancelar
+            </button>
         </div>
     `;
 
-    startVoiceRecognition((alternatives, error) => {
-        if (btn) btn.disabled = false;
+    startVoiceRecognition((transcript, error) => {
+        btn.disabled = false;
+        
+        if (error === 'cancelado') {
+            feedback.classList.add('hidden');
+            return;
+        }
         
         if (error) {
-            document.getElementById('voice-feedback').innerHTML = `
-                <div class="flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg border border-rose-900/50">
-                    <span class="text-rose-400 text-sm font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i> ${error}</span>
-                    <button onclick="startVoiceInput()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-2"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+            feedback.innerHTML = `
+                <div class="flex items-center justify-between gap-3">
+                    <span>⚠️ ${error}</span>
+                    <button onclick="retryVoiceInput()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition">
+                        Reintentar
+                    </button>
                 </div>
             `;
             return;
         }
         
-        // Si no es array, lo convertimos (por compatibilidad)
-        const altList = Array.isArray(alternatives) ? alternatives : [alternatives];
-        let bestTranscript = altList[0] || '';
-        let bestScore = 0;
-        let bestEval = null;
-
-        // Evaluamos cada alternativa con el método estricto y nos quedamos con la mejor
-        altList.forEach(alt => {
-            if (!alt) return;
-            const evalData = computeStrictEvaluation(alt, target);
-            if (evalData.score > bestScore) {
-                bestScore = evalData.score;
-                bestTranscript = alt;
-                bestEval = evalData;
-            }
-        });
-        
-        // Si no se encontró nada, usamos la primera
-        if (!bestEval) bestEval = computeStrictEvaluation(bestTranscript, target);
-        
-        const score = bestEval.score;
-        
-        document.getElementById('voice-feedback').innerHTML = `
-            <div class="flex flex-col gap-4">
-                <div class="text-slate-200 leading-relaxed text-xl text-center p-6 bg-slate-950 border border-slate-800 rounded-2xl shadow-inner flex flex-wrap justify-center items-center">
-                    ${bestEval.diff}
-                </div>
-                <div class="flex justify-between items-center border-t border-slate-800/80 pt-4 px-2">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Similitud Fonética</span>
-                        <span class="font-mono text-3xl ${score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-500'} font-black">${score}%</span>
-                        ${altList.length > 1 ? `<span class="text-[10px] text-slate-500 mt-1">Elegida entre ${altList.length} alternativas</span>` : ''}
-                    </div>
-                    <button onclick="startVoiceInput()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg flex items-center gap-2 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1">
-                        <i class="fa-solid fa-rotate-right text-lg"></i> Repetir
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        localGrammarRating = score >= 95 ? 5 : score >= 80 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-        localFluencyRating = score >= 80 ? 4 : 2; 
+        const score = computeScore(transcript, target);
+        feedback.innerHTML = `🎙️ Dijiste: "<strong>${transcript}</strong>"<br>📊 Similitud: <strong>${score}%</strong>`;
+        localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+        localFluencyRating = 3;
         renderDynamicStars('grammar', localGrammarRating);
         renderDynamicStars('fluency', localFluencyRating);
         revealTargetStructure();
-    }, langCode); 
+    }, lang);
 }
+
+function retryVoiceInput() {
+    // Pequeña pausa para resetear el micrófono
+    setTimeout(() => {
+        startVoiceInput();
+    }, 300);
+}
+
 function cancelVoiceRecognition() {
-    if (voiceCancelFn) voiceCancelFn();
-    isRecognizing = false;
-    const btn = document.getElementById('btn-voice-input');
-    if (btn) btn.disabled = false;
+    if (voiceCancelFn) {
+        voiceCancelFn();
+    } else {
+        limpiarEstadoVoz();
+    }
+    document.getElementById('btn-voice-input').disabled = false;
     document.getElementById('voice-feedback').classList.add('hidden');
 }
-
-function startTypingInput() {
-    document.getElementById('typing-input-area').classList.remove('hidden');
-    document.getElementById('typing-answer').value = '';
-    document.getElementById('typing-feedback').classList.add('hidden');
-    document.getElementById('typing-answer').focus();
-}
-
-function submitTypingAnswer() {
-    const ans = document.getElementById('typing-answer').value.trim();
-    if (!ans) return;
-    
-    // Aquí mantenemos el computeScore clásico para la escritura manual
-    const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
-    const score = computeScore(ans, target);
-    
-    document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
-    document.getElementById('typing-feedback').classList.remove('hidden');
-    document.getElementById('typing-input-area').classList.add('hidden');
-    
-    localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-    localFluencyRating = 4;
-    renderDynamicStars('grammar', localGrammarRating);
-    renderDynamicStars('fluency', localFluencyRating);
-    revealTargetStructure();
-}
-
 // ==================== ATAJOS DE TECLADO ====================
 function handleKeyboardShortcuts(e) {
     // 🔴 BLOQUEO DE SEGURIDAD: Si el foco está en un input o textarea, NO hacemos nada.
