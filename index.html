@@ -1526,6 +1526,38 @@ function getFolderPath(folderId) {
 function getChildFolders(parentId) {
     return appData.vocabFolders.filter(f => f.parentId === parentId);
 }
+function deleteVocabFolder(folderId) {
+    const folder = appData.vocabFolders.find(f => f.id === folderId);
+    if (!folder) return;
+    if (!confirm(`¿Eliminar la carpeta "${folder.name}"? Las palabras se moverán a la carpeta superior.`)) return;
+
+    // Recoger todos los IDs de esta carpeta y sus subcarpetas
+    const idsToDelete = new Set();
+    function collectIds(id) {
+        idsToDelete.add(id);
+        getChildFolders(id).forEach(child => collectIds(child.id));
+    }
+    collectIds(folderId);
+
+    // Mover las palabras de estas carpetas a la carpeta padre (o null si es raíz)
+    const parentId = folder.parentId;
+    appData.vocabulary.forEach(w => {
+        if (idsToDelete.has(w.folderId)) {
+            w.folderId = parentId;
+        }
+    });
+
+    // Eliminar las carpetas del array
+    appData.vocabFolders = appData.vocabFolders.filter(f => !idsToDelete.has(f.id));
+
+    saveDatabase();
+    // Si la carpeta eliminada era la seleccionada, volver a "Todas"
+    if (currentVocabFolderId === folderId || idsToDelete.has(currentVocabFolderId)) {
+        currentVocabFolderId = null;
+    }
+    renderVocabFolderSelector();
+    renderVocabularyList();
+}
 
 function createVocabFolder(parentId) {
     const parentName = parentId ? getFolderPath(parentId) : 'raíz';
