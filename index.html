@@ -285,7 +285,7 @@
     </div>
     <!-- Panel de carpetas jerárquicas -->
     <div class="flex flex-wrap items-center gap-2 mb-2">
-        <button onclick="createVocabFolder(null)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva carpeta</button>
+        <button onclick="createVocabFolder(currentVocabFolderId)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva carpeta</button>
         <button onclick="addVocabWordManually()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus"></i> Añadir palabra</button>
         <button onclick="importVocabFromIslands()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-file-import"></i> Importar desde islas</button>
         <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
@@ -1545,9 +1545,8 @@ function renderVocabFolderSelector() {
     const container = document.getElementById('vocab-folder-tabs');
     if (!container) return;
 
-    // Mostrar solo carpetas raíz, pero al hacer clic en una se expande (simplificado: mostramos todas con sangría)
+    // Ordenar carpetas jerárquicamente
     const allFolders = [...appData.vocabFolders];
-    // Ordenar por jerarquía: primero las raíz, luego sus hijas, etc.
     const sorted = [];
     function addChildren(parentId, depth) {
         allFolders.filter(f => f.parentId === parentId).forEach(f => {
@@ -1561,7 +1560,10 @@ function renderVocabFolderSelector() {
     sorted.forEach(f => {
         const indent = ' '.repeat(f.depth);
         const isSelected = currentVocabFolderId === f.id;
+        html += `<span class="inline-flex items-center gap-1">`;
         html += `<button onclick="selectVocabFolder('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isSelected ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}">${indent}📁 ${f.name}</button>`;
+        html += `<button onclick="event.stopPropagation(); deleteVocabFolder('${f.id}')" class="text-slate-500 hover:text-rose-400 text-xs px-1" title="Eliminar carpeta">✕</button>`;
+        html += `</span>`;
     });
     container.innerHTML = html;
 }
