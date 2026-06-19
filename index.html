@@ -292,6 +292,7 @@
         <button onclick="createVocabFolder(currentVocabFolderId)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>
         <button onclick="addVocabWordManually()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus"></i> Añadir palabra</button>
         <button onclick="importVocabFromIslands()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-file-import"></i> Importar desde islas</button>
+        <button onclick="importVocabFromText()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-paste"></i> Pegar lista</button>
     </div>
 
     <!-- Subcarpetas -->
@@ -1767,6 +1768,115 @@ async function importVocabFromIslands() {
         if (num > 0 && num <= folderNames.length) folderId = folderNames[num-1].id;
         else { alert('Opción inválida.'); return; }
     }
+
+function importVocabFromText() {
+    // Crear modal con textarea
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    const content = document.createElement('div');
+    content.className = 'popup-content max-w-2xl';
+    content.style.maxHeight = '90vh';
+    content.style.overflowY = 'auto';
+    content.innerHTML = `
+        <h3 class="font-bold text-lg text-emerald-400 mb-2">Pegar lista de vocabulario</h3>
+        <p class="text-xs text-slate-400 mb-3">Pega aquí el vocabulario (formato libre: palabra : traducción).<br>Las líneas que tengan "frase:" o "ejemplo:" se usarán como frase de ejemplo.</p>
+        <textarea id="vocab-text-input" rows="15" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white font-mono" placeholder="Pega aquí tu lista..."></textarea>
+        <div class="mt-3">
+            <label class="text-xs text-slate-400">Carpeta destino:</label>
+            <select id="vocab-text-folder" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1 text-sm text-white mt-1">
+                <option value="">Raíz</option>
+                ${appData.vocabFolders.map(f => `<option value="${f.id}" ${f.id === currentVocabFolderId ? 'selected' : ''}>${getFolderPath(f.id)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="cancel-vocab-text" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            <button id="confirm-vocab-text" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-xs font-bold">Importar</button>
+        </div>
+    `;
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    document.getElementById('cancel-vocab-text').onclick = () => overlay.remove();
+    document.getElementById('confirm-vocab-text').onclick = async () => {
+        const text = document.getElementById('vocab-text-input').value.trim();
+        const folderId = document.getElementById('vocab-text-folder').value || null;
+        if (!text) { alert('Pega algún texto.'); return; }
+
+        const lines = text.split('\n');
+        let addedCount = 0;
+        let currentExampleDe = '';
+        let currentExampleEs = '';
+
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+
+            // Detectar frases de ejemplo (prefijos comunes)
+            if (line.toLowerCase().startsWith('frase:') || line.toLowerCase().startsWith('ejemplo:') || line.toLowerCase().startsWith('beispiel:')) {
+                const parts = line.split(':').slice(1).join(':').trim();
+                const subParts = parts.split('//');
+                currentExampleDe = subParts[0]?.trim() || '';
+                currentExampleEs = subParts[1]?.trim() || currentExampleDe;
+                continue;
+            }
+
+            // Ignorar líneas de encabezado (suelen estar en mayúsculas o empezar con símbolos)
+            if (line.startsWith('📂') || line.startsWith('EINSTIEG') || line.startsWith('SPRECHEN') || line.startsWith('LESEN') || line.startsWith('HÖREN') || line.startsWith('WORTSCHATZ') || line.startsWith('SEHEN')) {
+                continue;
+            }
+
+            // Extraer palabra y traducción
+            // Formato esperado: [símbolos opcionales] palabra (género/plural) : traducción
+            const cleanLine = line.replace(/[🔴🟢🔵🟡⚪️]/g, '').trim();
+            const colonIndex = cleanLine.indexOf(':');
+            if (colonIndex === -1) continue;
+
+            const germanPart = cleanLine.substring(0, colonIndex).trim();
+            const spanishPart = cleanLine.substring(colonIndex + 1).trim();
+
+            // Quitar paréntesis del final de la parte alemana (ej: "die Herkunft (Sg.)" -> "die Herkunft")
+            const wordOnly = germanPart.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+
+            if (wordOnly.length < 2 || spanishPart.length < 2) continue;
+
+            // Verificar duplicados
+            if (appData.vocabulary.some(v => v.word.toLowerCase() === wordOnly.toLowerCase())) continue;
+
+            // Usar frase de ejemplo acumulada o vacía
+            const exampleDe = currentExampleDe || '';
+            const exampleEs = currentExampleEs || '';
+            currentExampleDe = '';
+            currentExampleEs = '';
+
+            appData.vocabulary.push({
+                id: 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                word: wordOnly,
+                translation: spanishPart,
+                example_de: exampleDe,
+                example_es: exampleEs,
+                folderId: folderId,
+                sourceIslandId: null,
+                sourcePhraseId: null,
+                added: getTodayDateString(),
+                interval: 1,
+                nextReviewDate: getTodayDateString(),
+                easeFactor: 2.5,
+                reps: 0,
+                lapses: 0
+            });
+            addedCount++;
+        }
+
+        await saveDatabase();
+        overlay.remove();
+        renderVocabFolderSelector();
+        renderVocabularyList();
+        alert(`✅ ${addedCount} palabras importadas correctamente.`);
+    };
+}
+    
 function showIslandSelectionModal(islandList) {
     return new Promise((resolve) => {
         // Eliminar modal previo si existe
