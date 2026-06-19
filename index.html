@@ -613,6 +613,9 @@ function stopRecording() {
         // El evento onstop se encargará de guardar y mostrar el reproductor
     }
 }
+let silenceDetectorTimer = null;
+let audioContextForSilence = null;
+
 function startRecordingFromUI() {
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
     const phrase = trainingQueue[currentTrainIndex];
@@ -622,11 +625,20 @@ function startRecordingFromUI() {
         btn.innerHTML = '<i class="fa-solid fa-microphone-alt"></i> Grabando...';
         btn.classList.add('recording-active');
     }
-    startRecording(phrase.id);
+    startRecordingWithSilenceDetection(phrase.id);
 }
 
 function stopRecordingFromUI() {
     stopRecording();
+    // Limpiar detector de silencio
+    if (silenceDetectorTimer) {
+        cancelAnimationFrame(silenceDetectorTimer);
+        silenceDetectorTimer = null;
+    }
+    if (audioContextForSilence) {
+        audioContextForSilence.close();
+        audioContextForSilence = null;
+    }
     const btn = document.getElementById('btn-record');
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Grabar';
@@ -634,6 +646,109 @@ function stopRecordingFromUI() {
     }
 }
 
+function toggleRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        // Si ya está grabando, forzamos parada manual
+        stopRecordingFromUI();
+    } else {
+        startRecordingFromUI();
+    }
+}
+
+function startRecordingWithSilenceDetection(phraseId) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no soporta grabación de audio.');
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        currentRecordingPhraseId = phraseId;
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (currentRecordingPhraseId) {
+                await saveAudioBlob(currentRecordingPhraseId, audioBlob);
+                console.log('Grabación guardada para frase', currentRecordingPhraseId);
+                setupTrainingSlide();
+            }
+            stream.getTracks().forEach(track => track.stop());
+            mediaRecorder = null;
+            // Limpiar detector de silencio
+            if (silenceDetectorTimer) {
+                cancelAnimationFrame(silenceDetectorTimer);
+                silenceDetectorTimer = null;
+            }
+            if (audioContextForSilence) {
+                audioContextForSilence.close();
+                audioContextForSilence = null;
+            }
+            // Restaurar botón
+            const btn = document.getElementById('btn-record');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-microphone"></i> Grabar';
+                btn.classList.remove('recording-active');
+            }
+        };
+
+        mediaRecorder.start();
+
+        // Iniciar detección de silencio
+        detectSilenceAndStop(stream);
+    }).catch(err => {
+        alert('Error al acceder al micrófono: ' + err);
+    });
+}
+
+function detectSilenceAndStop(stream) {
+    audioContextForSilence = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContextForSilence.createAnalyser();
+    const microphone = audioContextForSilence.createMediaStreamSource(stream);
+    microphone.connect(analyser);
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const SILENCE_THRESHOLD = 25;  // nivel por debajo del cual es silencio
+    const SILENCE_DURATION = 1200; // 1.2 segundos de silencio para parar
+    let silenceStart = null;
+
+    function checkSilence() {
+        if (!mediaRecorder || mediaRecorder.state !== 'recording') {
+            // Ya se detuvo por otra vía
+            if (audioContextForSilence) {
+                audioContextForSilence.close();
+                audioContextForSilence = null;
+            }
+            return;
+        }
+
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+        }
+        const avg = sum / bufferLength;
+
+        if (avg < SILENCE_THRESHOLD) {
+            if (!silenceStart) {
+                silenceStart = Date.now();
+            } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+                // Silencio prolongado: detener grabación
+                stopRecordingFromUI();
+                return;
+            }
+        } else {
+            silenceStart = null;
+        }
+        silenceDetectorTimer = requestAnimationFrame(checkSilence);
+    }
+    checkSilence();
+}
 // ==================== CACHÉ DE VOZ ALEMANA ====================
 let cachedGermanVoice = null;
 
