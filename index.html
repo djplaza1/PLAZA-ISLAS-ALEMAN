@@ -273,7 +273,7 @@
             </div>
         </section>
 
-<!-- VISTA VOCABULARIO (JERARQUÍA DE CARPETAS) -->
+<!-- VISTA VOCABULARIO (EXPLORADOR DE CARPETAS) -->
 <section id="view-vocabulary" class="view-section space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
         <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-book text-teal-400"></i> Vocabulario</h2>
@@ -283,15 +283,22 @@
             <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition">Lista</button>
         </div>
     </div>
-    <!-- Panel de carpetas jerárquicas -->
-    <div class="flex flex-wrap items-center gap-2 mb-2">
-        <button onclick="createVocabFolder(currentVocabFolderId)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva carpeta</button>
+
+    <!-- Barra de navegación de carpetas -->
+    <div class="flex flex-wrap items-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+        <button onclick="navigateVocabFolder(null)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition">📚 Raíz</button>
+        <span id="vocab-breadcrumb" class="text-slate-400 text-sm font-mono"></span>
+        <div class="flex-1"></div>
+        <button onclick="createVocabFolder(currentVocabFolderId)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>
         <button onclick="addVocabWordManually()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-plus"></i> Añadir palabra</button>
         <button onclick="importVocabFromIslands()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-file-import"></i> Importar desde islas</button>
-        <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
     </div>
+
+    <!-- Subcarpetas -->
+    <div id="vocab-subfolders" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+    <!-- Flashcards (ocultas por defecto) -->
     <div id="flashcard-area" class="hidden space-y-4">
-        <!-- flashcards sin cambios -->
         <div class="flex justify-between items-center max-w-lg mx-auto">
             <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
                 <option value="de-es">Alemán → Español</option>
@@ -319,9 +326,10 @@
             <button onclick="markKnownWord()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">La sé ✓</button>
         </div>
     </div>
+
+    <!-- Lista de palabras de la carpeta actual -->
     <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
 </section>
-
         <!-- VISTA DETALLE DE ISLA -->
         <section id="view-island-detail" class="view-section space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-1 rounded-xl">
@@ -1422,19 +1430,17 @@ function renderIslandsGrid() {
             initiateTrainingSession(virtualId, direction);
         }
 
-// ==================== VOCABULARIO (JERARQUÍA DE CARPETAS + MOVIMIENTO) ====================
-let currentVocabFolderId = null; // null = todas las palabras
+// ==================== VOCABULARIO (EXPLORADOR DE CARPETAS CORREGIDO) ====================
+let currentVocabFolderId = null; // null = carpeta raíz
 
-// Migración de datos antiguos (se ejecuta en loadAppData)
+// Migración de datos antiguos
 function migrateVocabData() {
-    // Convertir vocabFolders de strings a objetos
     if (appData.vocabFolders && appData.vocabFolders.length > 0 && typeof appData.vocabFolders[0] === 'string') {
         appData.vocabFolders = appData.vocabFolders.map(name => ({ id: 'vf_' + Date.now() + '_' + Math.random().toString(36).substr(2,5), name, parentId: null }));
     } else if (!appData.vocabFolders) {
         appData.vocabFolders = [];
     }
 
-    // Migrar palabras: folder (string) -> folderId (ID)
     if (appData.vocabulary && appData.vocabulary.length > 0) {
         appData.vocabulary.forEach(w => {
             if (w.folder && !w.folderId) {
@@ -1461,6 +1467,7 @@ function switchVocabMode(mode) {
     } else {
         document.getElementById('flashcard-area').classList.add('hidden');
         document.getElementById('vocabulary-list-container').classList.remove('hidden');
+        renderVocabFolderSelector();
         renderVocabularyList();
     }
 }
@@ -1510,10 +1517,11 @@ function markKnownWord() {
     showFlashcard();
 }
 
-// --- FUNCIONES DE CARPETAS JERÁRQUICAS ---
+// --- FUNCIONES DE CARPETAS (Navegación jerárquica) ---
 function getFolderPath(folderId) {
+    if (!folderId) return 'Raíz';
     const folder = appData.vocabFolders.find(f => f.id === folderId);
-    if (!folder) return 'Sin carpeta';
+    if (!folder) return 'Raíz';
     let path = folder.name;
     let parent = appData.vocabFolders.find(f => f.id === folder.parentId);
     while (parent) {
@@ -1526,77 +1534,68 @@ function getFolderPath(folderId) {
 function getChildFolders(parentId) {
     return appData.vocabFolders.filter(f => f.parentId === parentId);
 }
-function deleteVocabFolder(folderId) {
-    const folder = appData.vocabFolders.find(f => f.id === folderId);
-    if (!folder) return;
-    if (!confirm(`¿Eliminar la carpeta "${folder.name}"? Las palabras se moverán a la carpeta superior.`)) return;
-
-    // Recoger todos los IDs de esta carpeta y sus subcarpetas
-    const idsToDelete = new Set();
-    function collectIds(id) {
-        idsToDelete.add(id);
-        getChildFolders(id).forEach(child => collectIds(child.id));
-    }
-    collectIds(folderId);
-
-    // Mover las palabras de estas carpetas a la carpeta padre (o null si es raíz)
-    const parentId = folder.parentId;
-    appData.vocabulary.forEach(w => {
-        if (idsToDelete.has(w.folderId)) {
-            w.folderId = parentId;
-        }
-    });
-
-    // Eliminar las carpetas del array
-    appData.vocabFolders = appData.vocabFolders.filter(f => !idsToDelete.has(f.id));
-
-    saveDatabase();
-    // Si la carpeta eliminada era la seleccionada, volver a "Todas"
-    if (currentVocabFolderId === folderId || idsToDelete.has(currentVocabFolderId)) {
-        currentVocabFolderId = null;
-    }
-    renderVocabFolderSelector();
-    renderVocabularyList();
-}
 
 function createVocabFolder(parentId) {
-    const parentName = parentId ? getFolderPath(parentId) : 'raíz';
-    const name = prompt(`Nombre de la nueva carpeta (dentro de ${parentName}):`);
+    const parentName = parentId ? getFolderPath(parentId) : 'Raíz';
+    const name = prompt(`Nombre de la nueva subcarpeta dentro de "${parentName}":`);
     if (!name) return;
     if (appData.vocabFolders.some(f => f.name === name && f.parentId === parentId)) {
         alert('Ya existe una carpeta con ese nombre en este nivel.');
         return;
     }
-    const newFolder = { id: 'vf_' + Date.now(), name: name, parentId: parentId };
-    appData.vocabFolders.push(newFolder);
+    appData.vocabFolders.push({ id: 'vf_' + Date.now(), name, parentId });
     saveDatabase();
     renderVocabFolderSelector();
 }
 
+function deleteVocabFolder(folderId) {
+    const folder = appData.vocabFolders.find(f => f.id === folderId);
+    if (!folder) return;
+    if (!confirm(`¿Eliminar la carpeta "${folder.name}" y mover sus palabras a la carpeta superior?`)) return;
+
+    const idsToDelete = new Set();
+    (function collect(id) {
+        idsToDelete.add(id);
+        getChildFolders(id).forEach(c => collect(c.id));
+    })(folderId);
+
+    const parentId = folder.parentId;
+    appData.vocabulary.forEach(w => { if (idsToDelete.has(w.folderId)) w.folderId = parentId; });
+    appData.vocabFolders = appData.vocabFolders.filter(f => !idsToDelete.has(f.id));
+
+    saveDatabase();
+    if (currentVocabFolderId && idsToDelete.has(currentVocabFolderId)) {
+        selectVocabFolder(parentId);
+    } else {
+        renderVocabFolderSelector();
+    }
+}
+
+// Selector de carpetas (ahora solo muestra las hijas de la carpeta actual)
 function renderVocabFolderSelector() {
     const container = document.getElementById('vocab-folder-tabs');
     if (!container) return;
 
-    // Ordenar carpetas jerárquicamente
-    const allFolders = [...appData.vocabFolders];
-    const sorted = [];
-    function addChildren(parentId, depth) {
-        allFolders.filter(f => f.parentId === parentId).forEach(f => {
-            sorted.push({...f, depth});
-            addChildren(f.id, depth + 1);
-        });
-    }
-    addChildren(null, 0);
+    const children = getChildFolders(currentVocabFolderId);
+    let html = '';
 
-    let html = `<button onclick="selectVocabFolder(null)" class="px-3 py-1 rounded-lg text-xs font-bold transition ${currentVocabFolderId === null ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}">📚 Todas</button>`;
-    sorted.forEach(f => {
-        const indent = ' '.repeat(f.depth);
+    // Botón "Subir" si no estamos en la raíz
+    if (currentVocabFolderId !== null) {
+        const parentId = appData.vocabFolders.find(f => f.id === currentVocabFolderId)?.parentId ?? null;
+        html += `<button onclick="selectVocabFolder(${parentId === null ? 'null' : `'${parentId}'`})" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-slate-700 text-slate-300 hover:bg-slate-600">⬆ Subir</button>`;
+    } else {
+        html += `<span class="px-3 py-1 text-xs font-bold text-slate-500">📚 Raíz</span>`;
+    }
+
+    // Subcarpetas directas
+    children.forEach(f => {
         const isSelected = currentVocabFolderId === f.id;
         html += `<span class="inline-flex items-center gap-1">`;
-        html += `<button onclick="selectVocabFolder('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isSelected ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}">${indent}📁 ${f.name}</button>`;
+        html += `<button onclick="selectVocabFolder('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isSelected ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}">📁 ${f.name}</button>`;
         html += `<button onclick="event.stopPropagation(); deleteVocabFolder('${f.id}')" class="text-slate-500 hover:text-rose-400 text-xs px-1" title="Eliminar carpeta">✕</button>`;
         html += `</span>`;
     });
+
     container.innerHTML = html;
 }
 
@@ -1606,36 +1605,25 @@ function selectVocabFolder(folderId) {
     renderVocabularyList();
 }
 
-// --- LISTA DE VOCABULARIO (con movimiento) ---
-function getWordsForCurrentFolder() {
-    if (!appData.vocabulary) return [];
-    if (currentVocabFolderId === null) return appData.vocabulary;
-    // Mostrar palabras de esta carpeta y de todas sus subcarpetas recursivamente
-    const folderIds = new Set();
-    function collectIds(parentId) {
-        folderIds.add(parentId);
-        getChildFolders(parentId).forEach(f => {
-            folderIds.add(f.id);
-            collectIds(f.id);
-        });
-    }
-    collectIds(currentVocabFolderId);
-    return appData.vocabulary.filter(w => folderIds.has(w.folderId));
-}
-
+// --- LISTA DE PALABRAS (solo las de la carpeta actual) ---
 function renderVocabularyList() {
     const container = document.getElementById('vocabulary-list-container');
     const search = document.getElementById('vocab-search')?.value.toLowerCase() || '';
-    let filtered = getWordsForCurrentFolder();
+
+    // Solo palabras directamente en currentVocabFolderId
+    let words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+
     if (search) {
-        filtered = filtered.filter(v => v.word.toLowerCase().includes(search) || v.translation.toLowerCase().includes(search));
+        words = words.filter(v => v.word.toLowerCase().includes(search) || v.translation.toLowerCase().includes(search));
     }
-    if (filtered.length === 0) {
-        container.innerHTML = '<p class="text-slate-500 text-center py-8">No hay palabras en esta carpeta.</p>';
+
+    if (words.length === 0) {
+        container.innerHTML = `<p class="text-slate-500 text-center py-8">${currentVocabFolderId ? 'Esta carpeta está vacía.' : 'No hay palabras en la raíz.'}</p>`;
         return;
     }
+
     container.innerHTML = '';
-    filtered.forEach(v => {
+    words.forEach(v => {
         const div = document.createElement('div');
         div.className = "flex justify-between items-center py-3 border-b border-slate-700/50";
         div.innerHTML = `
@@ -1643,7 +1631,6 @@ function renderVocabularyList() {
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="font-bold text-emerald-400">${v.word}</span>
                     <span class="text-slate-400 text-sm">${v.translation}</span>
-                    <span class="text-[10px] text-slate-500">(${getFolderPath(v.folderId)})</span>
                     ${v.example_de ? `<span class="text-[10px] text-slate-500 italic">"${v.example_de}"</span>` : ''}
                 </div>
                 <div class="flex gap-2 mt-1">
@@ -1664,21 +1651,15 @@ function renderVocabularyList() {
 function moveWordToFolder(wordId) {
     const word = appData.vocabulary.find(v => v.id === wordId);
     if (!word) return;
-    // Mostrar lista de carpetas para elegir
     const folderNames = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
-    let msg = 'Selecciona la carpeta destino (número):\n0 - Sin carpeta (raíz)\n';
-    folderNames.forEach((f, i) => { msg += `${i+1} - ${f.path}\n`; });
+    let msg = 'Selecciona carpeta destino (número):\n0 - Raíz\n';
+    folderNames.forEach((f, i) => msg += `${i+1} - ${f.path}\n`);
     const choice = prompt(msg);
     if (choice === null) return;
     const num = parseInt(choice);
-    if (num === 0) {
-        word.folderId = null;
-    } else if (num > 0 && num <= folderNames.length) {
-        word.folderId = folderNames[num-1].id;
-    } else {
-        alert('Opción inválida.');
-        return;
-    }
+    if (num === 0) word.folderId = null;
+    else if (num > 0 && num <= folderNames.length) word.folderId = folderNames[num-1].id;
+    else { alert('Opción inválida.'); return; }
     saveDatabase();
     renderVocabularyList();
 }
@@ -1715,38 +1696,31 @@ function addVocabWordManually() {
     if (!trans) return;
     const example_de = prompt('Frase de ejemplo (alemán, opcional):') || '';
     const example_es = prompt('Traducción de la frase de ejemplo (opcional):') || '';
-    // Elegir carpeta
     const folderNames = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
-    let msg = 'Selecciona carpeta (número):\n0 - Sin carpeta\n';
-    folderNames.forEach((f, i) => { msg += `${i+1} - ${f.path}\n`; });
+    let msg = 'Selecciona carpeta (número):\n0 - Raíz (actual)\n';
+    folderNames.forEach((f, i) => msg += `${i+1} - ${f.path}\n`);
     const choice = prompt(msg, '0');
-    let folderId = null;
-    if (choice && choice !== '0') {
+    let folderId = currentVocabFolderId; // por defecto, la carpeta actual
+    if (choice === '0') folderId = null;
+    else if (choice) {
         const num = parseInt(choice);
         if (num > 0 && num <= folderNames.length) folderId = folderNames[num-1].id;
     }
     appData.vocabulary.push({
         id: 'vocab_' + Date.now(),
-        word: word.trim(),
-        translation: trans.trim(),
-        example_de: example_de.trim(),
-        example_es: example_es.trim(),
-        folderId: folderId,
-        sourceIslandId: null,
-        sourcePhraseId: null,
+        word: word.trim(), translation: trans.trim(),
+        example_de, example_es,
+        folderId,
+        sourceIslandId: null, sourcePhraseId: null,
         added: getTodayDateString(),
-        interval: 1,
-        nextReviewDate: getTodayDateString(),
-        easeFactor: 2.5,
-        reps: 0,
-        lapses: 0
+        interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5, reps: 0, lapses: 0
     });
     saveDatabase();
     renderVocabFolderSelector();
     renderVocabularyList();
 }
 
-// Añadir desde popup (se mejoró para elegir carpeta)
+// Añadir desde popup
 function addWordToVocabulary(word, translation) {
     if (!appData.vocabulary) appData.vocabulary = [];
     if (appData.vocabulary.some(v => v.word === word)) {
@@ -1755,8 +1729,8 @@ function addWordToVocabulary(word, translation) {
     }
     const example = document.getElementById('popup-example')?.value.trim() || '';
     const folderNames = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
-    let msg = 'Selecciona carpeta (número):\n0 - Sin carpeta\n';
-    folderNames.forEach((f, i) => { msg += `${i+1} - ${f.path}\n`; });
+    let msg = 'Selecciona carpeta (número):\n0 - Raíz\n';
+    folderNames.forEach((f, i) => msg += `${i+1} - ${f.path}\n`);
     const choice = prompt(msg, '0');
     let folderId = null;
     if (choice && choice !== '0') {
@@ -1766,11 +1740,9 @@ function addWordToVocabulary(word, translation) {
     appData.vocabulary.push({
         id: 'vocab_' + Date.now(),
         word, translation,
-        example_de: example,
-        example_es: '',
+        example_de: example, example_es: '',
         folderId,
-        sourceIslandId: null,
-        sourcePhraseId: null,
+        sourceIslandId: null, sourcePhraseId: null,
         added: getTodayDateString(),
         interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5, reps: 0, lapses: 0
     });
@@ -1782,7 +1754,60 @@ function addWordToVocabulary(word, translation) {
     }
 }
 
-// --- TRADUCCIÓN ONLINE Y POPUP (sin cambios) ---
+// --- IMPORTACIÓN MASIVA (adaptada) ---
+async function importVocabFromIslands() {
+    const folderNames = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
+    let msg = 'Selecciona carpeta destino (número):\n0 - Raíz\n';
+    folderNames.forEach((f, i) => msg += `${i+1} - ${f.path}\n`);
+    const choice = prompt(msg, '0');
+    let folderId = currentVocabFolderId;
+    if (choice === '0') folderId = null;
+    else if (choice) {
+        const num = parseInt(choice);
+        if (num > 0 && num <= folderNames.length) folderId = folderNames[num-1].id;
+        else { alert('Opción inválida.'); return; }
+    }
+
+    const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
+    if (islandList.length === 0) { alert('No hay islas con frases.'); return; }
+
+    const islandNames = islandList.map(i => i.name).join('\n');
+    const input = prompt('Nombres de islas separados por comas, o "todas":\n\n' + islandNames);
+    if (!input) return;
+
+    let selected = input.trim().toLowerCase() === 'todas' ? islandList : islandList.filter(i => input.split(',').map(s => s.trim().toLowerCase()).includes(i.name.toLowerCase()));
+    if (selected.length === 0) { alert('No se encontraron islas.'); return; }
+
+    const existing = new Set(appData.vocabulary.map(v => v.word.toLowerCase()));
+    let added = 0;
+    for (const isl of selected) {
+        for (const p of isl.phrases) {
+            for (const raw of p.de.split(/\s+/)) {
+                const w = raw.replace(/[.,!?;:()¿¡]/g, '');
+                if (w.length < 2 || existing.has(w.toLowerCase())) continue;
+                let trans = de_es_dict[w.toLowerCase()] || null;
+                if (!trans) trans = await fetchOnlineTranslation(w);
+                if (!trans) trans = '(sin traducción)';
+                appData.vocabulary.push({
+                    id: 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                    word: w, translation: trans,
+                    example_de: p.de, example_es: p.es,
+                    folderId, sourceIslandId: isl.id, sourcePhraseId: p.id,
+                    added: getTodayDateString(),
+                    interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5, reps: 0, lapses: 0
+                });
+                existing.add(w.toLowerCase());
+                added++;
+            }
+        }
+    }
+    await saveDatabase();
+    renderVocabFolderSelector();
+    renderVocabularyList();
+    alert(`✅ ${added} palabras importadas a "${getFolderPath(folderId)}".`);
+}
+
+// --- TRADUCCIÓN ONLINE Y POPUP ---
 async function fetchOnlineTranslation(word) {
     const clean = word.toLowerCase().replace(/[.,!?;:()]/g, '');
     if (translationCache[clean]) return translationCache[clean];
