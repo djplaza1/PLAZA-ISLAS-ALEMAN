@@ -1755,6 +1755,7 @@ function addWordToVocabulary(word, translation) {
 }
 
 async function importVocabFromIslands() {
+    // 1. Elegir carpeta destino (aún con prompt, pero se puede mejorar después)
     const folderNames = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
     let msg = 'Selecciona carpeta destino (número):\n0 - Raíz\n';
     folderNames.forEach((f, i) => msg += `${i+1} - ${f.path}\n`);
@@ -1767,19 +1768,22 @@ async function importVocabFromIslands() {
         else { alert('Opción inválida.'); return; }
     }
 
+    // 2. Seleccionar islas con ventana modal
     const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
-    if (islandList.length === 0) { alert('No hay islas con frases.'); return; }
+    if (islandList.length === 0) {
+        alert('No hay islas con frases para importar.');
+        return;
+    }
 
-    const islandNames = islandList.map(i => i.name).join('\n');
-    const input = prompt('Nombres de islas separados por comas, o "todas":\n\n' + islandNames);
-    if (!input) return;
+    const selectedIslands = await showIslandSelectionModal(islandList);
+    if (!selectedIslands || selectedIslands.length === 0) {
+        return; // Cancelado o ninguna seleccionada
+    }
 
-    let selected = input.trim().toLowerCase() === 'todas' ? islandList : islandList.filter(i => input.split(',').map(s => s.trim().toLowerCase()).includes(i.name.toLowerCase()));
-    if (selected.length === 0) { alert('No se encontraron islas.'); return; }
-
+    // 3. Importar palabras
     const existing = new Set(appData.vocabulary.map(v => v.word.toLowerCase()));
     let added = 0;
-    for (const isl of selected) {
+    for (const isl of selectedIslands) {
         for (const p of isl.phrases) {
             for (const raw of p.de.split(/\s+/)) {
                 const w = raw.replace(/[.,!?;:()¿¡]/g, '');
