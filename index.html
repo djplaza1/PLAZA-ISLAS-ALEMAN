@@ -714,7 +714,7 @@ function detectSilenceAndStop(stream) {
     const dataArray = new Uint8Array(bufferLength);
 
     const SILENCE_THRESHOLD = 25;  // nivel por debajo del cual es silencio
-    const SILENCE_DURATION = 1200; // 1.2 segundos de silencio para parar
+    const SILENCE_DURATION = 500; // 0.5 segundos de silencio para parar
     let silenceStart = null;
 
     function checkSilence() {
