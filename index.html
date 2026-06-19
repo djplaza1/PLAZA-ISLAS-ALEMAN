@@ -273,7 +273,7 @@
             </div>
         </section>
 
-<!-- VISTA VOCABULARIO (EXPLORADOR DE CARPETAS) -->
+<!-- VISTA VOCABULARIO (CORREGIDA) -->
 <section id="view-vocabulary" class="view-section space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
         <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-book text-teal-400"></i> Vocabulario</h2>
@@ -286,7 +286,7 @@
 
     <!-- Barra de navegación de carpetas -->
     <div class="flex flex-wrap items-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-        <button onclick="navigateVocabFolder(null)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition">📚 Raíz</button>
+        <button onclick="selectVocabFolder(null)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition">📚 Raíz</button>
         <span id="vocab-breadcrumb" class="text-slate-400 text-sm font-mono"></span>
         <div class="flex-1"></div>
         <button onclick="createVocabFolder(currentVocabFolderId)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>
@@ -295,7 +295,7 @@
     </div>
 
     <!-- Subcarpetas -->
-    <div id="vocab-subfolders" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+    <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
 
     <!-- Flashcards (ocultas por defecto) -->
     <div id="flashcard-area" class="hidden space-y-4">
@@ -330,7 +330,8 @@
     <!-- Lista de palabras de la carpeta actual -->
     <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
 </section>
-        <!-- VISTA DETALLE DE ISLA -->
+
+<!-- VISTA DETALLE DE ISLA -->
         <section id="view-island-detail" class="view-section space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-1 rounded-xl">
                 <button onclick="switchView('islands')" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 transition">
