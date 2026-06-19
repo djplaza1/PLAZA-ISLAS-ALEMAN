@@ -499,6 +499,7 @@ async function saveToIDB(key, value) {
             islands: [],
             conversations: [],
             vocabulary: [],
+            vocabFolders: [], 
             stats: { dailyRepetitions: {}, dailyTime: {}, streak: 0, lastPracticeDate: null },
             settings: { flowType: 'manual', order: 'sequential', loops: 2, pause: 4, speed: 0.9 }
         };
@@ -995,6 +996,31 @@ async function loadAppData() {
     }
     if (!appData.vocabulary) appData.vocabulary = [];
     if (!appData.conversations) appData.conversations = [];
+    // Migración de vocabulario a nueva estructura SRS
+if (!appData.vocabFolders) appData.vocabFolders = [];
+if (appData.vocabulary && appData.vocabulary.length > 0) {
+    const needsMigration = appData.vocabulary.some(w => !w.hasOwnProperty('interval'));
+    if (needsMigration) {
+        appData.vocabulary = appData.vocabulary.map(w => ({
+            id: w.id || 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+            word: w.word,
+            translation: w.translation,
+            example_de: w.example_de || '',
+            example_es: w.example_es || '',
+            sourceIslandId: w.sourceIslandId || null,
+            sourcePhraseId: w.sourcePhraseId || null,
+            folder: w.folder || 'General',
+            added: w.added || getTodayDateString(),
+            // Campos SRS
+            interval: 1,
+            nextReviewDate: getTodayDateString(),
+            easeFactor: 2.5,
+            reps: 0,
+            lapses: 0
+        }));
+        saveDatabase();
+    }
+}
 }
 
 async function loadSettings() {
