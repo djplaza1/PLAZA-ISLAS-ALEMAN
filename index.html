@@ -2076,140 +2076,9 @@ function executePlaybackChain() {
             advanceAuto();
         }
 
-// ==================== VOZ Y TEXTO (VERSIÓN SIMPLE Y FUNCIONAL) ====================
-let micStream = null;
+// ==================== VOZ Y TEXTO (VERSIÓN ESTRICTA - C2 PRO) ====================
 
-function initSpeechRecognition(lang = 'de-DE') {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
-        return false;
-    }
-    if (recognition) {
-        try { recognition.abort(); } catch(e) {}
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        recognition = null;
-    }
-    recognition = new SpeechRecognition();
-    recognition.lang = lang;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.continuous = false;
-    return true;
-}
-
-function limpiarEstadoVoz() {
-    clearTimeout(voiceTimeout);
-    voiceTimeout = null;
-    if (micStream) {
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-    }
-    try { 
-        if (recognition) {
-            recognition.onresult = null;
-            recognition.onerror = null;
-            recognition.onend = null;
-            recognition.abort(); 
-        }
-    } catch(e) {}
-    isRecognizing = false;
-    voiceCancelFn = null;
-}
-
-function startVoiceRecognition(callback, lang = 'de-DE') {
-    limpiarEstadoVoz();
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            micStream = stream;
-
-            if (!recognition || recognition.lang !== lang) {
-                if (!initSpeechRecognition(lang)) {
-                    limpiarEstadoVoz();
-                    callback(null, 'not-supported');
-                    return;
-                }
-            }
-
-            isRecognizing = true;
-            let hasResult = false;
-
-            voiceCancelFn = () => {
-                limpiarEstadoVoz();
-                if (!hasResult) {
-                    callback(null, 'cancelado');
-                }
-            };
-
-            // Timeout de seguridad: 10 segundos
-            voiceTimeout = setTimeout(() => {
-                if (!hasResult) {
-                    limpiarEstadoVoz();
-                    callback(null, 'No se detectó voz. Intenta de nuevo.');
-                }
-            }, 10000);
-
-            recognition.onresult = (event) => {
-                hasResult = true;
-                clearTimeout(voiceTimeout);
-                
-                // Recoger todas las alternativas
-                const alternatives = [];
-                const lastResult = event.results[event.results.length - 1];
-                for (let i = 0; i < lastResult.length; i++) {
-                    alternatives.push(lastResult[i].transcript.trim());
-                }
-                
-                limpiarEstadoVoz();
-                callback(alternatives);
-            };
-
-            recognition.onerror = (event) => {
-                clearTimeout(voiceTimeout);
-                
-                if (event.error === 'aborted') {
-                    limpiarEstadoVoz();
-                    return;
-                }
-                
-                let msg = event.error;
-                if (event.error === 'not-allowed') msg = 'Permiso de micrófono denegado.';
-                else if (event.error === 'no-speech') msg = 'No se detectó voz. Habla más fuerte.';
-                else if (event.error === 'audio-capture') msg = 'No se encontró micrófono.';
-                else if (event.error === 'network') msg = 'Error de red. Comprueba tu conexión a Internet.';
-                
-                limpiarEstadoVoz();
-                if (!hasResult) {
-                    hasResult = true;
-                    callback(null, msg);
-                }
-            };
-
-            recognition.onend = () => {
-                if (!hasResult && isRecognizing) {
-                    clearTimeout(voiceTimeout);
-                    limpiarEstadoVoz();
-                    callback(null, 'No se detectó voz. Intenta de nuevo.');
-                }
-            };
-
-            try {
-                recognition.start();
-            } catch(e) {
-                limpiarEstadoVoz();
-                callback(null, 'Error al iniciar micrófono. Recarga la página.');
-            }
-        })
-        .catch(err => {
-            limpiarEstadoVoz();
-            callback(null, 'Permiso de micrófono denegado. Verifica la configuración del navegador.');
-        });
-}
-
-// Evaluador estricto para voz
+// 🟢 1. EVALUADOR ESTRICTO PARA VOZ (Penaliza orden, omisiones y palabras inventadas)
 function computeStrictEvaluation(transcript, target) {
     if (!transcript || !target) return { score: 0, diff: '<span class="text-rose-500">No se detectó audio útil.</span>' };
     
@@ -2229,8 +2098,10 @@ function computeStrictEvaluation(transcript, target) {
         
         if (tWord === tgtWord && tWord !== '') {
             matches++;
+            // Palabra perfecta
             diffHtml.push(`<span class="text-emerald-400 font-bold">${originalWords[i] || tWord}</span>`);
         } else {
+            // Palabra fallada, omitida o inventada
             let errorChunk = '';
             if (tWord) {
                 errorChunk += `<span class="text-rose-400 line-through bg-rose-950/40 px-1.5 py-0.5 rounded shadow-sm">${originalWords[i] || tWord}</span>`;
@@ -2248,7 +2119,7 @@ function computeStrictEvaluation(transcript, target) {
     };
 }
 
-// Evaluador clásico para escritura
+// 🔵 2. EVALUADOR CLÁSICO (Mantenido exclusivamente para la escritura manual)
 function computeScore(transcript, target) {
     if (!transcript || !target) return 0;
     const t1 = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').trim();
@@ -2262,12 +2133,100 @@ function computeScore(transcript, target) {
     return Math.min(100, Math.round((matches / Math.max(words1.length, words2.length)) * 100));
 }
 
+function initSpeechRecognition(lang = 'de-DE') {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+        return false;
+    }
+    if (recognition) {
+        try { recognition.abort(); } catch(e) {}
+        recognition = null;
+    }
+    recognition = new SpeechRecognition();
+    recognition.lang = lang;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false; 
+    return true;
+}
+
+function startVoiceRecognition(callback, lang = 'de-DE') {
+    if (voiceCancelFn) voiceCancelFn();
+    if (voiceTimeout) clearTimeout(voiceTimeout);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        callback(null, 'Tu navegador no soporta voz.');
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+    const recognition = new SpeechRecognition();
+    recognition.lang = lang;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;           // pedimos 3 posibles transcripciones
+    recognition.continuous = false;
+
+    isRecognizing = true;
+    let hasFiredCallback = false;
+
+    voiceCancelFn = () => {
+        clearTimeout(voiceTimeout);
+        try { recognition.abort(); } catch(e) {}
+        isRecognizing = false;
+        voiceCancelFn = null;
+    };
+
+    voiceTimeout = setTimeout(() => {
+        if (!hasFiredCallback) {
+            voiceCancelFn();
+            hasFiredCallback = true;
+            callback(null, 'Tiempo agotado. Intenta de nuevo.');
+        }
+    }, 12000);
+
+    recognition.onresult = (event) => {
+        clearTimeout(voiceTimeout);
+        // Recogemos todas las alternativas (hasta 3)
+        const alternatives = [];
+        for (let i = 0; i < event.results[0].length; i++) {
+            alternatives.push(event.results[0][i].transcript.trim());
+        }
+        // Mostramos la primera alternativa en tiempo real
+        const textDisplay = document.getElementById('live-speech-text');
+        if (textDisplay) {
+            textDisplay.innerHTML = `<span class="text-emerald-400 font-bold">${alternatives[0]}</span>`;
+        }
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            // Pasamos todas las alternativas al callback
+            callback(alternatives);
+        }
+    };
+
+    recognition.onend = () => {
+        clearTimeout(voiceTimeout);
+        isRecognizing = false;
+    };
+
+    recognition.onerror = (event) => {
+        clearTimeout(voiceTimeout);
+        isRecognizing = false;
+        if (!hasFiredCallback) {
+            hasFiredCallback = true;
+            if (event.error === 'aborted') return;
+            callback(null, 'Error de micrófono: ' + event.error);
+        }
+    };
+
+    try { recognition.start(); }
+    catch(e) { if(!hasFiredCallback) { hasFiredCallback = true; callback(null, 'Error al iniciar.'); } }
+}
 function startVoiceInput() {
-    const phrase = trainingQueue[currentTrainIndex];
-    if (!phrase) return;
-    
-    const target = phrase.de;
-    const lang = 'de-DE';
+    const target = trainingQueue[currentTrainIndex].de;
+    const langCode = 'de-DE';
+    const langLabel = 'Alemán 🇩🇪';
 
     const btn = document.getElementById('btn-voice-input');
     if (btn) btn.disabled = true;
@@ -2277,22 +2236,17 @@ function startVoiceInput() {
 
     document.getElementById('voice-feedback').classList.remove('hidden');
     document.getElementById('voice-feedback').innerHTML = `
-        <div class="flex items-center justify-between w-full bg-slate-900 p-3 rounded-lg border border-slate-700">
+        <div class="flex items-center justify-between w-full bg-slate-900 p-2 rounded-lg border border-slate-700">
             <div class="flex items-center gap-3 truncate pl-2">
                 <i class="fa-solid fa-microphone text-rose-500 animate-pulse shrink-0 text-lg"></i>
-                <span class="text-slate-300 truncate font-mono text-sm font-bold">🎤 Escuchando... habla ahora</span>
+                <span id="live-speech-text" class="text-slate-300 truncate font-mono text-sm font-bold">🎤 Escuchando en ${langLabel}...</span>
             </div>
             <button onclick="cancelVoiceRecognition()" class="text-xs bg-slate-800 px-4 py-2 rounded-lg border border-slate-600 hover:bg-slate-700 hover:text-white transition shrink-0 ml-2 font-bold uppercase tracking-wider text-slate-400">Abortar</button>
         </div>
     `;
 
-    startVoiceRecognition((result, error) => {
+    startVoiceRecognition((alternatives, error) => {
         if (btn) btn.disabled = false;
-        
-        if (error === 'cancelado') {
-            document.getElementById('voice-feedback').classList.add('hidden');
-            return;
-        }
         
         if (error) {
             document.getElementById('voice-feedback').innerHTML = `
@@ -2304,12 +2258,13 @@ function startVoiceInput() {
             return;
         }
         
-        // Manejar resultado (array de alternativas)
-        const altList = Array.isArray(result) ? result : [result];
+        // Si no es array, lo convertimos (por compatibilidad)
+        const altList = Array.isArray(alternatives) ? alternatives : [alternatives];
         let bestTranscript = altList[0] || '';
         let bestScore = 0;
         let bestEval = null;
 
+        // Evaluamos cada alternativa con el método estricto y nos quedamos con la mejor
         altList.forEach(alt => {
             if (!alt) return;
             const evalData = computeStrictEvaluation(alt, target);
@@ -2320,6 +2275,7 @@ function startVoiceInput() {
             }
         });
         
+        // Si no se encontró nada, usamos la primera
         if (!bestEval) bestEval = computeStrictEvaluation(bestTranscript, target);
         
         const score = bestEval.score;
@@ -2333,6 +2289,7 @@ function startVoiceInput() {
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Similitud Fonética</span>
                         <span class="font-mono text-3xl ${score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-500'} font-black">${score}%</span>
+                        ${altList.length > 1 ? `<span class="text-[10px] text-slate-500 mt-1">Elegida entre ${altList.length} alternativas</span>` : ''}
                     </div>
                     <button onclick="startVoiceInput()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg flex items-center gap-2 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1">
                         <i class="fa-solid fa-rotate-right text-lg"></i> Repetir
@@ -2342,19 +2299,44 @@ function startVoiceInput() {
         `;
         
         localGrammarRating = score >= 95 ? 5 : score >= 80 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
-        localFluencyRating = score >= 80 ? 4 : 2;
+        localFluencyRating = score >= 80 ? 4 : 2; 
         renderDynamicStars('grammar', localGrammarRating);
         renderDynamicStars('fluency', localFluencyRating);
         revealTargetStructure();
-    }, lang);
+    }, langCode); 
 }
-
 function cancelVoiceRecognition() {
     if (voiceCancelFn) voiceCancelFn();
-    limpiarEstadoVoz();
+    isRecognizing = false;
     const btn = document.getElementById('btn-voice-input');
     if (btn) btn.disabled = false;
     document.getElementById('voice-feedback').classList.add('hidden');
+}
+
+function startTypingInput() {
+    document.getElementById('typing-input-area').classList.remove('hidden');
+    document.getElementById('typing-answer').value = '';
+    document.getElementById('typing-feedback').classList.add('hidden');
+    document.getElementById('typing-answer').focus();
+}
+
+function submitTypingAnswer() {
+    const ans = document.getElementById('typing-answer').value.trim();
+    if (!ans) return;
+    
+    // Aquí mantenemos el computeScore clásico para la escritura manual
+    const target = trainingDirection === 'normal' ? trainingQueue[currentTrainIndex].de : trainingQueue[currentTrainIndex].es;
+    const score = computeScore(ans, target);
+    
+    document.getElementById('typing-feedback').innerHTML = `Similitud: ${score}%`;
+    document.getElementById('typing-feedback').classList.remove('hidden');
+    document.getElementById('typing-input-area').classList.add('hidden');
+    
+    localGrammarRating = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1;
+    localFluencyRating = 4;
+    renderDynamicStars('grammar', localGrammarRating);
+    renderDynamicStars('fluency', localFluencyRating);
+    revealTargetStructure();
 }
 
 // ==================== ATAJOS DE TECLADO ====================
