@@ -559,7 +559,13 @@ async function saveToIDB(key, value) {
             conversations: [],
             vocabulary: [],
             vocabFolders: [], 
-            stats: { dailyRepetitions: {}, dailyTime: {}, streak: 0, lastPracticeDate: null },
+            stats: { 
+    dailyRepetitions: {}, 
+    dailyTime: {}, 
+    streak: 0, 
+    lastPracticeDate: null,
+    sessions: []  // ← NUEVO
+},
             settings: { flowType: 'manual', order: 'sequential', loops: 2, pause: 4, speed: 0.9 }
         };
 
