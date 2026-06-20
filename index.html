@@ -1775,7 +1775,7 @@ function renderVocabularyList() {
         container.innerHTML = `<p class="text-slate-500 text-center py-8">${currentVocabFolderId ? 'Carpeta vacía.' : 'No hay palabras en la raíz.'}</p>`;
         return;
     }
-     container.innerHTML = '';
+    container.innerHTML = '';
     words.forEach(v => {
         const badgeColor = v.lastQuality === 1 ? 'bg-rose-600' :
                            v.lastQuality === 2 ? 'bg-amber-500' :
@@ -1790,9 +1790,9 @@ function renderVocabularyList() {
             <span class="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full text-white ${badgeColor}">${badgeText}</span>
             <div class="flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <span class="font-black text-xl text-emerald-400">${v.word}</span>
-                    <span class="text-slate-400 text-base">${v.translation}</span>
-                    ${v.example_de ? `<span class="text-sm text-slate-300 italic block">"${v.example_de}"</span>` : ''}
+                    <span class="font-black text-2xl text-emerald-400">${v.word}</span>
+                    <span class="text-slate-400 text-lg">${v.translation}</span>
+                    ${v.example_de ? `<span class="text-base text-slate-300 italic block mt-1">"${v.example_de}"</span>` : ''}
                 </div>
                 <div class="flex gap-2 mt-1">
                     <span class="text-[10px] text-slate-500">${v.added||''}</span>
