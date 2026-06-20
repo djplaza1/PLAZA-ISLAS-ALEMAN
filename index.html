@@ -475,32 +475,65 @@
 </section>
 
         <!-- VISTA ESTADÍSTICAS -->
-        <section id="view-stats" class="view-section space-y-6">
-            <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-chart-line text-amber-400"></i> Analítica de Rendimiento</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center"><span class="text-xs font-bold text-slate-400 uppercase block">Racha</span><span id="stat-streak" class="text-3xl font-black text-amber-400">0</span></div>
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center"><span class="text-xs font-bold text-slate-400 uppercase block">Repeticiones</span><span id="stat-total-reps" class="text-3xl font-black text-emerald-400">0</span></div>
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center"><span class="text-xs font-bold text-slate-400 uppercase block">Tiempo Neto</span><span id="stat-total-time" class="text-3xl font-black text-blue-400">0s</span></div>
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center"><span class="text-xs font-bold text-slate-400 uppercase block">Vocabulario</span><span id="stat-vocab-count" class="text-3xl font-black text-teal-400">0</span></div>
-            </div>
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6"><h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Registro Semanal</h3><div id="stats-days-graph" class="space-y-3"></div></div>
-        </section>
+<!-- VISTA ESTADÍSTICAS PREMIUM -->
+<section id="view-stats" class="view-section space-y-6">
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-chart-line text-amber-400"></i> Estadísticas Premium</h2>
+        <div class="flex gap-2">
+            <select id="stats-period-select" onchange="renderAdvancedStatistics()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-white">
+                <option value="day">Hoy</option>
+                <option value="week" selected>Semana</option>
+                <option value="month">Mes</option>
+                <option value="year">Año</option>
+            </select>
+        </div>
+    </div>
 
-        <!-- VISTA SYNC -->
-        <section id="view-sync" class="view-section max-w-2xl mx-auto space-y-6">
-            <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-purple-400"></i> Sincronización</h2>
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div><h4 class="font-bold text-sm">Exportar Base de Datos</h4></div>
-                    <div class="flex gap-2"><button onclick="exportDatabaseFile()" class="bg-purple-600 hover:bg-purple-500 text-xs font-bold px-4 py-2.5 rounded-lg">Descargar JSON</button><button onclick="copyJsonToClipboard()" class="bg-slate-700 hover:bg-slate-600 text-xs font-bold px-3 py-2.5 rounded-lg"><i class="fa-solid fa-copy"></i></button></div>
-                </div>
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
-                    <h4 class="font-bold text-sm">Importar Base de Datos</h4>
-                    <div class="flex flex-col sm:flex-row gap-2"><input type="file" id="import-file-field" accept=".json" class="block w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-slate-200 cursor-pointer"><button onclick="importDatabaseFile()" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-black uppercase px-5 py-2 rounded-xl shrink-0">Inyectar JSON</button></div>
-                </div>
-            </div>
-        </section>
-    </main>
+    <!-- Tarjetas resumen -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Sesiones</span>
+            <span id="stat-sessions" class="text-2xl font-black text-cyan-400">0</span>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Tarjetas</span>
+            <span id="stat-total-cards" class="text-2xl font-black text-teal-400">0</span>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Tiempo</span>
+            <span id="stat-total-time-new" class="text-2xl font-black text-blue-400">0h</span>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Racha</span>
+            <span id="stat-streak-new" class="text-2xl font-black text-amber-400">0</span>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Vocabulario</span>
+            <span id="stat-vocab-count-new" class="text-2xl font-black text-purple-400">0</span>
+        </div>
+    </div>
+
+    <!-- Gráfico de actividad anual -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+        <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">Actividad (últimos 365 días)</h3>
+        <div id="activity-grid" class="grid grid-cols-53 gap-1"></div>
+        <div class="flex items-center gap-2 mt-3 text-[10px] text-slate-500 justify-end">
+            <span>Menos</span>
+            <span class="w-4 h-4 rounded-sm bg-slate-800 border border-slate-700"></span>
+            <span class="w-4 h-4 rounded-sm bg-emerald-900/60"></span>
+            <span class="w-4 h-4 rounded-sm bg-emerald-700"></span>
+            <span class="w-4 h-4 rounded-sm bg-emerald-500"></span>
+            <span class="w-4 h-4 rounded-sm bg-emerald-300"></span>
+            <span>Más</span>
+        </div>
+    </div>
+
+    <!-- Lista de sesiones -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Sesiones del período</h3>
+        <div id="sessions-list" class="divide-y divide-slate-700"></div>
+    </div>
+</section>    </main>
 
     <footer class="bg-slate-950 border-t border-slate-800 p-4 text-center text-xs text-slate-500">
         Profesor Plaza Müller C2 Pro · Tiempo en sesión: <span id="practice-timer-live">00:00</span>
@@ -1702,6 +1735,18 @@ function endSRSSession() {
     `;
     renderVocabFolderSelector();
     renderVocabularyList();
+    // Registrar sesión en estadísticas
+appData.stats.sessions.push({
+    id: 'sess_' + Date.now(),
+    date: getTodayDateString(),
+    startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+    duration: 0, // se calculará si hay timer activo
+    type: 'vocab',
+    cardsCount: flashcardWords.length,
+    direction: window.customDirection || document.getElementById('flashcard-direction').value,
+    source: document.getElementById('cfg-practice-source').value
+});
+saveDatabase();
 }
 
 function forceReviewAll() {
@@ -2803,6 +2848,16 @@ function executePlaybackChain() {
             });
             saveDatabase();
             advanceAuto();
+            // Registrar sesión de frase
+appData.stats.sessions.push({
+    id: 'sess_' + Date.now(),
+    date: getTodayDateString(),
+    startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+    duration: sessionActive ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0,
+    type: trainingDirection === 'normal' ? 'production' : 'comprehension',
+    cardsCount: 1,
+    direction: trainingDirection
+});
         }
 
 // ==================== VOZ Y TEXTO (VERSIÓN ESTRICTA - C2 PRO) ====================
