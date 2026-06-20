@@ -702,6 +702,7 @@ let flashcardWords = [];
 let flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
 let flashcardTimerInterval = null;
 let flashcardReviewedCount = 0;
+let flashcardSessionActive = false;
 let flashcardStartTime = null;
 let currentFlashcardIndex = 0;
 let isFlipped = false;
@@ -1781,6 +1782,7 @@ function startConfiguredPractice() {
 flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
 flashcardStartTime = Date.now();
 flashcardReviewedCount = 0;
+flashcardSessionActive = true;
 if (flashcardTimerInterval) clearInterval(flashcardTimerInterval);
 flashcardTimerInterval = setInterval(updateFlashcardTimer, 1000);
 updateFlashcardProgress();
@@ -1793,7 +1795,6 @@ updateFlashcardProgress();
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
 }
-
 // Sobrescribir startFlashcardSession para que use la configuración actual
 function startFlashcardSession() {
     // Simplemente lanza la práctica con los valores del panel
