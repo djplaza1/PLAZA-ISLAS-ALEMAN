@@ -2086,40 +2086,143 @@ function showIslandSelectionModalWithPreselection(islandList, preselectedIds = [
     return new Promise(resolve => {
         const old = document.getElementById('island-selection-modal');
         if (old) old.remove();
+
+        // Estado de navegación
+        let currentGroupId = null; // null = raíz
+        const selectedIds = new Set(preselectedIds);
+
         const overlay = document.createElement('div');
         overlay.id = 'island-selection-modal';
         overlay.className = 'popup-overlay';
         overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
         const content = document.createElement('div');
         content.className = 'popup-content max-w-lg';
-        content.style.maxHeight = '80vh'; content.style.overflowY = 'auto';
-        content.innerHTML = `
-            <h3 class="font-bold text-lg text-emerald-400 mb-4">Selecciona islas</h3>
-            <div class="mb-3">
-                <button id="select-all-islands" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Todas</button>
-                <button id="deselect-all-islands" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold ml-2">Ninguna</button>
-            </div>
-            <div class="space-y-1 max-h-60 overflow-y-auto">
-                ${islandList.map(isl => `<label class="flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 p-1 rounded cursor-pointer"><input type="checkbox" value="${isl.id}" class="island-checkbox rounded" ${preselectedIds.includes(isl.id) ? 'checked' : ''}> ${isl.name} <span class="text-slate-500 text-xs">(${isl.phrases.length} frases)</span></label>`).join('')}
-            </div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button id="cancel-island-selection" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
-                <button id="confirm-island-selection" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-xs font-bold">Seleccionar</button>
+        content.style.maxHeight = '80vh';
+        content.style.overflowY = 'auto';
+
+        function renderList() {
+            // Filtrar islas y grupos según el nivel actual
+            const groups = appData.islands.filter(i => i.type === 'group' && i.parentId === currentGroupId);
+            const islands = islandList.filter(i => i.parentId === currentGroupId);
+
+            let html = `
+                <h3 class="font-bold text-lg text-emerald-400 mb-4">Selecciona islas para la práctica</h3>`;
+
+            // Botón de navegación hacia atrás
+            if (currentGroupId !== null) {
+                const parentGroup = appData.islands.find(i => i.id === currentGroupId);
+                const parentId = parentGroup ? parentGroup.parentId : null;
+                html += `<button id="nav-up" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold mb-3">
+                    ⬆ Subir a ${parentId ? (appData.islands.find(i => i.id === parentId)?.name || 'carpeta superior') : 'raíz'}
+                </button>`;
+            }
+
+            // Acciones rápidas
+            html += `<div class="mb-3 flex gap-2">
+                <button id="select-all-visible" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Todas las islas visibles</button>
+                <button id="deselect-all-visible" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Ninguna</button>
             </div>`;
+
+            // Carpetas (grupos)
+            if (groups.length > 0) {
+                html += `<div class="mb-3"><p class="text-[10px] text-slate-500 uppercase mb-1">📁 Carpetas:</p>`;
+                groups.forEach(g => {
+                    html += `<div class="flex items-center gap-2 text-sm text-amber-400 hover:bg-slate-700/50 p-1 rounded cursor-pointer" 
+                                  data-group-id="${g.id}">
+                                <span>📁 ${g.name}</span>
+                            </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Islas
+            if (islands.length > 0) {
+                html += `<div><p class="text-[10px] text-slate-500 uppercase mb-1">🏝️ Islas:</p>`;
+                html += `<div class="space-y-1 max-h-60 overflow-y-auto">`;
+                islands.forEach(isl => {
+                    const checked = selectedIds.has(isl.id) ? 'checked' : '';
+                    html += `<label class="flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 p-1 rounded cursor-pointer">
+                        <input type="checkbox" value="${isl.id}" class="island-checkbox rounded" ${checked}>
+                        ${isl.name} <span class="text-slate-500 text-xs">(${isl.phrases ? isl.phrases.length : 0} frases)</span>
+                    </label>`;
+                });
+                html += `</div></div>`;
+            } else if (groups.length === 0) {
+                html += `<p class="text-slate-500 text-sm py-4">No hay islas en esta ubicación.</p>`;
+            }
+
+            html += `<div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-700">
+                <button id="cancel-island-selection" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+                <button id="confirm-island-selection" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-xs font-bold">
+                    Seleccionar (${selectedIds.size})
+                </button>
+            </div>`;
+
+            content.innerHTML = html;
+
+            // Eventos: clic en carpetas
+            content.querySelectorAll('[data-group-id]').forEach(el => {
+                el.addEventListener('click', () => {
+                    currentGroupId = el.getAttribute('data-group-id');
+                    renderList();
+                });
+            });
+
+            // Evento: subir nivel
+            const navUpBtn = content.querySelector('#nav-up');
+            if (navUpBtn) {
+                navUpBtn.addEventListener('click', () => {
+                    if (currentGroupId !== null) {
+                        const parentGroup = appData.islands.find(i => i.id === currentGroupId);
+                        currentGroupId = parentGroup ? parentGroup.parentId : null;
+                        renderList();
+                    }
+                });
+            }
+
+            // Eventos: checkboxes
+            const cbs = content.querySelectorAll('.island-checkbox');
+            cbs.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) selectedIds.add(cb.value);
+                    else selectedIds.delete(cb.value);
+                    // Actualizar contador en el botón
+                    const btn = content.querySelector('#confirm-island-selection');
+                    if (btn) btn.textContent = `Seleccionar (${selectedIds.size})`;
+                });
+            });
+
+            // Seleccionar / deseleccionar todas las islas visibles
+            content.querySelector('#select-all-visible').addEventListener('click', () => {
+                cbs.forEach(cb => { cb.checked = true; selectedIds.add(cb.value); });
+                const btn = content.querySelector('#confirm-island-selection');
+                if (btn) btn.textContent = `Seleccionar (${selectedIds.size})`;
+            });
+            content.querySelector('#deselect-all-visible').addEventListener('click', () => {
+                cbs.forEach(cb => { cb.checked = false; selectedIds.delete(cb.value); });
+                const btn = content.querySelector('#confirm-island-selection');
+                if (btn) btn.textContent = `Seleccionar (${selectedIds.size})`;
+            });
+
+            // Confirmar
+            content.querySelector('#confirm-island-selection').addEventListener('click', () => {
+                overlay.remove();
+                resolve(islandList.filter(isl => selectedIds.has(isl.id)));
+            });
+
+            // Cancelar
+            content.querySelector('#cancel-island-selection').addEventListener('click', () => {
+                overlay.remove();
+                resolve(null);
+            });
+        }
+
+        renderList();
         overlay.appendChild(content);
         document.body.appendChild(overlay);
-        const cbs = content.querySelectorAll('.island-checkbox');
-        document.getElementById('select-all-islands').onclick = () => cbs.forEach(cb => cb.checked = true);
-        document.getElementById('deselect-all-islands').onclick = () => cbs.forEach(cb => cb.checked = false);
-        document.getElementById('confirm-island-selection').onclick = () => {
-            const ids = Array.from(cbs).filter(cb => cb.checked).map(cb => cb.value);
-            overlay.remove();
-            resolve(islandList.filter(isl => ids.includes(isl.id)));
-        };
-        document.getElementById('cancel-island-selection').onclick = () => { overlay.remove(); resolve(null); };
     });
-}
-async function selectPracticeIslands() {
+}async function selectPracticeIslands() {
     const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
     if (islandList.length === 0) {
         alert('No hay islas disponibles.');
