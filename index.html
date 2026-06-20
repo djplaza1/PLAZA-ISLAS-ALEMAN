@@ -3222,31 +3222,6 @@ function handleKeyboardShortcuts(e) {
 let statsSelectedYear = new Date().getFullYear();
 let selectedDayDate = null;
 
-// --- DATOS SIMULADOS PARA PRUEBA (BORRAR CUANDO QUIERAS) ---
-function seedDemoSessions() {
-    if (appData.stats.sessions && appData.stats.sessions.length > 0) return;
-    const types = ['vocab', 'production', 'comprehension'];
-    const directions = ['de-es', 'es-de', 'mix'];
-    const now = new Date();
-    for (let i = 0; i < 120; i++) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - Math.floor(Math.random() * 365));
-        const h = Math.floor(Math.random() * 14) + 8;
-        const m = Math.floor(Math.random() * 60);
-        appData.stats.sessions.push({
-            id: 'demo_' + i,
-            date: [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-'),
-            startTime: `${('0'+h).slice(-2)}:${('0'+m).slice(-2)}`,
-            duration: Math.floor(Math.random() * 1200) + 60,
-            type: types[Math.floor(Math.random() * types.length)],
-            cardsCount: Math.floor(Math.random() * 30) + 5,
-            direction: directions[Math.floor(Math.random() * directions.length)],
-            source: 'all'
-        });
-    }
-    appData.stats.sessions.sort((a,b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
-    saveDatabase();
-}
 
 // --- CAMBIO DE AÑO ---
 function changeStatsYear(delta) {
