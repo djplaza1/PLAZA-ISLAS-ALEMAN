@@ -335,6 +335,17 @@
 
     <!-- Subcarpetas -->
     <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
+    <!-- Panel de movimiento masivo de palabras -->
+<div id="bulk-word-move-panel" class="bg-slate-800 p-4 rounded-xl border border-blue-500/50 mb-4 items-center justify-between gap-4 hidden shadow-lg">
+    <span class="text-sm font-bold text-slate-300">Palabras seleccionadas: <span id="selected-words-count" class="text-blue-400 font-black text-lg">0</span></span>
+    <div class="flex gap-2 w-full max-w-md">
+        <select id="bulk-word-folder-select" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white w-full focus:border-blue-500 outline-none">
+            <!-- Se rellena dinámicamente -->
+        </select>
+        <button onclick="moveSelectedWords()" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md">Mover seleccionadas</button>
+    </div>
+    <button onclick="moveAllWordsInFolder()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md ml-2">Mover todas</button>
+</div>
 
 <!-- Flashcards (con botón para volver y SRS) -->
 <div id="flashcard-area" class="hidden space-y-4">
@@ -1570,6 +1581,7 @@ function renderIslandsGrid() {
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
 let currentVocabFolderId = null;
 let selectedPracticeIslandIds = [];
+let selectedWordIds = new Set(); // Para mover múltiples palabras
 
 function migrateVocabData() {
     console.log('Migrando datos de vocabulario...');
@@ -1929,6 +1941,11 @@ function renderVocabularyList() {
     const search = document.getElementById('vocab-search')?.value.toLowerCase() || '';
     let words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
     if (search) words = words.filter(v => v.word.toLowerCase().includes(search) || v.translation.toLowerCase().includes(search));
+
+    // Limpiar selección anterior
+    selectedWordIds.clear();
+    updateBulkWordPanel();
+
     if (words.length === 0) {
         container.innerHTML = `<p class="text-slate-500 text-center py-8">${currentVocabFolderId ? 'Carpeta vacía.' : 'No hay palabras en la raíz.'}</p>`;
         return;
@@ -1945,6 +1962,7 @@ function renderVocabularyList() {
         const div = document.createElement('div');
         div.className = "flex items-center gap-3 py-3 border-b border-slate-700/50";
         div.innerHTML = `
+            <input type="checkbox" class="word-checkbox shrink-0 w-4 h-4 cursor-pointer accent-blue-600" value="${v.id}" onchange="toggleWordSelection('${v.id}', this.checked)">
             <span class="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full text-white ${badgeColor}">${badgeText}</span>
             <div class="flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -1965,6 +1983,7 @@ function renderVocabularyList() {
         container.appendChild(div);
     });
 }
+
 function moveWordToFolder(wordId) {
     const word = appData.vocabulary.find(v => v.id === wordId);
     if (!word) return;
