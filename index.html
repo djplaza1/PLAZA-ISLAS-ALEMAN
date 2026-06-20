@@ -352,7 +352,7 @@
 <!-- Flashcards (con botón para volver y SRS) -->
 <div id="flashcard-area" class="hidden space-y-4">
     <div class="flex justify-between items-center max-w-lg mx-auto">
-        <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
+        <button onclick="exitFlashcardsToVocabList()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
         <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
             <option value="de-es">Alemán → Español</option>
             <option value="es-de">Español → Alemán</option>
@@ -1899,6 +1899,7 @@ appData.stats.sessions.push({
     source: document.getElementById('cfg-practice-source').value
 });
 saveDatabase();
+flashcardSessionActive = false;
 }
 
 function forceReviewAll() {
