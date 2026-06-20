@@ -1606,7 +1606,7 @@ function renderIslandsGrid() {
 let currentVocabFolderId = null;
 let selectedPracticeIslandIds = [];
 let selectedWordIds = new Set(); // Para mover múltiples palabras
-
+let flashcardSessionActive = false;
 function migrateVocabData() {
     console.log('Migrando datos de vocabulario...');
     if (appData.vocabFolders && appData.vocabFolders.length > 0 && typeof appData.vocabFolders[0] === 'string') {
@@ -1660,11 +1660,12 @@ function switchVocabMode(mode) {
     }
 }
 function exitFlashcardsToVocabList() {
-    // Si hay una sesión activa, guardar el progreso antes de salir
+    console.log('exitFlashcardsToVocabList llamada. flashcardSessionActive:', flashcardSessionActive);
     if (flashcardSessionActive) {
+        console.log('Guardando sesión...');
         endSRSSession();
     } else {
-        // No hay sesión activa, solo limpiar y volver
+        console.log('No hay sesión activa, volviendo sin guardar.');
         if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
         flashcardWords = [];
         flashcardReviewedCount = 0;
