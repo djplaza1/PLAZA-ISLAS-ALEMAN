@@ -1503,7 +1503,7 @@ function applySRS(word, quality) {
     const d = new Date();
     d.setDate(d.getDate() + Math.ceil(word.interval));
     word.nextReviewDate = d.toISOString().split('T')[0];
-    
+    word.lastQuality = quality;
     saveDatabase();
 }
 
