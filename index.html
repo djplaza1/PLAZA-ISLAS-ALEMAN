@@ -273,7 +273,7 @@
             </div>
         </section>
 
-<!-- VISTA VOCABULARIO (CORREGIDA) -->
+<!-- VISTA VOCABULARIO (COMPLETA Y CORREGIDA) -->
 <section id="view-vocabulary" class="view-section space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
         <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-book text-teal-400"></i> Vocabulario</h2>
@@ -284,7 +284,7 @@
         </div>
     </div>
 
-    <!-- Barra de navegación de carpetas -->
+    <!-- Barra de navegación de carpetas con breadcrumb -->
     <div class="flex flex-wrap items-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
         <button onclick="selectVocabFolder(null)" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition">📚 Raíz</button>
         <span id="vocab-breadcrumb" class="text-slate-400 text-sm font-mono"></span>
@@ -298,9 +298,10 @@
     <!-- Subcarpetas -->
     <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
 
-    <!-- Flashcards (ocultas por defecto) -->
+    <!-- Flashcards (con botón para volver) -->
     <div id="flashcard-area" class="hidden space-y-4">
         <div class="flex justify-between items-center max-w-lg mx-auto">
+            <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
             <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
                 <option value="de-es">Alemán → Español</option>
                 <option value="es-de">Español → Alemán</option>
@@ -328,7 +329,7 @@
         </div>
     </div>
 
-    <!-- Lista de palabras de la carpeta actual -->
+    <!-- Lista de palabras -->
     <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
 </section>
 
@@ -1432,7 +1433,7 @@ function renderIslandsGrid() {
             initiateTrainingSession(virtualId, direction);
         }
 
-// ==================== VOCABULARIO (EXPLORADOR + IMPORTACIÓN DESDE TEXTO) ====================
+// ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
 let currentVocabFolderId = null;
 
 function migrateVocabData() {
@@ -1460,30 +1461,35 @@ function migrateVocabData() {
     saveDatabase();
 }
 
+// --- MODO VISTA ---
 function switchVocabMode(mode) {
     if (mode === 'flashcards') {
         document.getElementById('flashcard-area').classList.remove('hidden');
         document.getElementById('vocabulary-list-container').classList.add('hidden');
+        document.getElementById('vocab-folder-tabs').classList.add('hidden');
         startFlashcardSession();
     } else {
         document.getElementById('flashcard-area').classList.add('hidden');
         document.getElementById('vocabulary-list-container').classList.remove('hidden');
+        document.getElementById('vocab-folder-tabs').classList.remove('hidden');
         renderVocabFolderSelector();
         renderVocabularyList();
     }
 }
 
-// --- FLASHCARDS (sin cambios) ---
+// --- FLASHCARDS (solo palabras de la carpeta actual) ---
 function startFlashcardSession() {
-    if (!appData.vocabulary || appData.vocabulary.length === 0) {
-        alert('No hay palabras en tu vocabulario.');
+    const words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+    if (words.length === 0) {
+        alert('No hay palabras en esta carpeta para estudiar.');
         return;
     }
-    flashcardWords = [...appData.vocabulary];
+    flashcardWords = [...words];
     currentFlashcardIndex = 0;
     isFlipped = false;
     document.getElementById('flashcard-area').classList.remove('hidden');
     document.getElementById('vocabulary-list-container').classList.add('hidden');
+    document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
 }
 function showFlashcard() {
@@ -1509,9 +1515,7 @@ function markKnownWord() {
     if (flashcardWords.length === 0) return;
     flashcardWords.splice(currentFlashcardIndex, 1);
     if (flashcardWords.length === 0) {
-        document.getElementById('flashcard-area').classList.add('hidden');
-        document.getElementById('vocabulary-list-container').classList.remove('hidden');
-        renderVocabularyList();
+        switchVocabMode('list');
         return;
     }
     if (currentFlashcardIndex >= flashcardWords.length) currentFlashcardIndex = flashcardWords.length - 1;
@@ -1559,9 +1563,10 @@ function deleteVocabFolder(folderId) {
     else { renderVocabFolderSelector(); renderVocabularyList(); }
 }
 
-// --- SELECTOR DE CARPETAS ---
 function renderVocabFolderSelector() {
     const container = document.getElementById('vocab-folder-tabs');
+    const breadcrumb = document.getElementById('vocab-breadcrumb');
+    if (breadcrumb) breadcrumb.innerText = getFolderPath(currentVocabFolderId);
     if (!container) return;
     const children = getChildFolders(currentVocabFolderId);
     let html = '';
@@ -1585,7 +1590,7 @@ function selectVocabFolder(folderId) {
     renderVocabularyList();
 }
 
-// --- LISTA DE PALABRAS ---
+// --- LISTA DE PALABRAS (solo carpeta actual) ---
 function renderVocabularyList() {
     const container = document.getElementById('vocabulary-list-container');
     const search = document.getElementById('vocab-search')?.value.toLowerCase() || '';
@@ -1733,7 +1738,6 @@ async function importVocabFromIslands() {
     renderVocabFolderSelector(); renderVocabularyList();
     alert(`✅ ${added} palabras importadas.`);
 }
-
 function showIslandSelectionModal(islandList) {
     return new Promise(resolve => {
         const old = document.getElementById('island-selection-modal');
@@ -1772,7 +1776,7 @@ function showIslandSelectionModal(islandList) {
     });
 }
 
-// --- IMPORTACIÓN DESDE TEXTO PEGADO (NUEVA) ---
+// --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
 function importVocabFromText() {
     const overlay = document.createElement('div');
     overlay.className = 'popup-overlay';
@@ -1782,7 +1786,11 @@ function importVocabFromText() {
     content.style.maxHeight = '90vh'; content.style.overflowY = 'auto';
     content.innerHTML = `
         <h3 class="font-bold text-lg text-emerald-400 mb-2">Pegar lista de vocabulario</h3>
-        <p class="text-xs text-slate-400 mb-3">Pega aquí el vocabulario (formato libre: palabra : traducción).<br>Líneas que empiecen por "frase:", "ejemplo:" o "beispiel:" se usarán como frase de ejemplo.</p>
+        <p class="text-xs text-slate-400 mb-3">Formatos admitidos:<br>
+        • <code>palabra : traducción</code><br>
+        • <code>frase: Frase en alemán // Traducción</code> (antes o después de la palabra)<br>
+        • <code>ejemplo: ...</code> o <code>beispiel: ...</code><br>
+        • Con o sin emojis (🔴🟢🔵)</p>
         <textarea id="vocab-text-input" rows="15" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white font-mono" placeholder="Pega aquí tu lista..."></textarea>
         <div class="mt-3">
             <label class="text-xs text-slate-400">Carpeta destino:</label>
@@ -1806,47 +1814,146 @@ function importVocabFromText() {
 
         const lines = text.split('\n');
         let added = 0;
-        let curExDe = '', curExEs = '';
-        for (let line of lines) {
-            line = line.trim();
+        let pendingExampleDe = '';
+        let pendingExampleEs = '';
+        let lastWasExample = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
             if (!line) continue;
-            if (/^(frase|ejemplo|beispiel)\s*:/i.test(line)) {
-                const parts = line.split(':').slice(1).join(':').trim();
-                const subParts = parts.split('//');
-                curExDe = subParts[0]?.trim() || '';
-                curExEs = subParts[1]?.trim() || curExDe;
+
+            // Detectar encabezados (todo en mayúsculas o empezando con 📂)
+            if (/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN|SCHREIBEN|EXTRA)/.test(line) || /^[A-ZÄÖÜ]{3,}/.test(line)) {
                 continue;
             }
-            if (/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN)/.test(line)) continue;
-            const cleanLine = line.replace(/[🔴🟢🔵🟡⚪️]/g, '').trim();
+
+            // Detectar frases de ejemplo (antes o después de una palabra)
+            const exampleMatch = line.match(/^(frase|ejemplo|beispiel)\s*:\s*(.+)/i);
+            if (exampleMatch) {
+                const rest = exampleMatch[2];
+                // Buscar separador //
+                const parts = rest.split('//');
+                pendingExampleDe = parts[0].trim();
+                pendingExampleEs = parts[1]?.trim() || pendingExampleDe;
+                lastWasExample = true;
+                continue;
+            }
+
+            // Intentar detectar línea de palabra:traducción
+            const cleanLine = line.replace(/[🔴🟢🔵🟡⚪️✅❌⭐🔥]/g, '').trim();
             const colonIndex = cleanLine.indexOf(':');
             if (colonIndex === -1) continue;
+
             const germanPart = cleanLine.substring(0, colonIndex).trim();
             const spanishPart = cleanLine.substring(colonIndex + 1).trim();
+
+            // Eliminar información de género/plural entre paréntesis
             const wordOnly = germanPart.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+
             if (wordOnly.length < 2 || spanishPart.length < 2) continue;
+
+            // Verificar duplicados
             if (appData.vocabulary.some(v => v.word.toLowerCase() === wordOnly.toLowerCase())) continue;
+
+            // Usar frase de ejemplo pendiente o vacía
+            const exampleDe = pendingExampleDe || '';
+            const exampleEs = pendingExampleEs || '';
+            pendingExampleDe = '';
+            pendingExampleEs = '';
+
             appData.vocabulary.push({
                 id: 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
-                word: wordOnly, translation: spanishPart,
-                example_de: curExDe, example_es: curExEs,
-                folderId, sourceIslandId: null, sourcePhraseId: null,
-                added: getTodayDateString(), interval:1, nextReviewDate: getTodayDateString(), easeFactor:2.5, reps:0, lapses:0
+                word: wordOnly,
+                translation: spanishPart,
+                example_de: exampleDe,
+                example_es: exampleEs,
+                folderId: folderId,
+                sourceIslandId: null,
+                sourcePhraseId: null,
+                added: getTodayDateString(),
+                interval: 1,
+                nextReviewDate: getTodayDateString(),
+                easeFactor: 2.5,
+                reps: 0,
+                lapses: 0
             });
             added++;
-            curExDe = ''; curExEs = '';
+            lastWasExample = false;
         }
+
         await saveDatabase();
         overlay.remove();
-        renderVocabFolderSelector(); renderVocabularyList();
+        renderVocabFolderSelector();
+        renderVocabularyList();
         alert(`✅ ${added} palabras importadas.`);
     };
 }
 
-// --- TRADUCCIÓN Y POPUP ---
-async function fetchOnlineTranslation(word) { /* ... mismo código ... */ }
-function showWordPopup(word) { /* ... mismo código ... */ }
-function wrapWordsInSpans(text, lang = 'de') { /* ... mismo código ... */ }
+// --- TRADUCCIÓN Y POPUP (sin cambios) ---
+async function fetchOnlineTranslation(word) {
+    const clean = word.toLowerCase().replace(/[.,!?;:()]/g, '');
+    if (translationCache[clean]) return translationCache[clean];
+    if (de_es_dict[clean]) { translationCache[clean] = de_es_dict[clean]; return de_es_dict[clean]; }
+    try {
+        const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=de|es`);
+        const data = await resp.json();
+        if (data.responseStatus === 200 && data.responseData.translatedText) {
+            const trans = data.responseData.translatedText.toLowerCase();
+            translationCache[clean] = trans;
+            return trans;
+        }
+    } catch(e) {}
+    return null;
+}
+function showWordPopup(word) {
+    const existingOverlay = document.querySelector('.popup-overlay');
+    if (existingOverlay) existingOverlay.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    const content = document.createElement('div');
+    content.className = 'popup-content';
+    content.innerHTML = `
+        <p class="font-bold text-lg text-emerald-400 mb-2">${word}</p>
+        <p class="text-slate-300 mt-1" id="popup-trans">Buscando traducción...</p>
+        <div class="mt-2">
+            <input type="text" id="popup-example" placeholder="Frase de ejemplo (opcional)" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+        </div>
+        <div class="flex gap-2 mt-3">
+            <button id="popup-save-btn" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded text-xs font-bold flex-1" disabled>➕ Guardar</button>
+            <button onclick="document.querySelector('.popup-overlay').remove()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+    `;
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    fetchOnlineTranslation(word).then(trans => {
+        const transEl = document.getElementById('popup-trans');
+        const saveBtn = document.getElementById('popup-save-btn');
+        if (trans) {
+            transEl.innerHTML = `🇪🇸 ${trans}`;
+            saveBtn.disabled = false;
+            saveBtn.onclick = () => addWordToVocabulary(word, trans);
+        } else {
+            transEl.innerHTML = 'No encontrada. <input type="text" id="custom-translation" placeholder="Tu traducción" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-white mt-1 w-full">';
+            saveBtn.disabled = false;
+            saveBtn.onclick = () => {
+                const custom = document.getElementById('custom-translation')?.value.trim();
+                if (custom) addWordToVocabulary(word, custom);
+            };
+        }
+    });
+}
+function wrapWordsInSpans(text, lang = 'de') {
+    if (!text) return '';
+    return text.split(' ').map(w => {
+        const clean = w.replace(/[.,!?;:()]/g, '');
+        if (clean.length === 0) return w;
+        if (lang === 'de') {
+            return `<span class="clickable-word" onclick="event.stopPropagation(); showWordPopup('${clean}')">${w}</span>`;
+        }
+        return w;
+    }).join(' ');
+}
 
 // ==================== DETALLE DE ISLA ====================
 function openIslandDetail(islandId) {
