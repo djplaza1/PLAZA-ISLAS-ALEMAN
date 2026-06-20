@@ -3382,6 +3382,7 @@ function updateSkillStats(prefix, sessions) {
 }
 
 // --- CALENDARIO ANUAL ---
+// --- CALENDARIO ANUAL (colores vivos) ---
 function renderCalendarGrid(sessions) {
     const grid = document.getElementById('calendar-grid');
     if (!grid) return;
@@ -3393,8 +3394,8 @@ function renderCalendarGrid(sessions) {
         const firstDay = new Date(statsSelectedYear, m, 1);
         const lastDay = new Date(statsSelectedYear, m + 1, 0);
         const daysInMonth = lastDay.getDate();
-        let startDayOfWeek = firstDay.getDay(); // 0=Dom, 1=Lun...6=Sáb
-        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // Ajuste: L=0, M=1...D=6
+        let startDayOfWeek = firstDay.getDay(); // 0=Dom
+        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // L=0..D=6
 
         const monthDiv = document.createElement('div');
         monthDiv.className = "bg-slate-900/60 p-3 rounded-xl border border-slate-800";
@@ -3404,20 +3405,20 @@ function renderCalendarGrid(sessions) {
         daysOfWeek.forEach(d => html += `<span class="text-center">${d}</span>`);
         html += `</div><div class="grid grid-cols-7 gap-0.5">`;
 
-        // Espacios vacíos
         for (let i = 0; i < startDayOfWeek; i++) html += `<span></span>`;
 
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${statsSelectedYear}-${('0'+(m+1)).slice(-2)}-${('0'+day).slice(-2)}`;
             const daySessions = sessions.filter(s => s.date === dateStr);
             const count = daySessions.length;
-            let bg = 'bg-slate-800/50';
-            if (count === 1) bg = 'bg-emerald-950/60';
-            else if (count === 2) bg = 'bg-emerald-800';
-            else if (count === 3) bg = 'bg-emerald-600';
-            else if (count >= 4) bg = 'bg-emerald-400';
-            html += `<span class="text-[8px] text-slate-300 text-center rounded-sm ${bg} cursor-pointer hover:ring-1 hover:ring-amber-400" 
-                        onclick="showDayDetail('${dateStr}')" 
+            let bg = 'bg-slate-700'; // día sin práctica (más claro que el fondo)
+            if (count === 1) bg = 'bg-amber-600';
+            else if (count === 2) bg = 'bg-orange-500';
+            else if (count === 3) bg = 'bg-rose-500';
+            else if (count >= 4) bg = 'bg-pink-400';
+
+            html += `<span class="text-[8px] text-white text-center rounded-sm ${bg} cursor-pointer hover:ring-1 hover:ring-amber-400" 
+                        onclick="showDayDetailModal('${dateStr}')" 
                         data-date="${dateStr}">${day}</span>`;
         }
         html += `</div>`;
@@ -3426,21 +3427,56 @@ function renderCalendarGrid(sessions) {
     }
 }
 
-// --- DETALLE DE DÍA (táctil y ratón) ---
-function showDayDetail(dateStr) {
-    selectedDayDate = dateStr;
+// --- VENTANA MODAL DE DETALLE DE DÍA ---
+function showDayDetailModal(dateStr) {
+    // Eliminar modal previo si existe
+    const oldModal = document.getElementById('day-detail-modal');
+    if (oldModal) oldModal.remove();
+
     const sessions = (appData.stats.sessions || []).filter(s => s.date === dateStr);
     const totalSecs = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
     const min = Math.floor(totalSecs / 60);
     const sec = totalSecs % 60;
-    const infoDiv = document.getElementById('selected-day-info');
-    if (infoDiv) {
-        infoDiv.classList.remove('hidden');
-        infoDiv.innerHTML = `📅 <strong>${dateStr}</strong> — ${sessions.length} sesiones, ${min}m ${sec}s — 
-            ${sessions.map(s => s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : '👂').join(' ')}`;
-    }
-}
 
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'day-detail-modal';
+    overlay.className = 'popup-overlay';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    // Contenido del modal
+    const content = document.createElement('div');
+    content.className = 'popup-content max-w-md';
+    content.innerHTML = `
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-lg text-emerald-400">📅 ${dateStr}</h3>
+            <button onclick="document.getElementById('day-detail-modal').remove()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div class="text-sm text-slate-300 space-y-2">
+            <p><span class="text-slate-500">Sesiones:</span> <strong>${sessions.length}</strong></p>
+            <p><span class="text-slate-500">Tiempo total:</span> <strong>${min}m ${sec}s</strong></p>
+            <p><span class="text-slate-500">Tipos:</span> ${sessions.length > 0 ? sessions.map(s => s.type === 'vocab' ? '📚 Vocabulario' : s.type === 'production' ? '✍️ Producción' : '👂 Comprensión').join(', ') : '—'}</p>
+            ${sessions.length > 0 ? `
+            <div class="mt-3 border-t border-slate-700 pt-3">
+                <p class="text-xs text-slate-400 uppercase mb-2">Detalle por sesión:</p>
+                <ul class="space-y-1 text-xs text-slate-400">
+                    ${sessions.map((s, i) => `
+                        <li class="flex justify-between">
+                            <span>${s.startTime || '—'}</span>
+                            <span>${s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : '👂'} ${s.cardsCount || 0} tarj.</span>
+                            <span>⏱ ${Math.floor((s.duration || 0) / 60)}m ${(s.duration || 0) % 60}s</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>` : ''}
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button onclick="document.getElementById('day-detail-modal').remove()" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cerrar</button>
+        </div>
+    `;
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+}
 
 // ==================== SYNC ====================
 async function exportDatabaseFile() {
