@@ -2140,6 +2140,40 @@ function wrapWordsInSpans(text, lang = 'de') {
         return w;
     }).join(' ');
 }
+function applyClickableWordsToHtml(html) {
+    if (!html) return '';
+
+    // Convierte cada palabra de un texto en un span clickeable
+    const wrapTextWithClicks = (text) => {
+        return text.split(' ').map(w => {
+            const clean = w.replace(/[.,!?;:()]/g, '');
+            if (clean.length === 0) return w;
+            return `<span class="clickable-word" onclick="event.stopPropagation(); showWordPopup('${clean}')">${w}</span>`;
+        }).join(' ');
+    };
+
+    // 1. Dentro de <span class="verb-highlight">…</span> hacemos las palabras clickeables
+    html = html.replace(/<span class="verb-highlight">([^<]*)<\/span>/g, (match, inner) => {
+        return `<span class="verb-highlight">${wrapTextWithClicks(inner)}</span>`;
+    });
+
+    // 2. Lo mismo para <span class="prep-highlight">…</span>
+    html = html.replace(/<span class="prep-highlight">([^<]*)<\/span>/g, (match, inner) => {
+        return `<span class="prep-highlight">${wrapTextWithClicks(inner)}</span>`;
+    });
+
+    // 3. Texto que no está dentro de ninguna etiqueta → hacerlo clickeable
+    const parts = html.split(/(<[^>]+>)/g);
+    let result = '';
+    for (let part of parts) {
+        if (part.startsWith('<')) {
+            result += part;
+        } else {
+            result += wrapTextWithClicks(part);
+        }
+    }
+    return result;
+}
 
 // ==================== DETALLE DE ISLA ====================
 function openIslandDetail(islandId) {
