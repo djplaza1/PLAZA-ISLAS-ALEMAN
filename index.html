@@ -3233,7 +3233,7 @@ function changeStatsYear(delta) {
 // --- RENDERIZADO PRINCIPAL ---
 function renderAdvancedStatistics() {
     if (!appData.stats.sessions) appData.stats.sessions = [];
-    seedDemoSessions();
+   
 
     const period = document.getElementById('stats-period-select').value;
     const now = new Date();
