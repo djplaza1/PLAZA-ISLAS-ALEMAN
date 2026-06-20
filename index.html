@@ -346,6 +346,7 @@
     </div>
     <button onclick="moveAllWordsInFolder()" class="bg-purple-600 hover:bg-purple-500 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md ml-2">Mover todas</button>
     <button onclick="deleteSelectedWords()" class="bg-rose-600 hover:bg-rose-500 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md ml-2">🗑️ Borrar seleccionadas</button>
+    <button onclick="deleteAllWordsInFolder()" class="bg-red-700 hover:bg-red-600 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md ml-2">💀 Borrar todas</button>
 </div>
 
 <!-- Flashcards (con botón para volver y SRS) -->
@@ -1938,6 +1939,21 @@ function deleteSelectedWords() {
     updateBulkWordPanel();
     renderVocabularyList();
 }
+
+function deleteAllWordsInFolder() {
+    const wordsInFolder = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+    if (wordsInFolder.length === 0) {
+        alert('No hay palabras en esta carpeta.');
+        return;
+    }
+    if (!confirm(`¿Eliminar TODAS las palabras de esta carpeta (${wordsInFolder.length} palabras)? Esta acción no se puede deshacer.`)) return;
+    appData.vocabulary = appData.vocabulary.filter(w => w.folderId !== currentVocabFolderId);
+    selectedWordIds.clear();
+    saveDatabase();
+    updateBulkWordPanel();
+    renderVocabularyList();
+}
+
 // --- CARPETAS ---
 function getFolderPath(folderId) {
     if (!folderId) return 'Raíz';
