@@ -1667,6 +1667,10 @@ function startConfiguredPractice() {
     const countInput = document.getElementById('cfg-practice-count');
     const mode = document.getElementById('cfg-practice-mode').value;
     const count = parseInt(countInput.value) || 20;
+        if (source === 'islands' && selectedPracticeIslandIds.length === 0) {
+        alert('Selecciona al menos una isla primero.');
+        return;
+    }
 
     let words = getWordsBySource(source);
 
