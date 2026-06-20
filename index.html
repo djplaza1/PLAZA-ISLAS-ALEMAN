@@ -1780,9 +1780,9 @@ function renderVocabularyList() {
         div.className = "flex justify-between items-center py-3 border-b border-slate-700/50";
         div.innerHTML = `
             <div class="flex-1"><div class="flex items-center gap-2 flex-wrap">
-                <span class="font-bold text-emerald-400">${v.word}</span>
-                <span class="text-slate-400 text-sm">${v.translation}</span>
-                ${v.example_de ? `<span class="text-[10px] text-slate-500 italic">"${v.example_de}"</span>` : ''}
+                <span class="font-black text-xl text-emerald-400">${v.word}</span>
+<span class="text-slate-400 text-base">${v.translation}</span>
+${v.example_de ? `<span class="text-sm text-slate-300 italic">"${v.example_de}"</span>` : ''}
             </div><div class="flex gap-2 mt-1">
                 <span class="text-[10px] text-slate-500">${v.added||''}</span>
                 <span class="text-[10px] text-slate-500">Rep:${v.reps||0} Lap:${v.lapses||0}</span>
