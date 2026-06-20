@@ -1930,6 +1930,8 @@ function renderVocabFolderSelector() {
     container.innerHTML = html;
 }
 function selectVocabFolder(folderId) {
+    selectedWordIds.clear();
+    updateBulkWordPanel();          // ← Oculta el panel si no hay selección
     currentVocabFolderId = folderId;
     renderVocabFolderSelector();
     renderVocabularyList();
@@ -1982,6 +1984,98 @@ function renderVocabularyList() {
             </div>`;
         container.appendChild(div);
     });
+}
+// Gestión de selección múltiple de palabras
+function toggleWordSelection(wordId, isChecked) {
+    if (isChecked) {
+        selectedWordIds.add(wordId);
+    } else {
+        selectedWordIds.delete(wordId);
+    }
+    updateBulkWordPanel();
+}
+
+function updateBulkWordPanel() {
+    const panel = document.getElementById('bulk-word-move-panel');
+    const countSpan = document.getElementById('selected-words-count');
+    const count = selectedWordIds.size;
+
+    if (count > 0) {
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+        countSpan.innerText = count;
+        // Rellenar selector de carpetas destino
+        const select = document.getElementById('bulk-word-folder-select');
+        const folders = appData.vocabFolders;
+        let options = '<option value="root">Ninguno (Raíz)</option>';
+        folders.forEach(f => {
+            options += `<option value="${f.id}">${getFolderPath(f.id)}</option>`;
+        });
+        select.innerHTML = options;
+    } else {
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+    }
+}
+
+function moveSelectedWords() {
+    if (selectedWordIds.size === 0) return;
+
+    const select = document.getElementById('bulk-word-folder-select');
+    const targetFolderId = select.value === 'root' ? null : select.value;
+
+    let moved = 0;
+    appData.vocabulary.forEach(word => {
+        if (selectedWordIds.has(word.id)) {
+            word.folderId = targetFolderId;
+            moved++;
+        }
+    });
+
+    if (moved > 0) {
+        saveDatabase();
+        // Limpiar selección y refrescar
+        selectedWordIds.clear();
+        updateBulkWordPanel();
+        renderVocabFolderSelector();
+        renderVocabularyList();
+        alert(`${moved} palabra(s) movidas correctamente.`);
+    }
+}
+
+function moveAllWordsInFolder() {
+    if (!confirm(`¿Mover TODAS las palabras de esta carpeta a otra ubicación?`)) return;
+
+    const folders = appData.vocabFolders.map(f => ({ id: f.id, path: getFolderPath(f.id) }));
+    let msg = 'Carpeta destino:\n0 - Raíz\n';
+    folders.forEach((f,i) => msg += `${i+1} - ${f.path}\n`);
+    const choice = prompt(msg);
+    if (choice === null) return;
+
+    let targetFolderId = null;
+    if (choice === '0') targetFolderId = null;
+    else {
+        const n = parseInt(choice);
+        if (n > 0 && n <= folders.length) targetFolderId = folders[n-1].id;
+        else { alert('Inválido.'); return; }
+    }
+
+    let moved = 0;
+    appData.vocabulary.forEach(word => {
+        if (word.folderId === currentVocabFolderId) {
+            word.folderId = targetFolderId;
+            moved++;
+        }
+    });
+
+    if (moved > 0) {
+        saveDatabase();
+        renderVocabFolderSelector();
+        renderVocabularyList();
+        alert(`${moved} palabra(s) movidas correctamente.`);
+    } else {
+        alert('No hay palabras en esta carpeta.');
+    }
 }
 
 function moveWordToFolder(wordId) {
