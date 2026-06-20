@@ -2404,7 +2404,7 @@ function renderPhrasesList() {
         row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
         
         const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
-        const esClass = hideSpanishList ? "hidden-content" : "text-slate-400 italic";   // ← sin text-xs
+       const esClass = hideSpanishList ? "hidden-content" : "text-emerald-400 italic";   // ← sin text-xs
         const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
 
         row.innerHTML = `
