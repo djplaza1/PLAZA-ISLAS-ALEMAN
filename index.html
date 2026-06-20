@@ -1483,7 +1483,6 @@ function switchVocabMode(mode) {
 }
 // --- FUNCIÓN SRS (SM-2 simplificado) ---
 function applySRS(word, quality) {
-    // quality: 1=Otra vez, 2=Difícil, 3=Bien, 4=Fácil
     if (quality === 1) {
         word.lapses = (word.lapses || 0) + 1;
         word.interval = 1;
@@ -1494,18 +1493,17 @@ function applySRS(word, quality) {
     } else if (quality === 4) {
         word.interval = Math.round((word.interval || 1) * (word.easeFactor || 2.5) * 1.3);
     }
-    
-    // Ajustar easeFactor
     word.easeFactor = Math.max(1.3, (word.easeFactor || 2.5) + (0.1 - (4 - quality) * (0.08 + (4 - quality) * 0.02)));
-    
     word.reps = (word.reps || 0) + 1;
-    
-    // Calcular próxima fecha de repaso
     const d = new Date();
     d.setDate(d.getDate() + Math.ceil(word.interval));
     word.nextReviewDate = d.toISOString().split('T')[0];
-    word.lastQuality = quality;
+    word.lastQuality = quality;   // ← clave
     saveDatabase();
+    // Refrescar la lista si está visible
+    if (!document.getElementById('vocabulary-list-container').classList.contains('hidden')) {
+        renderVocabularyList();
+    }
 }
 
 
@@ -2424,9 +2422,9 @@ function renderPhrasesList() {
             <div class="space-y-1 flex-grow">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-      <p class="${deClass}">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</p>                 ${tagsBadge}
+      <p class="${deClass} text-2xl">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</p>                 ${tagsBadge}
                 </div>
-                <p class="${esClass}">"${phrase.es}"</p>
+                <p class="${esClass} text-xl">"${phrase.es}"</p>
             </div>
             <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
                 <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
@@ -2527,8 +2525,12 @@ function setupTrainingSlide() {
     document.getElementById('train-current-index').innerText = currentTrainIndex + 1;
     document.getElementById('train-status-indicator').innerText = "Listo";
     document.getElementById('train-status-indicator').className = "text-xs uppercase font-black tracking-widest text-blue-400";
-    document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' ? phrase.es : applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de));
-    document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' ? applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de)) : phrase.es;
+    document.getElementById('train-text-stimulus').innerHTML = trainingDirection === 'normal' 
+        ? `<span class="text-2xl">${phrase.es}</span>` 
+        : `<span class="text-2xl">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</span>`;
+    document.getElementById('train-text-target').innerHTML = trainingDirection === 'normal' 
+        ? `<span class="text-2xl">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</span>` 
+        : `<span class="text-2xl">${phrase.es}</span>`;
     document.getElementById('train-target-container').style.opacity = '0';
     document.getElementById('evaluation-panel').classList.add('hidden');
     document.getElementById('btn-reveal').classList.add('hidden');
@@ -2544,7 +2546,6 @@ function setupTrainingSlide() {
     if (document.getElementById('cfg-flow-type').value === 'auto') {
         activePlaybackTimeout = setTimeout(executePlaybackChain, 800);
     }
-
     const btnMyVoice = document.getElementById('btn-play-my-recording');
     if (btnMyVoice) {
         const phrase = trainingQueue[currentTrainIndex];
