@@ -1535,7 +1535,19 @@ function startFlashcardSession() {
         (!w.nextReviewDate || w.nextReviewDate <= today)
     );
     if (words.length === 0) {
-        alert('No hay palabras pendientes de repaso en esta carpeta.');
+        // Mostrar mensaje con opciones de repaso alternativo
+        document.getElementById('flashcard-area').classList.add('hidden');
+        document.getElementById('vocabulary-list-container').classList.remove('hidden');
+        document.getElementById('vocabulary-list-container').innerHTML = `
+            <div class="text-center py-8 space-y-4">
+                <h3 class="text-xl font-black text-slate-400">📭 No hay palabras pendientes de repaso en esta carpeta.</h3>
+                <div class="flex flex-wrap justify-center gap-4 mt-6">
+                    <button onclick="forceReviewAll()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📚 Repasar todas</button>
+                    <button onclick="forceReviewDifficult()" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔥 Repasar difíciles</button>
+                    <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📋 Volver a lista</button>
+                </div>
+            </div>
+        `;
         return;
     }
     flashcardWords = [...words].sort(() => Math.random() - 0.5);
@@ -1625,6 +1637,51 @@ function endSRSSession() {
     renderVocabFolderSelector();
     renderVocabularyList();
 }
+function forceReviewAll() {
+    const words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+    if (words.length === 0) {
+        alert('No hay palabras en esta carpeta.');
+        return;
+    }
+    // Poner todas las palabras como pendientes (nextReviewDate = hoy)
+    const today = getTodayDateString();
+    words.forEach(w => {
+        w.nextReviewDate = today;
+        w.interval = 1; // Reiniciamos intervalo para que no se vayan muy lejos
+    });
+    saveDatabase();
+    startFlashcardSession();
+}
+
+function forceReviewDifficult() {
+    const words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+    if (words.length === 0) {
+        alert('No hay palabras en esta carpeta.');
+        return;
+    }
+    // Seleccionar las más difíciles: mayor número de lapsos o menor easeFactor
+    const difficult = words
+        .sort((a, b) => (b.lapses || 0) - (a.lapses || 0) || (a.easeFactor || 2.5) - (b.easeFactor || 2.5))
+        .slice(0, Math.min(20, words.length)); // máximo 20 difíciles
+    if (difficult.length === 0) {
+        alert('No hay palabras difíciles detectadas.');
+        return;
+    }
+    const today = getTodayDateString();
+    difficult.forEach(w => {
+        w.nextReviewDate = today;
+    });
+    saveDatabase();
+    // Iniciar sesión solo con esas palabras
+    flashcardWords = difficult;
+    currentFlashcardIndex = 0;
+    isFlipped = false;
+    document.getElementById('flashcard-area').classList.remove('hidden');
+    document.getElementById('vocabulary-list-container').classList.add('hidden');
+    document.getElementById('vocab-folder-tabs').classList.add('hidden');
+    showFlashcard();
+}
+
 
 function nextFlashcard() {
     if (currentFlashcardIndex < flashcardWords.length - 1) {
