@@ -698,6 +698,9 @@ let voiceCancelFn = null;
 let currentAudioElement = null; // Referencia al <audio> activo de grabaciones
 
 let flashcardWords = [];
+let flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
+let flashcardTimerInterval = null;
+let flashcardStartTime = null;
 let currentFlashcardIndex = 0;
 let isFlipped = false;
 // ==================== GRABACIÓN Y REPRODUCCIÓN DE AUDIO ====================
@@ -1741,6 +1744,12 @@ function startConfiguredPractice() {
     flashcardWords = words;
     currentFlashcardIndex = 0;
     isFlipped = false;
+    // Reiniciar contadores y temporizador
+flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
+flashcardStartTime = Date.now();
+if (flashcardTimerInterval) clearInterval(flashcardTimerInterval);
+flashcardTimerInterval = setInterval(updateFlashcardTimer, 1000);
+updateFlashcardProgress();
     // Guardar dirección para las tarjetas
     document.getElementById('flashcard-direction').value = direction === 'mix' ? 'de-es' : direction;
     window.customDirection = direction; // para alternar en mix
@@ -1777,6 +1786,7 @@ function showFlashcard() {
     document.getElementById('flashcard').classList.remove('flipped');
     isFlipped = false;
     document.getElementById('srs-buttons').classList.add('hidden');
+    updateFlashcardProgress();
 }
 
 function flipFlashcard() {
@@ -1796,6 +1806,11 @@ function rateSRS(quality) {
     if (flashcardWords.length === 0) return;
     const word = flashcardWords[currentFlashcardIndex];
     applySRS(word, quality);
+    // Actualizar contador según calidad
+if (quality === 1) flashcardQualityCounts.again++;
+else if (quality === 2) flashcardQualityCounts.hard++;
+else if (quality === 3) flashcardQualityCounts.good++;
+else if (quality === 4) flashcardQualityCounts.easy++;
     if (quality <= 2) {
         flashcardWords.push(flashcardWords.splice(currentFlashcardIndex, 1)[0]);
         if (currentFlashcardIndex >= flashcardWords.length) {
@@ -1813,6 +1828,7 @@ function rateSRS(quality) {
 }
 
 function endSRSSession() {
+    if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
     const total = flashcardWords.length;
     const aprendidas = (appData.vocabulary || []).filter(w => 
         w.folderId === currentVocabFolderId && w.nextReviewDate > getTodayDateString()
@@ -1875,6 +1891,28 @@ function forceReviewDifficult() {
     document.getElementById('vocabulary-list-container').classList.add('hidden');
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
+}
+
+function updateFlashcardProgress() {
+    const total = flashcardWords.length;
+    const done = currentFlashcardIndex;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    document.getElementById('fc-progress-text').innerText = `${done}/${total}`;
+    document.getElementById('fc-progress-bar').style.width = `${percent}%`;
+    document.getElementById('fc-count-again').innerText = flashcardQualityCounts.again;
+    document.getElementById('fc-count-hard').innerText = flashcardQualityCounts.hard;
+    document.getElementById('fc-count-good').innerText = flashcardQualityCounts.good;
+    document.getElementById('fc-count-easy').innerText = flashcardQualityCounts.easy;
+}
+
+function updateFlashcardTimer() {
+    if (!flashcardStartTime) return;
+    const elapsed = Math.floor((Date.now() - flashcardStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    const timerEl = document.getElementById('fc-timer');
+    if (timerEl) timerEl.innerText = `${mins}:${secs}`;
 }
 
 // Navegación entre tarjetas
