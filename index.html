@@ -1862,6 +1862,7 @@ else if (quality === 4) flashcardQualityCounts.easy++;
 }
 
 function endSRSSession() {
+    console.log('📊 endSRSSession ejecutada. Total palabras:', flashcardWords.length);
     if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
     const total = flashcardWords.length;
     const aprendidas = (appData.vocabulary || []).filter(w => 
@@ -1883,6 +1884,8 @@ function endSRSSession() {
             </div>
         </div>
     `;
+    document.getElementById('vocabulary-list-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    console.log('📋 Resumen insertado en vocabulary-list-container');
     renderVocabFolderSelector();
     renderVocabularyList();
     // Registrar sesión en estadísticas
