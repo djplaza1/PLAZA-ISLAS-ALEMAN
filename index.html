@@ -1578,6 +1578,9 @@ function startConfiguredPractice() {
         const today = getTodayDateString();
         words = words.filter(w => !w.nextReviewDate || w.nextReviewDate <= today);
     }
+    else if (mode === 'difficult') {
+    words = words.filter(w => w.lastQuality === 1 || w.lastQuality === 2);
+}
 
     if (words.length === 0) {
         // Mostrar mensaje con opciones de repaso alternativo
