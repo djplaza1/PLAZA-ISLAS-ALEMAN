@@ -3218,16 +3218,17 @@ function handleKeyboardShortcuts(e) {
         default: break;
     }
 }
-// ==================== ESTADÍSTICAS PREMIUM ====================
+// ==================== ESTADÍSTICAS PREMIUM (CALENDARIO + PRODUCCIÓN/COMPRENSIÓN) ====================
+let statsSelectedYear = new Date().getFullYear();
+let selectedDayDate = null;
 
 // --- DATOS SIMULADOS PARA PRUEBA (BORRAR CUANDO QUIERAS) ---
 function seedDemoSessions() {
-    if (appData.stats.sessions && appData.stats.sessions.length > 0) return; // Ya hay datos
+    if (appData.stats.sessions && appData.stats.sessions.length > 0) return;
     const types = ['vocab', 'production', 'comprehension'];
     const directions = ['de-es', 'es-de', 'mix'];
-    const sources = ['current-folder', 'all'];
     const now = new Date();
-    for (let i = 0; i < 45; i++) {
+    for (let i = 0; i < 120; i++) {
         const d = new Date(now);
         d.setDate(d.getDate() - Math.floor(Math.random() * 365));
         const h = Math.floor(Math.random() * 14) + 8;
@@ -3240,16 +3241,22 @@ function seedDemoSessions() {
             type: types[Math.floor(Math.random() * types.length)],
             cardsCount: Math.floor(Math.random() * 30) + 5,
             direction: directions[Math.floor(Math.random() * directions.length)],
-            source: sources[Math.floor(Math.random() * sources.length)]
+            source: 'all'
         });
     }
     appData.stats.sessions.sort((a,b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
     saveDatabase();
 }
 
+// --- CAMBIO DE AÑO ---
+function changeStatsYear(delta) {
+    statsSelectedYear += delta;
+    document.getElementById('stats-year-label').innerText = statsSelectedYear;
+    renderAdvancedStatistics();
+}
+
 // --- RENDERIZADO PRINCIPAL ---
 function renderAdvancedStatistics() {
-    // Asegurar datos de demo
     if (!appData.stats.sessions) appData.stats.sessions = [];
     seedDemoSessions();
 
@@ -3266,44 +3273,50 @@ function renderAdvancedStatistics() {
         const d = new Date(now); d.setMonth(d.getMonth() - 1);
         dateFrom = d.toISOString().split('T')[0];
     } else if (period === 'year') {
-        const d = new Date(now); d.setFullYear(d.getFullYear() - 1);
-        dateFrom = d.toISOString().split('T')[0];
+        dateFrom = `${statsSelectedYear}-01-01`;
     }
 
-    const sessions = appData.stats.sessions.filter(s => s.date >= dateFrom);
+    const sessions = appData.stats.sessions.filter(s => s.date >= dateFrom && s.date.startsWith(statsSelectedYear));
     const totalCards = sessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
 
+    document.getElementById('stats-year-label').innerText = statsSelectedYear;
     document.getElementById('stat-sessions').innerText = sessions.length;
     document.getElementById('stat-total-cards').innerText = totalCards;
     document.getElementById('stat-total-time-new').innerText = `${hours}h ${minutes}m`;
     document.getElementById('stat-streak-new').innerText = `${appData.stats.streak || 0} días`;
     document.getElementById('stat-vocab-count-new').innerText = (appData.vocabulary || []).length;
 
-    // Gráfico de actividad (último año)
-    renderActivityGrid();
+    // Estadísticas producción/comprensión
+    const prodSessions = sessions.filter(s => s.type === 'production');
+    const compSessions = sessions.filter(s => s.type === 'comprehension');
+    updateSkillStats('prod', prodSessions);
+    updateSkillStats('comp', compSessions);
 
-    // Lista de sesiones del período
+    // Calendario
+    renderCalendarGrid(sessions);
+
+    // Lista de sesiones
     const listContainer = document.getElementById('sessions-list');
     listContainer.innerHTML = '';
     if (sessions.length === 0) {
         listContainer.innerHTML = '<p class="text-slate-500 text-center py-4 text-sm">No hay sesiones en este período.</p>';
     } else {
         sessions.forEach(s => {
-            const typeLabel = s.type === 'vocab' ? '📚 Vocabulario' : s.type === 'production' ? '✍️ Producción' : '👂 Comprensión';
+            const typeLabel = s.type === 'vocab' ? '📚 Vocab' : s.type === 'production' ? '✍️ Prod' : '👂 Comp';
             const typeColor = s.type === 'vocab' ? 'text-teal-400' : s.type === 'production' ? 'text-blue-400' : 'text-purple-400';
             const durMin = Math.floor((s.duration || 0) / 60);
             const durSec = (s.duration || 0) % 60;
             const div = document.createElement('div');
             div.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 gap-2";
             div.innerHTML = `
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                     <span class="text-[10px] text-slate-500 w-16">${s.date}</span>
                     <span class="text-[10px] text-slate-600 w-12">${s.startTime}</span>
                     <span class="text-xs font-bold ${typeColor}">${typeLabel}</span>
-                    <span class="text-[10px] text-slate-500">${s.cardsCount || 0} tarjetas</span>
+                    <span class="text-[10px] text-slate-500">${s.cardsCount || 0} tarj.</span>
                     <span class="text-[10px] text-slate-500">${s.direction || ''}</span>
                 </div>
                 <span class="text-[10px] text-slate-400 font-mono">⏱ ${durMin}m ${durSec}s</span>
@@ -3313,105 +3326,125 @@ function renderAdvancedStatistics() {
     }
 }
 
-// --- GRÁFICO DE ACTIVIDAD ANUAL ---
-function renderActivityGrid() {
-    const grid = document.getElementById('activity-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    const now = new Date();
-    for (let i = 364; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const dateKey = [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
-        const sessions = (appData.stats.sessions || []).filter(s => s.date === dateKey);
-        const count = sessions.length;
-        let bg = 'bg-slate-800 border border-slate-700';
-        if (count === 1) bg = 'bg-emerald-950/60';
-        else if (count === 2) bg = 'bg-emerald-800';
-        else if (count === 3) bg = 'bg-emerald-600';
-        else if (count >= 4) bg = 'bg-emerald-400';
-        const cell = document.createElement('div');
-        cell.className = `w-3 h-3 rounded-sm ${bg}`;
-        cell.title = `${dateKey}: ${count} sesiones`;
-        grid.appendChild(cell);
-    }
-}
+// --- ESTADÍSTICAS DE HABILIDAD ---
+function updateSkillStats(prefix, sessions) {
+    const count = sessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+    document.getElementById(`stat-${prefix}-count`).innerText = count;
 
-// ==================== SYNC (SIN CAMBIOS) ====================
-async function exportDatabaseFile() {
-    trackNetPracticeTime();
-    const exportData = JSON.parse(JSON.stringify(appData));
-    exportData._audioFiles = {};
-    if (db) {
-        const transaction = db.transaction('appState', 'readonly');
-        const store = transaction.objectStore('appState');
-        const request = store.getAll();
-        await new Promise((resolve, reject) => {
-            request.onsuccess = async () => {
-                const allItems = request.result;
-                for (let item of allItems) {
-                    if (item.key.startsWith('audio_') && item.value instanceof Blob) {
-                        const base64 = await new Promise((res) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => res(reader.result);
-                            reader.readAsDataURL(item.value);
-                        });
-                        exportData._audioFiles[item.key] = base64;
-                    }
-                }
-                resolve();
-            };
-            request.onerror = () => reject(request.error);
+    // Obtener promedios de estrellas de frases (se calculan sobre todas las frases)
+    let grammarSum = 0, fluencySum = 0, phraseCount = 0;
+    appData.islands.forEach(isl => {
+        if (isl.phrases) isl.phrases.forEach(p => {
+            const g = prefix === 'prod' ? p.starsGrammarNormal : p.starsGrammarInverse;
+            const f = prefix === 'prod' ? p.starsFluencyNormal : p.starsFluencyInverse;
+            if (g || f) {
+                grammarSum += g || 0;
+                fluencySum += f || 0;
+                phraseCount++;
+            }
+        });
+    });
+    const avgGrammar = phraseCount > 0 ? (grammarSum / phraseCount).toFixed(1) : '-';
+    const avgFluency = phraseCount > 0 ? (fluencySum / phraseCount).toFixed(1) : '-';
+    document.getElementById(`stat-${prefix}-grammar`).innerText = avgGrammar !== '-' ? `${avgGrammar}/5` : '-';
+    document.getElementById(`stat-${prefix}-fluency`).innerText = avgFluency !== '-' ? `${avgFluency}/5` : '-';
+
+    // Evolución 7 días: diferencia entre media de últimos 7 días y media de los 7 anteriores
+    const today = new Date();
+    const last7 = []; const prev7 = [];
+    for (let i = 0; i < 14; i++) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const dStr = d.toISOString().split('T')[0];
+        const daySessions = sessions.filter(s => s.date === dStr);
+        const dayCount = daySessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+        if (i < 7) last7.push(dayCount);
+        else prev7.push(dayCount);
+    }
+    const lastAvg = last7.reduce((a,b) => a+b, 0) / 7;
+    const prevAvg = prev7.reduce((a,b) => a+b, 0) / 7;
+    let trend = '-';
+    if (prevAvg > 0) {
+        const change = ((lastAvg - prevAvg) / prevAvg) * 100;
+        trend = change >= 0 ? `↑${Math.abs(change).toFixed(0)}%` : `↓${Math.abs(change).toFixed(0)}%`;
+    }
+    document.getElementById(`stat-${prefix}-trend`).innerText = trend;
+
+    // Mini gráfico de barras (últimos 7 días)
+    const chartContainer = document.getElementById(`${prefix}-mini-chart`);
+    if (chartContainer) {
+        chartContainer.innerHTML = '';
+        const maxVal = Math.max(...last7, 1);
+        last7.forEach(val => {
+            const bar = document.createElement('div');
+            const height = Math.max(2, (val / maxVal) * 48);
+            bar.className = `w-3 bg-${prefix === 'prod' ? 'blue' : 'purple'}-500/60 rounded-t`;
+            bar.style.height = height + 'px';
+            chartContainer.appendChild(bar);
         });
     }
-    const jsonStr = JSON.stringify(exportData);
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
-    const anchor = document.createElement('a');
-    anchor.href = dataStr;
-    anchor.download = "Muller_Satzinseln_ProX_Backup.json";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
 }
 
-function copyJsonToClipboard() {
-    trackNetPracticeTime();
-    navigator.clipboard.writeText(JSON.stringify(appData)).then(() => {
-        alert("📋 Copia maestra en portapapeles.");
-    }).catch(() => {
-        alert("Error al copiar.");
-    });
+// --- CALENDARIO ANUAL ---
+function renderCalendarGrid(sessions) {
+    const grid = document.getElementById('calendar-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const daysOfWeek = ['L','M','X','J','V','S','D'];
+
+    for (let m = 0; m < 12; m++) {
+        const firstDay = new Date(statsSelectedYear, m, 1);
+        const lastDay = new Date(statsSelectedYear, m + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        let startDayOfWeek = firstDay.getDay(); // 0=Dom, 1=Lun...6=Sáb
+        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // Ajuste: L=0, M=1...D=6
+
+        const monthDiv = document.createElement('div');
+        monthDiv.className = "bg-slate-900/60 p-3 rounded-xl border border-slate-800";
+
+        let html = `<div class="text-xs font-bold text-slate-300 mb-2">${months[m]}</div>`;
+        html += `<div class="grid grid-cols-7 gap-0.5 text-[9px] text-slate-500 mb-1">`;
+        daysOfWeek.forEach(d => html += `<span class="text-center">${d}</span>`);
+        html += `</div><div class="grid grid-cols-7 gap-0.5">`;
+
+        // Espacios vacíos
+        for (let i = 0; i < startDayOfWeek; i++) html += `<span></span>`;
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${statsSelectedYear}-${('0'+(m+1)).slice(-2)}-${('0'+day).slice(-2)}`;
+            const daySessions = sessions.filter(s => s.date === dateStr);
+            const count = daySessions.length;
+            let bg = 'bg-slate-800/50';
+            if (count === 1) bg = 'bg-emerald-950/60';
+            else if (count === 2) bg = 'bg-emerald-800';
+            else if (count === 3) bg = 'bg-emerald-600';
+            else if (count >= 4) bg = 'bg-emerald-400';
+            html += `<span class="text-[8px] text-slate-300 text-center rounded-sm ${bg} cursor-pointer hover:ring-1 hover:ring-amber-400" 
+                        onclick="showDayDetail('${dateStr}')" 
+                        data-date="${dateStr}">${day}</span>`;
+        }
+        html += `</div>`;
+        monthDiv.innerHTML = html;
+        grid.appendChild(monthDiv);
+    }
 }
 
-async function importDatabaseFile() {
-    const fileField = document.getElementById('import-file-field');
-    if (fileField.files.length === 0) { alert("Selecciona un archivo .json"); return; }
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (data && data.islands) {
-                const audioFiles = data._audioFiles || {};
-                if (Object.keys(audioFiles).length > 0) {
-                    for (let [key, base64] of Object.entries(audioFiles)) {
-                        try {
-                            const response = await fetch(base64);
-                            const blob = await response.blob();
-                            await saveAudioBlob(key.replace('audio_', ''), blob);
-                        } catch (err) { console.warn('No se pudo restaurar audio:', key, err); }
-                    }
-                }
-                delete data._audioFiles;
-                appData = data;
-                await saveDatabase();
-                await loadSettings();
-                alert("✅ Base de datos inyectada con éxito.");
-                switchView('islands');
-            } else { alert("JSON inválido."); }
-        } catch(err) { alert("Error al leer el archivo."); }
-    };
-    reader.readAsText(fileField.files[0]);
+// --- DETALLE DE DÍA (táctil y ratón) ---
+function showDayDetail(dateStr) {
+    selectedDayDate = dateStr;
+    const sessions = (appData.stats.sessions || []).filter(s => s.date === dateStr);
+    const totalSecs = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const min = Math.floor(totalSecs / 60);
+    const sec = totalSecs % 60;
+    const infoDiv = document.getElementById('selected-day-info');
+    if (infoDiv) {
+        infoDiv.classList.remove('hidden');
+        infoDiv.innerHTML = `📅 <strong>${dateStr}</strong> — ${sessions.length} sesiones, ${min}m ${sec}s — 
+            ${sessions.map(s => s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : '👂').join(' ')}`;
+    }
 }
+
+
 // ==================== SYNC ====================
 async function exportDatabaseFile() {
     trackNetPracticeTime();
