@@ -475,7 +475,6 @@
 </section>
 
         <!-- VISTA ESTADÍSTICAS -->
-<!-- VISTA ESTADÍSTICAS PREMIUM -->
 <!-- VISTA ESTADÍSTICAS SUPER PREMIUM -->
 <section id="view-stats" class="view-section space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
@@ -563,6 +562,21 @@
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
         <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Sesiones del período</h3>
         <div id="sessions-list" class="divide-y divide-slate-700"></div>
+    </div>
+</section>
+
+<!-- VISTA SYNC -->
+<section id="view-sync" class="view-section max-w-2xl mx-auto space-y-6">
+    <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up text-purple-400"></i> Sincronización</h2>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div><h4 class="font-bold text-sm">Exportar Base de Datos</h4></div>
+            <div class="flex gap-2"><button onclick="exportDatabaseFile()" class="bg-purple-600 hover:bg-purple-500 text-xs font-bold px-4 py-2.5 rounded-lg">Descargar JSON</button><button onclick="copyJsonToClipboard()" class="bg-slate-700 hover:bg-slate-600 text-xs font-bold px-3 py-2.5 rounded-lg"><i class="fa-solid fa-copy"></i></button></div>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
+            <h4 class="font-bold text-sm">Importar Base de Datos</h4>
+            <div class="flex flex-col sm:flex-row gap-2"><input type="file" id="import-file-field" accept=".json" class="block w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-slate-200 cursor-pointer"><button onclick="importDatabaseFile()" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-black uppercase px-5 py-2 rounded-xl shrink-0">Inyectar JSON</button></div>
+        </div>
     </div>
 </section>
 </main>
