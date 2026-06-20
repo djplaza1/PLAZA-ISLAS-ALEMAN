@@ -2082,44 +2082,7 @@ async function importVocabFromIslands() {
     renderVocabFolderSelector(); renderVocabularyList();
     alert(`✅ ${added} palabras importadas.`);
 }
-function showIslandSelectionModal(islandList) {
-    return new Promise(resolve => {
-        const old = document.getElementById('island-selection-modal');
-        if (old) old.remove();
-        const overlay = document.createElement('div');
-        overlay.id = 'island-selection-modal';
-        overlay.className = 'popup-overlay';
-        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-        const content = document.createElement('div');
-        content.className = 'popup-content max-w-lg';
-        content.style.maxHeight = '80vh'; content.style.overflowY = 'auto';
-        content.innerHTML = `
-            <h3 class="font-bold text-lg text-emerald-400 mb-4">Selecciona islas</h3>
-            <div class="mb-3">
-                <button id="select-all-islands" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Todas</button>
-                <button id="deselect-all-islands" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold ml-2">Ninguna</button>
-            </div>
-            <div class="space-y-1 max-h-60 overflow-y-auto">
-                ${islandList.map(isl => `<label class="flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 p-1 rounded cursor-pointer"><input type="checkbox" value="${isl.id}" class="island-checkbox rounded"> ${isl.name} <span class="text-slate-500 text-xs">(${isl.phrases.length} frases)</span></label>`).join('')}
-            </div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button id="cancel-island-selection" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
-                <button id="confirm-island-selection" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-xs font-bold">Importar</button>
-            </div>`;
-        overlay.appendChild(content);
-        document.body.appendChild(overlay);
-        const cbs = content.querySelectorAll('.island-checkbox');
-        document.getElementById('select-all-islands').onclick = () => cbs.forEach(cb => cb.checked = true);
-        document.getElementById('deselect-all-islands').onclick = () => cbs.forEach(cb => cb.checked = false);
-        document.getElementById('confirm-island-selection').onclick = () => {
-            const ids = Array.from(cbs).filter(cb => cb.checked).map(cb => cb.value);
-            overlay.remove();
-            resolve(islandList.filter(isl => ids.includes(isl.id)));
-        };
-        document.getElementById('cancel-island-selection').onclick = () => { overlay.remove(); resolve(null); };
-    });
-}
-
+function showIslandSelectionModal(islandL
 function showIslandSelectionModalWithPreselection(islandList, preselectedIds = []) {
     return new Promise(resolve => {
         const old = document.getElementById('island-selection-modal');
