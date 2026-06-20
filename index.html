@@ -2050,42 +2050,87 @@ async function importVocabFromIslands() {
     const choice = prompt(msg, '0');
     let folderId = currentVocabFolderId;
     if (choice === '0') folderId = null;
-    else if (choice) { const n = parseInt(choice); if (n>0 && n<=folders.length) folderId = folders[n-1].id; else { alert('Inválido.'); return; } }
+    else if (choice) {
+        const n = parseInt(choice);
+        if (n > 0 && n <= folders.length) folderId = folders[n-1].id;
+        else { alert('Inválido.'); return; }
+    }
 
     const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases?.length > 0);
-    if (islandList.length === 0) { alert('No hay islas con frases.'); return; }
+    console.log('🏝️ Islas con frases:', islandList.length);
+    if (islandList.length === 0) {
+        alert('No hay islas con frases.');
+        return;
+    }
+
     const selectedIslands = await showIslandSelectionModal(islandList);
+    console.log('✅ Islas seleccionadas:', selectedIslands);
     if (selectedIslands === null) return; // Canceló el modal
     if (!selectedIslands || selectedIslands.length === 0) {
         alert("No seleccionaste ninguna isla. La importación no se realizó.");
         return;
     }
 
-    const existing = new Set(appData.vocabulary.map(v => v.word.toLowerCase()));
+    // Solo comprobamos duplicados dentro de la misma carpeta de destino
+    const existingInFolder = new Set(
+        (appData.vocabulary || [])
+            .filter(v => v.folderId === folderId)
+            .map(v => v.word.toLowerCase())
+    );
+
     let added = 0;
     for (const isl of selectedIslands) {
         for (const p of isl.phrases) {
-            for (const raw of p.de.split(/\s+/)) {
+            const words = p.de.split(/\s+/);
+            for (const raw of words) {
                 const w = raw.replace(/[.,!?;:()¿¡]/g, '');
-                if (w.length < 2 || existing.has(w.toLowerCase())) continue;
-                let trans = de_es_dict[w.toLowerCase()] || null;
+                if (w.length < 2) continue;
+                const lower = w.toLowerCase();
+                if (existingInFolder.has(lower)) {
+                    console.log(`⏭️ Omitida (ya existe en carpeta destino): ${w}`);
+                    continue;
+                }
+
+                let trans = de_es_dict[lower] || null;
                 if (!trans) trans = await fetchOnlineTranslation(w);
                 if (!trans) trans = '(sin traducción)';
+
                 appData.vocabulary.push({
-                    id: 'vocab_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
-                    word: w, translation: trans, example_de: p.de, example_es: p.es,
-                    folderId, sourceIslandId: isl.id, sourcePhraseId: p.id,
-                    added: getTodayDateString(), interval:1, nextReviewDate: getTodayDateString(), easeFactor:2.5, reps:0, lapses:0
+                    id: 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                    word: w,
+                    translation: trans,
+                    example_de: p.de,
+                    example_es: p.es,
+                    folderId: folderId,
+                    sourceIslandId: isl.id,
+                    sourcePhraseId: p.id,
+                    added: getTodayDateString(),
+                    interval: 1,
+                    nextReviewDate: getTodayDateString(),
+                    easeFactor: 2.5,
+                    reps: 0,
+                    lapses: 0,
+                    lastQuality: 0
                 });
-                existing.add(w.toLowerCase());
+
+                existingInFolder.add(lower);
                 added++;
+                console.log(`➕ Añadida: ${w} → ${trans}`);
             }
         }
     }
+
     await saveDatabase();
-    renderVocabFolderSelector(); renderVocabularyList();
-    alert(`✅ ${added} palabras importadas.`);
+    renderVocabFolderSelector();
+    renderVocabularyList();
+
+    if (added === 0) {
+        alert("ℹ️ No se importaron palabras nuevas. Todas las palabras de las islas seleccionadas ya existen en la carpeta destino.");
+    } else {
+        alert(`✅ ${added} palabras importadas.`);
+    }
 }
+
 function showIslandSelectionModal(islandList) {
     return new Promise(resolve => {
         const old = document.getElementById('island-selection-modal');
