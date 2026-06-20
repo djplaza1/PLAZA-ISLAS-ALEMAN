@@ -298,36 +298,40 @@
     <!-- Subcarpetas -->
     <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
 
-    <!-- Flashcards (con botón para volver) -->
-    <div id="flashcard-area" class="hidden space-y-4">
-        <div class="flex justify-between items-center max-w-lg mx-auto">
-            <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
-            <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
-                <option value="de-es">Alemán → Español</option>
-                <option value="es-de">Español → Alemán</option>
-            </select>
-            <div class="flex gap-2">
-                <button onclick="prevFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
-                <span id="flashcard-index" class="text-xs font-mono self-center">1/1</span>
-                <button onclick="nextFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-        </div>
-        <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
-            <div class="flashcard-inner">
-                <div class="flashcard-front">
-                    <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
-                    <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
-                </div>
-                <div class="flashcard-back">
-                    <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
-                    <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
-                </div>
-            </div>
-        </div>
-        <div class="text-center mt-2">
-            <button onclick="markKnownWord()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">La sé ✓</button>
+<!-- Flashcards (con botón para volver y SRS) -->
+<div id="flashcard-area" class="hidden space-y-4">
+    <div class="flex justify-between items-center max-w-lg mx-auto">
+        <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
+        <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
+            <option value="de-es">Alemán → Español</option>
+            <option value="es-de">Español → Alemán</option>
+        </select>
+        <div class="flex gap-2">
+            <button onclick="prevFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-left"></i></button>
+            <span id="flashcard-index" class="text-xs font-mono self-center">1/1</span>
+            <button onclick="nextFlashcard()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
     </div>
+    <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
+        <div class="flashcard-inner">
+            <div class="flashcard-front">
+                <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
+                <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+            </div>
+            <div class="flashcard-back">
+                <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
+                <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+            </div>
+        </div>
+    </div>
+    <!-- Botones SRS (aparecen tras voltear la tarjeta) -->
+    <div id="srs-buttons" class="hidden flex justify-center gap-2 mt-4">
+        <button onclick="rateSRS(1)" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold">🔴 Otra vez</button>
+        <button onclick="rateSRS(2)" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🟠 Difícil</button>
+        <button onclick="rateSRS(3)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🟢 Bien</button>
+        <button onclick="rateSRS(4)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🔵 Fácil</button>
+    </div>
+</div>
 
     <!-- Lista de palabras -->
     <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
