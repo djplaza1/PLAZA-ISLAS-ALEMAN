@@ -2118,6 +2118,23 @@ function showIslandSelectionModalWithPreselection(islandList, preselectedIds = [
         document.getElementById('cancel-island-selection').onclick = () => { overlay.remove(); resolve(null); };
     });
 }
+async function selectPracticeIslands() {
+    const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
+    if (islandList.length === 0) {
+        alert('No hay islas disponibles.');
+        return;
+    }
+    // Preseleccionar las que ya estuvieran marcadas
+    const selected = await showIslandSelectionModalWithPreselection(islandList, selectedPracticeIslandIds);
+    if (selected) {
+        selectedPracticeIslandIds = selected.map(isl => isl.id);
+        // Mostrar cuántas islas se han seleccionado en el botón
+        const btn = document.querySelector('button[onclick="selectPracticeIslands()"]');
+        if (btn) {
+            btn.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${selectedPracticeIslandIds.length} isla(s)`;
+        }
+    }
+}
 // --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
 function importVocabFromText() {
     const overlay = document.createElement('div');
