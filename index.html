@@ -1658,6 +1658,26 @@ function switchVocabMode(mode) {
         renderVocabularyList();
     }
 }
+function exitFlashcardsToVocabList() {
+    // Si hay sesión en curso y se han calificado tarjetas, guardar progreso
+    if (flashcardWords.length > 0 && flashcardReviewedCount > 0 && 
+        !document.getElementById('flashcard-area').classList.contains('hidden')) {
+        endSRSSession();
+    } else {
+        // Limpiar sesión sin guardar
+        if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
+        flashcardWords = [];
+        flashcardReviewedCount = 0;
+        flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
+        document.getElementById('flashcard-area').classList.add('hidden');
+        document.getElementById('vocabulary-list-container').classList.remove('hidden');
+        document.getElementById('vocab-folder-tabs').classList.remove('hidden');
+        renderVocabFolderSelector();
+        renderVocabularyList();
+    }
+}
+
+
 // --- FUNCIÓN SRS (SM-2 simplificado) ---
 function applySRS(word, quality) {
     // quality: 1=Otra vez, 2=Difícil, 3=Bien, 4=Fácil
@@ -1860,7 +1880,7 @@ function endSRSSession() {
                 <button onclick="startConfiguredPractice()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔄 Nueva práctica</button>
                 <button onclick="forceReviewAll()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📚 Repasar todas</button>
                 <button onclick="forceReviewDifficult()" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔥 Repasar difíciles</button>
-                <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📋 Volver a lista</button>
+                <button onclick="exitFlashcardsToVocabList()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
             </div>
         </div>
     `;
