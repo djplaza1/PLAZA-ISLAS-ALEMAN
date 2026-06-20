@@ -1660,12 +1660,11 @@ function switchVocabMode(mode) {
     }
 }
 function exitFlashcardsToVocabList() {
-    // Si hay sesión en curso y se han calificado tarjetas, guardar progreso
-    if (flashcardWords.length > 0 && flashcardReviewedCount > 0 && 
-        !document.getElementById('flashcard-area').classList.contains('hidden')) {
+    // Si hay una sesión activa, guardar el progreso antes de salir
+    if (flashcardSessionActive) {
         endSRSSession();
     } else {
-        // Limpiar sesión sin guardar
+        // No hay sesión activa, solo limpiar y volver
         if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
         flashcardWords = [];
         flashcardReviewedCount = 0;
@@ -1677,7 +1676,6 @@ function exitFlashcardsToVocabList() {
         renderVocabularyList();
     }
 }
-
 
 // --- FUNCIÓN SRS (SM-2 simplificado) ---
 function applySRS(word, quality) {
