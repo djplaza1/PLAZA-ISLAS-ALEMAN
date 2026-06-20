@@ -1862,45 +1862,75 @@ else if (quality === 4) flashcardQualityCounts.easy++;
 }
 
 function endSRSSession() {
-    console.log('📊 endSRSSession ejecutada. Total palabras:', flashcardWords.length);
+    console.log('📊 endSRSSession ejecutada');
+
+    // Parar el temporizador
     if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
-    const total = flashcardWords.length;
+
+    // Calcular tiempo real transcurrido
+    const elapsedSeconds = flashcardStartTime ? Math.floor((Date.now() - flashcardStartTime) / 1000) : 0;
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = elapsedSeconds % 60;
+
+    // Usar tarjetas realmente calificadas, no el total del mazo
+    const total = flashcardReviewedCount || 0;
     const aprendidas = (appData.vocabulary || []).filter(w => 
         w.folderId === currentVocabFolderId && w.nextReviewDate > getTodayDateString()
     ).length;
-    document.getElementById('flashcard-area').classList.add('hidden');
-    document.getElementById('vocab-folder-tabs').classList.remove('hidden');
-    document.getElementById('vocabulary-list-container').classList.remove('hidden');
-    document.getElementById('vocabulary-list-container').innerHTML = `
-        <div class="text-center py-8 space-y-4">
-            <h3 class="text-xl font-black text-emerald-400">🎉 Sesión completada</h3>
-            <p class="text-slate-400">Palabras repasadas: <span class="text-emerald-400 font-bold">${total}</span></p>
-            <p class="text-slate-400">Aprendidas hoy: <span class="text-amber-400 font-bold">${aprendidas}</span></p>
-            <div class="flex flex-wrap justify-center gap-4 mt-6">
-                <button onclick="startConfiguredPractice()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔄 Nueva práctica</button>
-                <button onclick="forceReviewAll()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📚 Repasar todas</button>
-                <button onclick="forceReviewDifficult()" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔥 Repasar difíciles</button>
-                <button onclick="exitFlashcardsToVocabList()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
+
+    // Registrar sesión con datos reales
+    appData.stats.sessions.push({
+        id: 'sess_' + Date.now(),
+        date: getTodayDateString(),
+        startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        duration: elapsedSeconds,
+        type: 'vocab',
+        cardsCount: total,
+        direction: window.customDirection || document.getElementById('flashcard-direction').value,
+        source: document.getElementById('cfg-practice-source').value
+    });
+
+    // Limpiar estado de la sesión
+    flashcardSessionActive = false;
+    flashcardWords = [];
+    flashcardReviewedCount = 0;
+    flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
+    flashcardStartTime = null;
+
+    // Guardar base de datos
+    saveDatabase();
+
+    // Mostrar resumen en el contenedor (sin que otras funciones lo borren)
+    const container = document.getElementById('vocabulary-list-container');
+    const flashcardArea = document.getElementById('flashcard-area');
+    const tabs = document.getElementById('vocab-folder-tabs');
+
+    // Ocultar área de flashcards y mostrar contenedor de lista
+    if (flashcardArea) flashcardArea.classList.add('hidden');
+    if (tabs) tabs.classList.remove('hidden');
+    if (container) {
+        container.classList.remove('hidden');
+        container.innerHTML = `
+            <div class="text-center py-8 space-y-4">
+                <h3 class="text-xl font-black text-emerald-400">🎉 Sesión completada</h3>
+                <p class="text-slate-400">Palabras repasadas: <span class="text-emerald-400 font-bold">${total}</span></p>
+                <p class="text-slate-400">Tiempo: <span class="text-amber-400 font-bold">${mins}m ${secs}s</span></p>
+                <p class="text-slate-400">Aprendidas hoy: <span class="text-amber-400 font-bold">${aprendidas}</span></p>
+                <div class="flex flex-wrap justify-center gap-4 mt-6">
+                    <button onclick="startConfiguredPractice()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔄 Nueva práctica</button>
+                    <button onclick="forceReviewAll()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📚 Repasar todas</button>
+                    <button onclick="forceReviewDifficult()" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔥 Repasar difíciles</button>
+                    <button onclick="exitFlashcardsToVocabList()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold">📋 Volver a lista</button>
+                </div>
             </div>
-        </div>
-    `;
-    document.getElementById('vocabulary-list-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    console.log('📋 Resumen insertado en vocabulary-list-container');
-    renderVocabFolderSelector();
-    renderVocabularyList();
-    // Registrar sesión en estadísticas
-appData.stats.sessions.push({
-    id: 'sess_' + Date.now(),
-    date: getTodayDateString(),
-    startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    duration: 0, // se calculará si hay timer activo
-    type: 'vocab',
-    cardsCount: flashcardWords.length,
-    direction: window.customDirection || document.getElementById('flashcard-direction').value,
-    source: document.getElementById('cfg-practice-source').value
-});
-saveDatabase();
-flashcardSessionActive = false;
+        `;
+        // Forzar visibilidad
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // NO llamar a renderVocabFolderSelector ni renderVocabularyList aquí,
+    // porque borrarían el resumen.
 }
 
 function forceReviewAll() {
