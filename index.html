@@ -305,6 +305,7 @@
                 <option value="all">Todo el vocabulario</option>
                 <option value="islands">Islas seleccionadas</option>
             </select>
+            <button onclick="selectPracticeIslands()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition mt-2 sm:mt-0"><i class="fa-solid fa-layer-group"></i> Elegir islas</button>
         </div>
         <div>
             <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Dirección</label>
@@ -1646,17 +1647,20 @@ function applySRS(word, quality) {
     }
 }
 // --- CONFIGURACIÓN Y PRÁCTICA AVANZADA (FASE 5) ---
-
+let selectedPracticeIslandIds = [];
 function getWordsBySource(source) {
     let words = [];
     if (source === 'current-folder') {
         words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
     } else if (source === 'all') {
         words = [...(appData.vocabulary || [])];
+    } else if (source === 'islands') {
+        // Filtrar palabras cuyo sourceIslandId esté entre las islas seleccionadas
+        const ids = selectedPracticeIslandIds;
+        words = (appData.vocabulary || []).filter(w => w.sourceIslandId && ids.includes(w.sourceIslandId));
     }
     return words;
 }
-
 function startConfiguredPractice() {
     const source = document.getElementById('cfg-practice-source').value;
     const direction = document.getElementById('cfg-practice-direction').value;
