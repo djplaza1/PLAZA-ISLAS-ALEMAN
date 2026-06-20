@@ -1127,6 +1127,15 @@ async function loadAppData() {
     if (!appData.vocabulary) appData.vocabulary = [];
     if (!appData.conversations) appData.conversations = [];
     migrateVocabData();
+    // Eliminar sesiones simuladas que pudieran quedar
+if (appData.stats.sessions) {
+    const antes = appData.stats.sessions.length;
+    appData.stats.sessions = appData.stats.sessions.filter(s => !s.id.startsWith('demo_'));
+    if (appData.stats.sessions.length !== antes) {
+        saveDatabase();
+        console.log('🧹 Sesiones simuladas eliminadas:', antes - appData.stats.sessions.length);
+    }
+}
     // Migración de vocabulario a nueva estructura SRS
 if (!appData.vocabFolders) appData.vocabFolders = [];
 if (appData.vocabulary && appData.vocabulary.length > 0) {
