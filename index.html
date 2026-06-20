@@ -701,6 +701,7 @@ let currentAudioElement = null; // Referencia al <audio> activo de grabaciones
 let flashcardWords = [];
 let flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
 let flashcardTimerInterval = null;
+let flashcardReviewedCount = 0;
 let flashcardStartTime = null;
 let currentFlashcardIndex = 0;
 let isFlipped = false;
@@ -1639,6 +1640,17 @@ function switchVocabMode(mode) {
         document.getElementById('vocab-folder-tabs').classList.add('hidden');
         startFlashcardSession();
     } else {
+        // Si hay una sesión de flashcards en curso y se han calificado tarjetas, guardar progreso
+        if (flashcardWords.length > 0 && flashcardReviewedCount > 0 && 
+            !document.getElementById('flashcard-area').classList.contains('hidden')) {
+            endSRSSession(); // Guarda, muestra resumen y vuelve a lista
+            return;
+        }
+        // Si no hay sesión activa o no se ha calificado nada, simplemente limpiar y volver
+        if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
+        flashcardWords = [];
+        flashcardReviewedCount = 0;
+        flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
         document.getElementById('flashcard-area').classList.add('hidden');
         document.getElementById('vocabulary-list-container').classList.remove('hidden');
         document.getElementById('vocab-folder-tabs').classList.remove('hidden');
@@ -1748,6 +1760,7 @@ function startConfiguredPractice() {
     // Reiniciar contadores y temporizador
 flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
 flashcardStartTime = Date.now();
+flashcardReviewedCount = 0;
 if (flashcardTimerInterval) clearInterval(flashcardTimerInterval);
 flashcardTimerInterval = setInterval(updateFlashcardTimer, 1000);
 updateFlashcardProgress();
@@ -1806,6 +1819,7 @@ function flipFlashcard() {
 function rateSRS(quality) {
     if (flashcardWords.length === 0) return;
     const word = flashcardWords[currentFlashcardIndex];
+    flashcardReviewedCount++;
     applySRS(word, quality);
     // Actualizar contador según calidad
 if (quality === 1) flashcardQualityCounts.again++;
