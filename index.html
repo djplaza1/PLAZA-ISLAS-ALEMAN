@@ -1449,6 +1449,7 @@ function migrateVocabData() {
     }
     if (appData.vocabulary && appData.vocabulary.length > 0) {
         appData.vocabulary.forEach(w => {
+            if (w.lastQuality === undefined) w.lastQuality = 0;
             if (w.folder && !w.folderId) {
                 let folder = appData.vocabFolders.find(f => f.name === w.folder);
                 if (!folder) {
