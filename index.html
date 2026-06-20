@@ -295,6 +295,41 @@
         <button onclick="importVocabFromText()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-paste"></i> Pegar lista</button>
     </div>
 
+<!-- Panel de configuración de práctica -->
+<div id="practice-config" class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+        <div>
+            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Fuente</label>
+            <select id="cfg-practice-source" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200">
+                <option value="current-folder">Carpeta actual</option>
+                <option value="all">Todo el vocabulario</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Dirección</label>
+            <select id="cfg-practice-direction" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200">
+                <option value="de-es">DE → ES</option>
+                <option value="es-de">ES → DE</option>
+                <option value="mix">🎲 Mix</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Tarjetas</label>
+            <input type="number" id="cfg-practice-count" value="20" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
+        </div>
+        <div>
+            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Modo</label>
+            <select id="cfg-practice-mode" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200">
+                <option value="pending">Solo pendientes</option>
+                <option value="all">Todas</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button onclick="startConfiguredPractice()" class="w-full bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-lg text-xs font-black uppercase transition">🚀 Iniciar práctica</button>
+        </div>
+    </div>
+</div>
+
     <!-- Subcarpetas -->
     <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
 
@@ -1516,12 +1551,33 @@ function applySRS(word, quality) {
         renderVocabularyList();
     }
 }
-function startFlashcardSession() {
-    const today = getTodayDateString();
-    let words = (appData.vocabulary || []).filter(w =>
-        w.folderId === currentVocabFolderId &&
-        (!w.nextReviewDate || w.nextReviewDate <= today)
-    );
+// --- CONFIGURACIÓN Y PRÁCTICA AVANZADA (FASE 5) ---
+
+function getWordsBySource(source) {
+    let words = [];
+    if (source === 'current-folder') {
+        words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
+    } else if (source === 'all') {
+        words = [...(appData.vocabulary || [])];
+    }
+    return words;
+}
+
+function startConfiguredPractice() {
+    const source = document.getElementById('cfg-practice-source').value;
+    const direction = document.getElementById('cfg-practice-direction').value;
+    const countInput = document.getElementById('cfg-practice-count');
+    const mode = document.getElementById('cfg-practice-mode').value;
+    const count = parseInt(countInput.value) || 20;
+
+    let words = getWordsBySource(source);
+
+    // Filtrar por pendientes si es el modo
+    if (mode === 'pending') {
+        const today = getTodayDateString();
+        words = words.filter(w => !w.nextReviewDate || w.nextReviewDate <= today);
+    }
+
     if (words.length === 0) {
         // Mostrar mensaje con opciones de repaso alternativo
         document.getElementById('flashcard-area').classList.add('hidden');
@@ -1538,19 +1594,41 @@ function startFlashcardSession() {
         `;
         return;
     }
-    flashcardWords = [...words].sort(() => Math.random() - 0.5);
+
+    // Mezclar y limitar
+    words = [...words].sort(() => Math.random() - 0.5);
+    if (count > 0 && count < words.length) {
+        words = words.slice(0, count);
+    }
+
+    // Configurar sesión
+    flashcardWords = words;
     currentFlashcardIndex = 0;
     isFlipped = false;
+    // Guardar dirección para las tarjetas
+    document.getElementById('flashcard-direction').value = direction === 'mix' ? 'de-es' : direction;
+    window.customDirection = direction; // para alternar en mix
+
     document.getElementById('flashcard-area').classList.remove('hidden');
     document.getElementById('vocabulary-list-container').classList.add('hidden');
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
 }
 
+// Sobrescribir startFlashcardSession para que use la configuración actual
+function startFlashcardSession() {
+    // Simplemente lanza la práctica con los valores del panel
+    startConfiguredPractice();
+}
+
 function showFlashcard() {
     if (flashcardWords.length === 0) { endSRSSession(); return; }
     const word = flashcardWords[currentFlashcardIndex];
-    const dir = document.getElementById('flashcard-direction').value;
+    // Determinar dirección para esta tarjeta
+    let dir = document.getElementById('flashcard-direction').value;
+    if (window.customDirection === 'mix') {
+        dir = Math.random() < 0.5 ? 'de-es' : 'es-de';
+    }
     const front = dir === 'de-es' ? word.word : word.translation;
     const frontEx = dir === 'de-es' ? (word.example_de || '') : (word.example_es || '');
     const back = dir === 'de-es' ? word.translation : word.word;
@@ -1574,22 +1652,14 @@ function flipFlashcard() {
 function rateSRS(quality) {
     if (flashcardWords.length === 0) return;
     const word = flashcardWords[currentFlashcardIndex];
-
-    // Si la calidad es baja (1 o 2) movemos la palabra al final del mazo
+    applySRS(word, quality);
     if (quality <= 2) {
-        // Guardamos la calificación pero no avanzamos el índice todavía
-        applySRS(word, quality);
-        // La movemos al final para que reaparezca más tarde
         flashcardWords.push(flashcardWords.splice(currentFlashcardIndex, 1)[0]);
-        // Si la palabra eliminada estaba antes del final, el índice se mantiene; si era la última, ajustamos
         if (currentFlashcardIndex >= flashcardWords.length) {
             currentFlashcardIndex = flashcardWords.length - 1;
         }
-        // Mostrar la siguiente tarjeta (que ahora está en la posición actual)
         showFlashcard();
     } else {
-        // Calidad >= 3: palabra aprendida en esta sesión, avanzamos
-        applySRS(word, quality);
         currentFlashcardIndex++;
         if (currentFlashcardIndex >= flashcardWords.length) {
             endSRSSession();
@@ -1600,11 +1670,9 @@ function rateSRS(quality) {
 }
 
 function endSRSSession() {
-    // Contar resultados de la sesión
-    const totalRepasadas = flashcardWords.length; // las que quedan son las que no se han calificado como >=3
+    const total = flashcardWords.length;
     const aprendidas = (appData.vocabulary || []).filter(w => 
-        w.folderId === currentVocabFolderId && 
-        w.nextReviewDate > getTodayDateString()
+        w.folderId === currentVocabFolderId && w.nextReviewDate > getTodayDateString()
     ).length;
     document.getElementById('flashcard-area').classList.add('hidden');
     document.getElementById('vocab-folder-tabs').classList.remove('hidden');
@@ -1612,10 +1680,10 @@ function endSRSSession() {
     document.getElementById('vocabulary-list-container').innerHTML = `
         <div class="text-center py-8 space-y-4">
             <h3 class="text-xl font-black text-emerald-400">🎉 Sesión completada</h3>
-            <p class="text-slate-400">Palabras repasadas: <span class="text-emerald-400 font-bold">${flashcardWords.length}</span></p>
+            <p class="text-slate-400">Palabras repasadas: <span class="text-emerald-400 font-bold">${total}</span></p>
             <p class="text-slate-400">Aprendidas hoy: <span class="text-amber-400 font-bold">${aprendidas}</span></p>
             <div class="flex flex-wrap justify-center gap-4 mt-6">
-                <button onclick="startFlashcardSession()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔄 Nueva sesión (pendientes)</button>
+                <button onclick="startConfiguredPractice()" class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔄 Nueva práctica</button>
                 <button onclick="forceReviewAll()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📚 Repasar todas</button>
                 <button onclick="forceReviewDifficult()" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">🔥 Repasar difíciles</button>
                 <button onclick="switchVocabMode('list')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl text-xs font-black uppercase transition">📋 Volver a lista</button>
@@ -1625,42 +1693,26 @@ function endSRSSession() {
     renderVocabFolderSelector();
     renderVocabularyList();
 }
+
 function forceReviewAll() {
-    const words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
-    if (words.length === 0) {
-        alert('No hay palabras en esta carpeta.');
-        return;
-    }
-    // Poner todas las palabras como pendientes (nextReviewDate = hoy)
+    const words = getWordsBySource(document.getElementById('cfg-practice-source').value);
+    if (words.length === 0) { alert('No hay palabras.'); return; }
     const today = getTodayDateString();
-    words.forEach(w => {
-        w.nextReviewDate = today;
-        w.interval = 1; // Reiniciamos intervalo para que no se vayan muy lejos
-    });
+    words.forEach(w => { w.nextReviewDate = today; w.interval = 1; });
     saveDatabase();
-    startFlashcardSession();
+    startConfiguredPractice();
 }
 
 function forceReviewDifficult() {
-    const words = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId);
-    if (words.length === 0) {
-        alert('No hay palabras en esta carpeta.');
-        return;
-    }
-    // Seleccionar las más difíciles: mayor número de lapsos o menor easeFactor
+    const words = getWordsBySource(document.getElementById('cfg-practice-source').value);
+    if (words.length === 0) { alert('No hay palabras.'); return; }
     const difficult = words
-        .sort((a, b) => (b.lapses || 0) - (a.lapses || 0) || (a.easeFactor || 2.5) - (b.easeFactor || 2.5))
-        .slice(0, Math.min(20, words.length)); // máximo 20 difíciles
-    if (difficult.length === 0) {
-        alert('No hay palabras difíciles detectadas.');
-        return;
-    }
+        .sort((a,b) => (b.lapses||0)-(a.lapses||0) || (a.easeFactor||2.5)-(b.easeFactor||2.5))
+        .slice(0, 20);
+    if (difficult.length === 0) { alert('No hay difíciles.'); return; }
     const today = getTodayDateString();
-    difficult.forEach(w => {
-        w.nextReviewDate = today;
-    });
+    difficult.forEach(w => { w.nextReviewDate = today; });
     saveDatabase();
-    // Iniciar sesión solo con esas palabras
     flashcardWords = difficult;
     currentFlashcardIndex = 0;
     isFlipped = false;
@@ -1670,7 +1722,7 @@ function forceReviewDifficult() {
     showFlashcard();
 }
 
-
+// Navegación entre tarjetas
 function nextFlashcard() {
     if (currentFlashcardIndex < flashcardWords.length - 1) {
         currentFlashcardIndex++;
@@ -1684,6 +1736,7 @@ function prevFlashcard() {
     }
 }
 function markKnownWord() { rateSRS(3); }
+
 // --- CARPETAS ---
 function getFolderPath(folderId) {
     if (!folderId) return 'Raíz';
