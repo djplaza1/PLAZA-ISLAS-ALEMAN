@@ -1915,7 +1915,12 @@ function applyGuidedReadingFontSize() {
 
 function startContinuousRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { console.warn('Reconocimiento no soportado'); return; }
+    if (!SpeechRecognition) return;
+
+    // Detener cualquier instancia previa
+    if (guidedReadingState.recognition) {
+        try { guidedReadingState.recognition.stop(); } catch(e) {}
+    }
 
     guidedReadingState.recognition = new SpeechRecognition();
     guidedReadingState.recognition.lang = 'de-DE';
@@ -1932,13 +1937,16 @@ function startContinuousRecognition() {
     };
 
     guidedReadingState.recognition.onerror = (event) => {
-        if (event.error === 'no-speech' && guidedReadingState.isActive) {
-            try { guidedReadingState.recognition.stop(); } catch(e) {}
-            setTimeout(() => {
-                if (guidedReadingState.isActive) {
-                    try { guidedReadingState.recognition.start(); } catch(e) {}
-                }
-            }, 500);
+        if (event.error === 'no-speech') {
+            // Simplemente reintentamos si no se detecta voz
+            if (guidedReadingState.isActive) {
+                try { guidedReadingState.recognition.stop(); } catch(e) {}
+                setTimeout(() => {
+                    if (guidedReadingState.isActive) {
+                        try { guidedReadingState.recognition.start(); } catch(e) {}
+                    }
+                }, 300);
+            }
         }
     };
 
@@ -1959,29 +1967,56 @@ function startReadingAudioRecording() {
 
 function stopGuidedReading() {
     if (!guidedReadingState.isActive) {
-        // Si no está activo, simplemente volver a configuración
-        document.getElementById('guided-reading-reader').classList.add('hidden');
-        document.getElementById('guided-reading-config').classList.remove('hidden');
+        // Si no está activo, volver a configuración
+        backToConfigScreen();
         return;
     }
     guidedReadingState.isActive = false;
 
+    // Detener temporizadores
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
     if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
 
+    // Detener reconocimiento y esperar resultado final
     if (guidedReadingState.recognition) {
         try { guidedReadingState.recognition.stop(); } catch(e) {}
-        guidedReadingState.recognition = null;
-    }
-
-    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-        guidedReadingState.mediaRecorder.stop();
-        guidedReadingState.mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
-            showReadingResults(audioBlob);
+        // El evento onend se disparará y entonces procesaremos resultados
+        guidedReadingState.recognition.onend = () => {
+            // Detener grabación
+            if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+                guidedReadingState.mediaRecorder.stop();
+                guidedReadingState.mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
+                    showReadingResults(audioBlob);
+                };
+            } else {
+                showReadingResults(null);
+            }
         };
+        // Si ya no hay reconocimiento activo, forzar finalización
+        setTimeout(() => {
+            if (guidedReadingState.recognition) {
+                // Forzar cierre si no se disparó onend
+                if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+                    guidedReadingState.mediaRecorder.stop();
+                    guidedReadingState.mediaRecorder.onstop = () => {
+                        showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
+                    };
+                } else {
+                    showReadingResults(null);
+                }
+                guidedReadingState.recognition = null;
+            }
+        }, 500);
     } else {
-        showReadingResults(null);
+        if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+            guidedReadingState.mediaRecorder.stop();
+            guidedReadingState.mediaRecorder.onstop = () => {
+                showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
+            };
+        } else {
+            showReadingResults(null);
+        }
     }
 }
 
@@ -2138,7 +2173,7 @@ function highlightWord(index) {
             span.className = 'text-slate-500';
         }
     });
-    if (spans[index]) spans[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Sin scroll automático para que puedas deslizar libremente
 }
 
 // Permite hacer clic en una palabra para establecer el punto de inicio de la escucha
