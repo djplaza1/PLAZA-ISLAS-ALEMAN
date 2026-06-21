@@ -2216,6 +2216,20 @@ function toggleWordSelection(wordId, isChecked) {
     updateBulkWordPanel();
 }
 
+function toggleVocabAudioPanel() {
+    const panel = document.getElementById('vocab-audio-panel');
+    const btn = document.getElementById('btn-show-vocab-audio');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        if (btn) btn.classList.add('hidden');
+    } else {
+        panel.classList.add('hidden');
+        if (btn) btn.classList.remove('hidden');
+    }
+}
+
 function updateBulkWordPanel() {
     const panel = document.getElementById('bulk-word-move-panel');
     const countSpan = document.getElementById('selected-words-count');
