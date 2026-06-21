@@ -1705,7 +1705,12 @@ let guidedReadingState = {
     showMark: true,
     fontSize: 2,
     timerInterval: null,
-    wpmHistory: []
+    wpmHistory: [],          // puedes conservarlo
+    // NUEVOS CAMPOS PARA TTS
+    ttsActive: false,
+    ttsPaused: false,
+    ttsCurrentWordIndex: 0,
+    ttsStartWordIndex: 0
 };
 
 const fluencyLevels = [
