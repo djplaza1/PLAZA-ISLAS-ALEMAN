@@ -162,6 +162,12 @@
 }
 .flashcard {
     position: relative;
+    overflow: hidden;                /* evita el desplazamiento al girar */
+    width: 100%;
+    max-width: 500px;                /* se mantiene como antes */
+    height: 300px;                   /* altura fija para que no baile */
+    margin: 0 auto;
+    cursor: pointer;
 }
 </style>
 </head>
