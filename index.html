@@ -1879,16 +1879,22 @@ function endSRSSession() {
     ).length;
 
     // Registrar sesión con datos reales
-    appData.stats.sessions.push({
-        id: 'sess_' + Date.now(),
-        date: getTodayDateString(),
-        startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-        duration: elapsedSeconds,
-        type: 'vocab',
-        cardsCount: total,
-        direction: window.customDirection || document.getElementById('flashcard-direction').value,
-        source: document.getElementById('cfg-practice-source').value
-    });
+appData.stats.sessions.push({
+    id: 'sess_' + Date.now(),
+    date: getTodayDateString(),
+    startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+    duration: elapsedSeconds,
+    type: 'vocab',
+    cardsCount: total,
+    direction: window.customDirection || document.getElementById('flashcard-direction').value,
+    source: document.getElementById('cfg-practice-source').value,
+    quality: {
+        again: flashcardQualityCounts.again,
+        hard: flashcardQualityCounts.hard,
+        good: flashcardQualityCounts.good,
+        easy: flashcardQualityCounts.easy
+    }
+});
 
     // Guardar base de datos
     saveDatabase();
