@@ -1856,37 +1856,7 @@ function showFlashcard() {
     const frontCard = document.querySelector('.flashcard-front');
     const backCard = document.querySelector('.flashcard-back');
 
-    [frontCard, backCard].forEach(card => {
-        if (!card) return;
-        // Eliminar botones de audio anteriores
-        const oldBtns = card.querySelectorAll('.audio-btn');
-        oldBtns.forEach(b => b.remove());
-
-        // Crear botón para la palabra (siempre en alemán)
-        const btnWord = document.createElement('button');
-        btnWord.className = 'audio-btn absolute top-2 right-2 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
-        btnWord.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-        btnWord.title = 'Escuchar palabra';
-        btnWord.onclick = (e) => {
-            e.stopPropagation();
-            speakText(word.word);
-        };
-        card.style.position = 'relative';
-        card.appendChild(btnWord);
-
-        // Crear botón para la frase (si hay ejemplo en alemán)
-        if (word.example_de) {
-            const btnPhrase = document.createElement('button');
-            btnPhrase.className = 'audio-btn absolute top-2 right-10 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
-            btnPhrase.innerHTML = '<i class="fa-solid fa-file-audio"></i>';
-            btnPhrase.title = 'Escuchar frase';
-            btnPhrase.onclick = (e) => {
-                e.stopPropagation();
-                speakText(word.example_de);
-            };
-            card.appendChild(btnPhrase);
-        }
-    });
+  [frontCard, backCard].forEach(card => {
 }
 
 function flipFlashcard() {
