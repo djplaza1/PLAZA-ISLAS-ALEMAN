@@ -2002,7 +2002,18 @@ function forceReviewDifficult() {
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
 }
-
+function flipFlashcard() {
+    const card = document.getElementById('flashcard');
+    if (card.classList.contains('flipped')) {
+        card.classList.remove('flipped');
+        isFlipped = false;
+        document.getElementById('srs-buttons').classList.add('hidden');
+    } else {
+        card.classList.add('flipped');
+        isFlipped = true;
+        document.getElementById('srs-buttons').classList.remove('hidden');
+    }
+}
 function updateFlashcardProgress() {
     const total = flashcardWords.length;
     const done = currentFlashcardIndex;
