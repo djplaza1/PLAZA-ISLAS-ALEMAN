@@ -3176,20 +3176,41 @@ function startTrainingFromPhrase(phraseId) {
     }
 
     // Obtener todas las frases de la isla y aplicar el orden configurado
+    // Obtener todas las frases de la isla y aplicar el orden configurado
     let phrases = [...foundIsland.phrases];
     if (phrases.length === 0) return;
 
     const order = document.getElementById('cfg-order').value;
+    let startIndex = 0;
+
     if (order === 'random') {
-        phrases.sort(() => Math.random() - 0.5);
+        // Eliminar la frase elegida de la lista para que sea la primera
+        const chosenPhrase = phrases.find(p => p.id === phraseId);
+        if (chosenPhrase) {
+            phrases = phrases.filter(p => p.id !== phraseId);
+            // Barajar el resto
+            for (let i = phrases.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [phrases[i], phrases[j]] = [phrases[j], phrases[i]];
+            }
+            // Insertar la frase elegida al principio
+            phrases.unshift(chosenPhrase);
+            startIndex = 0; // siempre la primera
+        } else {
+            // Si no se encontró, barajar todo (caso improbable)
+            phrases.sort(() => Math.random() - 0.5);
+            startIndex = phrases.findIndex(p => p.id === phraseId);
+            if (startIndex === -1) startIndex = 0;
+        }
     } else if (order === 'worst') {
         phrases.sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+        startIndex = phrases.findIndex(p => p.id === phraseId);
+        if (startIndex === -1) startIndex = 0;
+    } else {
+        // Orden secuencial
+        startIndex = phrases.findIndex(p => p.id === phraseId);
+        if (startIndex === -1) startIndex = 0;
     }
-
-    // Encontrar la posición de la frase elegida en la lista ordenada
-    let startIndex = phrases.findIndex(p => p.id === phraseId);
-    if (startIndex === -1) startIndex = 0;
-
     // Configurar la sesión de entrenamiento
     trainingQueue = phrases;
     currentTrainIndex = startIndex;
