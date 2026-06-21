@@ -2682,6 +2682,7 @@ function showIslandSelectionModalWithPreselection(islandList, preselectedIds = [
 }
 
 // --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
+// --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
 function importVocabFromText() {
     const overlay = document.createElement('div');
     overlay.className = 'popup-overlay';
@@ -2725,7 +2726,6 @@ function importVocabFromText() {
         let pendingExampleDe = '';
         let pendingExampleEs = '';
 
-        for (let i = 0; i < lines.length; i++) {
         for (let i = 0; i < lines.length; i++) {
             const rawLine = lines[i].trim();
             if (!rawLine) continue;
@@ -2808,7 +2808,7 @@ function importVocabFromText() {
             });
             added++;
         }
-        
+
         await saveDatabase();
         overlay.remove();
         renderVocabFolderSelector();
