@@ -3999,11 +3999,19 @@ function showDayDetailModal(dateStr) {
                 <p class="text-xs text-slate-400 uppercase mb-2">Detalle por sesión:</p>
                 <ul class="space-y-1 text-xs text-slate-400">
                     ${sessions.map((s, i) => `
-                        <li class="flex justify-between">
-                            <span>${s.startTime || '—'}</span>
-                            <span>${s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : '👂'} ${s.cardsCount || 0} tarj.</span>
-                            <span>⏱ ${Math.floor((s.duration || 0) / 60)}m ${(s.duration || 0) % 60}s</span>
-                        </li>
+                                          <li class="flex justify-between">
+                        <span>${s.startTime || '—'}</span>
+                        <span>${s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : '👂'} ${s.cardsCount || 0} tarj.</span>
+                        <span>⏱ ${Math.floor((s.duration || 0) / 60)}m ${(s.duration || 0) % 60}s</span>
+                    </li>
+                    ${s.type === 'vocab' && s.quality ? `
+                    <li class="flex gap-3 pl-4 text-[11px]">
+                        <span class="text-rose-400">🔴${s.quality.again || 0}</span>
+                        <span class="text-amber-400">🟠${s.quality.hard || 0}</span>
+                        <span class="text-emerald-400">🟢${s.quality.good || 0}</span>
+                        <span class="text-blue-400">🔵${s.quality.easy || 0}</span>
+                    </li>
+                    ` : ''}
                     `).join('')}
                 </ul>
             </div>` : ''}
