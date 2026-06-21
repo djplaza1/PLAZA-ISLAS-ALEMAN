@@ -1810,13 +1810,15 @@ function startGuidedReading() {
     // Iniciar teleprompter
     const msPerWord = 60000 / guidedReadingState.wpm;
     updateGuidedReadingDisplay();
-    guidedReadingState.intervalId = setInterval(() => {
+        guidedReadingState.intervalId = setInterval(() => {
         guidedReadingState.currentIndex++;
         if (guidedReadingState.currentIndex >= guidedReadingState.words.length) {
-            stopGuidedReading();
-            return;
+            // No detenemos la sesión; simplemente mantenemos el índice al final
+            guidedReadingState.currentIndex = guidedReadingState.words.length;
+            updateGuidedReadingDisplay(); // Refresca para mostrar progreso completo
+        } else {
+            updateGuidedReadingDisplay();
         }
-        updateGuidedReadingDisplay();
     }, msPerWord);
 
     // Iniciar reconocimiento continuo
