@@ -301,26 +301,7 @@
 
 <!-- MODAL DE LECTURA GUIADA (oculto por defecto) -->
 <div id="guided-reading-modal" class="hidden fixed inset-0 z-[300] bg-black flex flex-col">
-    <!-- Barra superior (aparece al iniciar) -->
-    <div id="guided-reading-topbar" class="hidden flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-slate-800">
-        <div class="flex items-center gap-3 text-xs text-slate-400">
-            <span id="guided-reading-timer" class="font-mono text-white font-bold">00:00</span>
-            <span class="text-slate-600">|</span>
-            <span><span id="guided-reading-wpm-live" class="text-blue-400 font-bold">0</span> WPM</span>
-            <span class="text-slate-600">|</span>
-            <span>Nivel: <span id="guided-reading-level-live" class="text-amber-400 font-bold">—</span></span>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="toggleGuidedReadingMark()" id="btn-toggle-mark" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Sin marca</button>
-            <button onclick="changeGuidedReadingSpeed(-10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">−10</button>
-            <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
-            <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
-            <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
-            <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
-        </div>
-    </div>
-
-    <!-- Contenedor de configuración (visible antes de iniciar) -->
+    <!-- Pantalla 1: Configuración (pegar texto) -->
     <div id="guided-reading-config" class="flex flex-col items-center justify-center flex-1 p-6 gap-6">
         <h3 class="text-2xl font-black text-amber-400"><i class="fa-solid fa-book-open-reader"></i> Lectura Guiada</h3>
         <textarea id="guided-reading-input" rows="6" class="w-full max-w-2xl bg-slate-900 border border-slate-600 rounded-xl p-4 text-sm text-white font-mono" placeholder="Pega aquí el texto que quieras leer..."></textarea>
@@ -329,18 +310,41 @@
             <input type="range" id="guided-reading-wpm" min="80" max="250" value="150" step="10" class="w-40">
             <span id="guided-reading-wpm-label" class="text-sm font-bold text-white">150 WPM</span>
         </div>
-        <button onclick="startGuidedReading()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-3 rounded-xl text-lg font-black uppercase transition">▶ Iniciar</button>
+        <button onclick="acceptGuidedReadingText()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-3 rounded-xl text-lg font-black uppercase transition">✔ Aceptar</button>
         <button onclick="closeGuidedReading()" class="text-slate-500 hover:text-white text-sm">Cerrar</button>
     </div>
 
-    <!-- Teleprompter (aparece al iniciar) -->
-    <div id="guided-reading-prompter" class="hidden flex-1 overflow-y-auto p-4 md:p-8">
-        <div id="guided-reading-display" class="text-2xl md:text-3xl font-medium text-slate-300 leading-relaxed max-w-4xl mx-auto"></div>
-    </div>
+    <!-- Pantalla 2: Lectura (oculta hasta aceptar) -->
+    <div id="guided-reading-reader" class="hidden flex flex-col flex-1">
+        <!-- Barra superior (controles + botón Iniciar) -->
+        <div id="guided-reading-topbar" class="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-slate-800">
+            <div class="flex items-center gap-3 text-xs text-slate-400">
+                <span id="guided-reading-timer" class="font-mono text-white font-bold">00:00</span>
+                <span class="text-slate-600">|</span>
+                <span><span id="guided-reading-wpm-live" class="text-blue-400 font-bold">0</span> WPM</span>
+                <span class="text-slate-600">|</span>
+                <span>Nivel: <span id="guided-reading-level-live" class="text-amber-400 font-bold">—</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-guided-start" onclick="startGuidedReading()" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-bold">▶ Iniciar</button>
+                <button onclick="toggleGuidedReadingMark()" id="btn-toggle-mark" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Sin marca</button>
+                <button onclick="changeGuidedReadingSpeed(-10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">−10</button>
+                <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
+                <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
+                <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
+                <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
+            </div>
+        </div>
 
-    <!-- Barra de progreso inferior -->
-    <div id="guided-reading-progress" class="hidden h-1 bg-slate-800">
-        <div id="guided-reading-progress-fill" class="h-full bg-amber-500 transition-all duration-300" style="width:0%"></div>
+        <!-- Teleprompter -->
+        <div id="guided-reading-prompter" class="flex-1 overflow-y-auto p-4 md:p-8">
+            <div id="guided-reading-display" class="text-2xl md:text-3xl font-medium text-slate-300 leading-relaxed max-w-4xl mx-auto"></div>
+        </div>
+
+        <!-- Barra de progreso inferior -->
+        <div id="guided-reading-progress" class="h-1 bg-slate-800">
+            <div id="guided-reading-progress-fill" class="h-full bg-amber-500 transition-all duration-300" style="width:0%"></div>
+        </div>
     </div>
 
     <!-- Resultados (aparecen al finalizar) -->
@@ -1716,13 +1720,46 @@ function getFluencyLevel(wpm) {
     return fluencyLevels[fluencyLevels.length - 1];
 }
 
+// ==================== LECTURA GUIADA ====================
+let guidedReadingState = {
+    words: [],
+    currentIndex: 0,
+    wpm: 150,
+    intervalId: null,
+    recognition: null,
+    recognizedText: '',
+    startTime: null,
+    mediaRecorder: null,
+    audioChunks: [],
+    isActive: false,
+    showMark: true,
+    fontSize: 2,
+    timerInterval: null,
+    wpmHistory: []
+};
+
+const fluencyLevels = [
+    { max: 60, level: 'A1', desc: 'Principiante' },
+    { max: 80, level: 'A2', desc: 'Básico' },
+    { max: 100, level: 'B1', desc: 'Intermedio' },
+    { max: 120, level: 'B2', desc: 'Intermedio alto' },
+    { max: 140, level: 'C1', desc: 'Avanzado' },
+    { max: Infinity, level: 'C2', desc: 'Nativo' }
+];
+
+function getFluencyLevel(wpm) {
+    for (let f of fluencyLevels) {
+        if (wpm <= f.max) return f;
+    }
+    return fluencyLevels[fluencyLevels.length - 1];
+}
+
 function openGuidedReading() {
     const modal = document.getElementById('guided-reading-modal');
     modal.classList.remove('hidden');
+    // Mostrar solo configuración
     document.getElementById('guided-reading-config').classList.remove('hidden');
-    document.getElementById('guided-reading-prompter').classList.add('hidden');
-    document.getElementById('guided-reading-topbar').classList.add('hidden');
-    document.getElementById('guided-reading-progress').classList.add('hidden');
+    document.getElementById('guided-reading-reader').classList.add('hidden');
     document.getElementById('guided-reading-results').classList.add('hidden');
     document.getElementById('guided-reading-input').focus();
 
@@ -1730,6 +1767,9 @@ function openGuidedReading() {
     const label = document.getElementById('guided-reading-wpm-label');
     label.textContent = slider.value + ' WPM';
     slider.oninput = () => { label.textContent = slider.value + ' WPM'; };
+
+    // Resetear estado
+    guidedReadingState.isActive = false;
 }
 
 function closeGuidedReading() {
@@ -1738,37 +1778,54 @@ function closeGuidedReading() {
     }
     document.getElementById('guided-reading-modal').classList.add('hidden');
     // Limpiar
-    guidedReadingState.intervalId && clearInterval(guidedReadingState.intervalId);
-    guidedReadingState.timerInterval && clearInterval(guidedReadingState.timerInterval);
+    if (guidedReadingState.intervalId) clearInterval(guidedReadingState.intervalId);
+    if (guidedReadingState.timerInterval) clearInterval(guidedReadingState.timerInterval);
     guidedReadingState.isActive = false;
 }
 
-function startGuidedReading() {
+function acceptGuidedReadingText() {
     const text = document.getElementById('guided-reading-input').value.trim();
     if (!text) { alert('Pega un texto para leer.'); return; }
 
+    // Guardar palabras y configuración
     guidedReadingState.words = text.split(/\s+/).filter(w => w.length > 0);
-    guidedReadingState.currentIndex = 0;
     guidedReadingState.wpm = parseInt(document.getElementById('guided-reading-wpm').value);
     guidedReadingState.recognizedText = '';
-    guidedReadingState.startTime = Date.now();
-    guidedReadingState.isActive = true;
     guidedReadingState.showMark = true;
-    guidedReadingState.wpmHistory = [];
+    guidedReadingState.fontSize = 2;
+    guidedReadingState.isActive = false; // aún no activo
 
-    // Ocultar configuración, mostrar prompter y barra superior
+    // Ocultar configuración, mostrar lector
     document.getElementById('guided-reading-config').classList.add('hidden');
-    document.getElementById('guided-reading-prompter').classList.remove('hidden');
-    document.getElementById('guided-reading-topbar').classList.remove('hidden');
-    document.getElementById('guided-reading-progress').classList.remove('hidden');
+    document.getElementById('guided-reading-reader').classList.remove('hidden');
     document.getElementById('guided-reading-results').classList.add('hidden');
 
-    // Iniciar temporizador visual
+    // Mostrar texto completo sin resaltar
+    updateGuidedReadingDisplay();
+
+    // Resetear barra de progreso
+    document.getElementById('guided-reading-progress-fill').style.width = '0%';
+    document.getElementById('guided-reading-timer').textContent = '00:00';
+    document.getElementById('guided-reading-wpm-live').textContent = '0';
+    document.getElementById('guided-reading-level-live').textContent = '—';
+
+    // Asegurar que el botón Iniciar esté visible
+    document.getElementById('btn-guided-start').classList.remove('hidden');
+}
+
+function startGuidedReading() {
+    if (guidedReadingState.words.length === 0) return;
+    guidedReadingState.currentIndex = 0;
+    guidedReadingState.startTime = Date.now();
+    guidedReadingState.isActive = true;
+    guidedReadingState.recognizedText = '';
+
+    // Ocultar botón Iniciar
+    document.getElementById('btn-guided-start').classList.add('hidden');
+
+    // Iniciar temporizador
     updateGuidedReadingTimer();
     guidedReadingState.timerInterval = setInterval(updateGuidedReadingTimer, 1000);
-
-    // Aplicar tamaño de fuente inicial
-    applyGuidedReadingFontSize();
 
     // Iniciar teleprompter
     const msPerWord = 60000 / guidedReadingState.wpm;
@@ -1796,7 +1853,6 @@ function updateGuidedReadingTimer() {
     const secs = (elapsed % 60).toString().padStart(2, '0');
     document.getElementById('guided-reading-timer').textContent = `${mins}:${secs}`;
 
-    // Actualizar WPM en vivo y nivel
     const recognizedWords = guidedReadingState.recognizedText.split(/\s+/).filter(w => w.length > 0).length;
     const minutes = elapsed / 60;
     const liveWPM = minutes > 0 ? Math.round(recognizedWords / minutes) : 0;
@@ -1804,7 +1860,6 @@ function updateGuidedReadingTimer() {
     const level = getFluencyLevel(liveWPM);
     document.getElementById('guided-reading-level-live').textContent = `${level.level} (${level.desc})`;
 
-    // Actualizar progreso
     const progress = guidedReadingState.words.length > 0 ? (guidedReadingState.currentIndex / guidedReadingState.words.length) * 100 : 0;
     document.getElementById('guided-reading-progress-fill').style.width = progress + '%';
 }
@@ -1816,14 +1871,14 @@ function updateGuidedReadingDisplay() {
     const idx = guidedReadingState.currentIndex;
     let html = '';
     for (let i = 0; i < words.length; i++) {
-        if (guidedReadingState.showMark && i === idx) {
+        if (guidedReadingState.showMark && i === idx && guidedReadingState.isActive) {
             html += `<span class="text-amber-400 bg-amber-400/10 px-1 rounded">${words[i]}</span> `;
         } else {
             html += `<span class="text-slate-500">${words[i]}</span> `;
         }
     }
     display.innerHTML = html;
-    if (guidedReadingState.showMark) {
+    if (guidedReadingState.showMark && guidedReadingState.isActive) {
         const currentSpan = display.querySelector('.text-amber-400');
         if (currentSpan) currentSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -1831,15 +1886,17 @@ function updateGuidedReadingDisplay() {
 
 function toggleGuidedReadingMark() {
     guidedReadingState.showMark = !guidedReadingState.showMark;
-    const btn = document.getElementById('btn-toggle-mark');
-    btn.textContent = guidedReadingState.showMark ? 'Sin marca' : 'Con marca';
+    document.getElementById('btn-toggle-mark').textContent = guidedReadingState.showMark ? 'Sin marca' : 'Con marca';
     updateGuidedReadingDisplay();
 }
 
 function changeGuidedReadingSpeed(delta) {
-    if (!guidedReadingState.isActive) return;
+    if (!guidedReadingState.isActive) {
+        // Ajustar velocidad antes de iniciar
+        guidedReadingState.wpm = Math.max(60, Math.min(300, guidedReadingState.wpm + delta));
+        return;
+    }
     guidedReadingState.wpm = Math.max(60, Math.min(300, guidedReadingState.wpm + delta));
-    // Reiniciar intervalo
     if (guidedReadingState.intervalId) clearInterval(guidedReadingState.intervalId);
     const msPerWord = 60000 / guidedReadingState.wpm;
     guidedReadingState.intervalId = setInterval(() => {
@@ -1910,7 +1967,12 @@ function startReadingAudioRecording() {
 }
 
 function stopGuidedReading() {
-    if (!guidedReadingState.isActive) return;
+    if (!guidedReadingState.isActive) {
+        // Si no está activo, simplemente volver a configuración
+        document.getElementById('guided-reading-reader').classList.add('hidden');
+        document.getElementById('guided-reading-config').classList.remove('hidden');
+        return;
+    }
     guidedReadingState.isActive = false;
 
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
@@ -1933,10 +1995,8 @@ function stopGuidedReading() {
 }
 
 function showReadingResults(audioBlob) {
-    // Ocultar prompter y barra superior
-    document.getElementById('guided-reading-prompter').classList.add('hidden');
-    document.getElementById('guided-reading-topbar').classList.add('hidden');
-    document.getElementById('guided-reading-progress').classList.add('hidden');
+    document.getElementById('guided-reading-reader').classList.add('hidden');
+    document.getElementById('guided-reading-results').classList.remove('hidden');
 
     const totalWords = guidedReadingState.words.length;
     const recognizedClean = guidedReadingState.recognizedText.replace(/[.,!?;:()]/g, '').toLowerCase().trim();
@@ -1955,8 +2015,7 @@ function showReadingResults(audioBlob) {
     const fluencyIndex = Math.round((precision * 0.7) + (Math.min(100, (realWPM / 150) * 100) * 0.3));
     const level = getFluencyLevel(realWPM);
 
-    const resultsContent = document.getElementById('guided-reading-results-content');
-    resultsContent.innerHTML = `
+    document.getElementById('guided-reading-results-content').innerHTML = `
         <div class="grid grid-cols-2 gap-3 text-sm">
             <div><span class="text-slate-500">Palabras:</span> <span class="text-white font-bold">${totalWords}</span></div>
             <div><span class="text-slate-500">Precisión:</span> <span class="text-emerald-400 font-bold">${precision}%</span></div>
@@ -1968,9 +2027,6 @@ function showReadingResults(audioBlob) {
         ${audioBlob ? `<button onclick="downloadReadingAudio()" class="mt-3 w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-download"></i> Descargar lectura (MP3)</button>` : '<p class="text-xs text-rose-400 mt-2">No se pudo grabar audio.</p>'}
     `;
 
-    document.getElementById('guided-reading-results').classList.remove('hidden');
-
-    // Guardar sesión
     appData.stats.sessions.push({
         id: 'sess_' + Date.now(),
         date: getTodayDateString(),
