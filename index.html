@@ -3795,6 +3795,44 @@ function renderAdvancedStatistics() {
 
     // Calendario
     renderCalendarGrid(sessions);
+    // Totales de calidad de vocabulario en el período
+    const vocabSessions = sessions.filter(s => s.type === 'vocab');
+    const totalQuality = vocabSessions.reduce((acc, s) => {
+        if (s.quality) {
+            acc.again += s.quality.again || 0;
+            acc.hard += s.quality.hard || 0;
+            acc.good += s.quality.good || 0;
+            acc.easy += s.quality.easy || 0;
+        }
+        return acc;
+    }, { again: 0, hard: 0, good: 0, easy: 0 });
+
+    const statsContainer = document.getElementById('sessions-list').parentNode;
+    const qualityDiv = document.createElement('div');
+    qualityDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
+    qualityDiv.innerHTML = `
+        <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 mb-3">📚 Calidad de Vocabulario</h3>
+        <div class="grid grid-cols-4 gap-2 text-center text-xs">
+            <div class="bg-slate-900/60 p-2 rounded-lg">
+                <span class="text-rose-400 font-bold block">🔴 Otra vez</span>
+                <span class="text-white font-black text-lg">${totalQuality.again}</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-lg">
+                <span class="text-amber-400 font-bold block">🟠 Difícil</span>
+                <span class="text-white font-black text-lg">${totalQuality.hard}</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-lg">
+                <span class="text-emerald-400 font-bold block">🟢 Bien</span>
+                <span class="text-white font-black text-lg">${totalQuality.good}</span>
+            </div>
+            <div class="bg-slate-900/60 p-2 rounded-lg">
+                <span class="text-blue-400 font-bold block">🔵 Fácil</span>
+                <span class="text-white font-black text-lg">${totalQuality.easy}</span>
+            </div>
+        </div>
+    `;
+    const sessionsListDiv = document.getElementById('sessions-list');
+    sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
 
     // Lista de sesiones
     const listContainer = document.getElementById('sessions-list');
@@ -3818,12 +3856,18 @@ function renderAdvancedStatistics() {
                     <span class="text-[10px] text-slate-500">${s.direction || ''}</span>
                 </div>
                 <span class="text-[10px] text-slate-400 font-mono">⏱ ${durMin}m ${durSec}s</span>
+                ${s.type === 'vocab' && s.quality ? `
+                <div class="flex gap-2 text-[10px] mt-1">
+                    <span class="text-rose-400">🔴${s.quality.again||0}</span>
+                    <span class="text-amber-400">🟠${s.quality.hard||0}</span>
+                    <span class="text-emerald-400">🟢${s.quality.good||0}</span>
+                    <span class="text-blue-400">🔵${s.quality.easy||0}</span>
+                </div>
+                ` : ''}
             `;
             listContainer.appendChild(div);
         });
     }
-}
-
 // --- ESTADÍSTICAS DE HABILIDAD ---
 function updateSkillStats(prefix, sessions) {
     const count = sessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
