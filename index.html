@@ -3133,21 +3133,16 @@ async function playMyRecording() {
     }
 }
 
-        // ==================== ENTRENAMIENTO ====================
 function initiateTrainingSession(islandId, direction) {
     saveSettings();
     let sourcePhrases = getPhrasesArray(islandId);
     if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
 
     const order = document.getElementById('cfg-order').value;
-        if (order === 'worst') {
+    if (order === 'worst') {
         sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
     }
-    // Para 'random' y 'sequential' dejamos el array en su orden originalif (order === 'random') {
-        sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
-    } else if (order === 'worst') {
-        sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
-    }
+    // Para 'random' y 'sequential' dejamos el array en su orden original
 
     trainingQueue = sourcePhrases;
     currentTrainIndex = 0;
