@@ -318,23 +318,26 @@
     <div id="guided-reading-reader" class="hidden flex flex-col flex-1">
         <!-- Barra superior (controles + botón Iniciar) -->
         <div id="guided-reading-topbar" class="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-slate-800">
-            <div class="flex items-center gap-3 text-xs text-slate-400">
-                <span id="guided-reading-timer" class="font-mono text-white font-bold">00:00</span>
-                <span class="text-slate-600">|</span>
-                <span><span id="guided-reading-wpm-live" class="text-blue-400 font-bold">0</span> WPM</span>
-                <span class="text-slate-600">|</span>
-                <span>Nivel: <span id="guided-reading-level-live" class="text-amber-400 font-bold">—</span></span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="btn-guided-start" onclick="startGuidedReading()" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-bold">▶ Iniciar</button>
-                <button onclick="toggleGuidedReadingMark()" id="btn-toggle-mark" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Sin marca</button>
-                <button onclick="changeGuidedReadingSpeed(-10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">−10</button>
-                <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
-                <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
-                <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
-                <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
-            </div>
-        </div>
+    <div class="flex items-center gap-3 text-xs text-slate-400">
+        <span id="guided-reading-timer" class="font-mono text-white font-bold">00:00</span>
+        <span class="text-slate-600">|</span>
+        <span><span id="guided-reading-wpm-live" class="text-blue-400 font-bold">0</span> WPM</span>
+        <span class="text-slate-600">|</span>
+        <span>Nivel: <span id="guided-reading-level-live" class="text-amber-400 font-bold">—</span></span>
+    </div>
+    <div class="flex items-center gap-2">
+        <!-- Botón de escucha + velocidad personalizada -->
+        <input type="number" id="guided-listening-speed" value="0.9" min="0.5" max="2.0" step="0.1" class="w-12 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-[10px] text-white text-center font-bold" title="Velocidad de voz (0.5 - 2.0)">
+        <button id="btn-guided-listen" onclick="toggleTextToSpeech()" class="text-[10px] bg-cyan-600 hover:bg-cyan-500 text-white px-2 py-1 rounded font-bold">🔊 Escuchar</button>
+        <button id="btn-guided-start" onclick="startGuidedReading()" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-bold">▶ Iniciar</button>
+        <button onclick="toggleGuidedReadingMark()" id="btn-toggle-mark" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Sin marca</button>
+        <button onclick="changeGuidedReadingSpeed(-10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">−10</button>
+        <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
+        <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
+        <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
+        <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
+    </div>
+</div>
 
         <!-- Teleprompter -->
         <div id="guided-reading-prompter" class="flex-1 overflow-y-auto p-4 md:p-8">
@@ -1834,20 +1837,27 @@ function updateGuidedReadingTimer() {
 function updateGuidedReadingDisplay() {
     const display = document.getElementById('guided-reading-display');
     if (!display) return;
-    const words = guidedReadingState.words;
-    const idx = guidedReadingState.currentIndex;
     let html = '';
-    for (let i = 0; i < words.length; i++) {
-        if (guidedReadingState.showMark && i === idx && guidedReadingState.isActive) {
-            html += `<span class="text-amber-400 bg-amber-400/10 px-1 rounded">${words[i]}</span> `;
-        } else {
-            html += `<span class="text-slate-500">${words[i]}</span> `;
-        }
-    }
+    guidedReadingState.words.forEach((w, i) => {
+        html += `<span class="text-slate-500 cursor-pointer" onclick="event.stopPropagation(); setTTSStartWord(${i})">${w}</span> `;
+    });
     display.innerHTML = html;
+    // Si estamos en modo marca y activo, resaltar palabra actual
     if (guidedReadingState.showMark && guidedReadingState.isActive) {
-        const currentSpan = display.querySelector('.text-amber-400');
-        if (currentSpan) currentSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        highlightWord(guidedReadingState.currentIndex);
+    }
+    // Si el TTS está activo, mantener resaltada su palabra actual
+    if (guidedReadingState.ttsActive && !guidedReadingState.isActive) {
+        highlightWord(guidedReadingState.ttsCurrentWordIndex);
+    }
+}
+
+// Función auxiliar para establecer palabra de inicio de escucha
+function setTTSStartWord(index) {
+    guidedReadingState.ttsStartWordIndex = index;
+    // Si el TTS está inactivo, resaltamos la palabra elegida
+    if (!guidedReadingState.ttsActive) {
+        highlightWord(index);
     }
 }
 
@@ -2026,6 +2036,93 @@ function downloadReadingAudio() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+// ==================== REPRODUCTOR DE VOZ NATIVA ====================
+function toggleTextToSpeech() {
+    if (!guidedReadingState.ttsActive) {
+        // Iniciar desde la palabra marcada como inicio (por defecto 0)
+        const startIdx = guidedReadingState.ttsStartWordIndex || 0;
+        startTextToSpeechFrom(startIdx);
+    } else if (guidedReadingState.ttsPaused) {
+        resumeTextToSpeech();
+    } else {
+        pauseTextToSpeech();
+    }
+}
+
+function startTextToSpeechFrom(startIndex) {
+    window.speechSynthesis.cancel();
+    guidedReadingState.ttsActive = true;
+    guidedReadingState.ttsPaused = false;
+    guidedReadingState.ttsCurrentWordIndex = startIndex;
+    guidedReadingState.ttsStartWordIndex = startIndex;
+
+    document.getElementById('btn-guided-listen').textContent = '⏸ Pausar';
+    speakNextWord();
+}
+
+function speakNextWord() {
+    if (!guidedReadingState.ttsActive || guidedReadingState.ttsPaused) return;
+    if (guidedReadingState.ttsCurrentWordIndex >= guidedReadingState.words.length) {
+        // Terminó
+        guidedReadingState.ttsActive = false;
+        guidedReadingState.ttsPaused = false;
+        document.getElementById('btn-guided-listen').textContent = '🔊 Escuchar';
+        // Resaltar primera palabra al terminar
+        guidedReadingState.ttsCurrentWordIndex = 0;
+        highlightWord(0);
+        return;
+    }
+
+    const word = guidedReadingState.words[guidedReadingState.ttsCurrentWordIndex];
+    const utterance = new SpeechSynthesisUtterance(word);
+    const voice = getBestGermanVoice();
+    if (voice) utterance.voice = voice;
+    utterance.lang = 'de-DE';
+    utterance.rate = parseFloat(document.getElementById('guided-listening-speed').value) || 0.9;
+    utterance.pitch = 1.0;
+
+    // Resaltar palabra actual
+    highlightWord(guidedReadingState.ttsCurrentWordIndex);
+
+    utterance.onend = () => {
+        guidedReadingState.ttsCurrentWordIndex++;
+        speakNextWord();
+    };
+
+    utterance.onerror = () => {
+        guidedReadingState.ttsCurrentWordIndex++;
+        speakNextWord();
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+function pauseTextToSpeech() {
+    guidedReadingState.ttsPaused = true;
+    window.speechSynthesis.pause();
+    document.getElementById('btn-guided-listen').textContent = '▶ Reanudar';
+}
+
+function resumeTextToSpeech() {
+    guidedReadingState.ttsPaused = false;
+    window.speechSynthesis.resume();
+    document.getElementById('btn-guided-listen').textContent = '⏸ Pausar';
+}
+
+function highlightWord(index) {
+    const display = document.getElementById('guided-reading-display');
+    if (!display) return;
+    const spans = display.querySelectorAll('span');
+    spans.forEach((span, i) => {
+        if (i === index) {
+            span.className = 'text-cyan-400 bg-cyan-400/10 px-1 rounded';
+        } else {
+            span.className = 'text-slate-500';
+        }
+    });
+    // Scroll a la palabra actual
+    if (spans[index]) spans[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
