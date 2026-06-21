@@ -3156,6 +3156,54 @@ function initiateTrainingSession(islandId, direction) {
     setupTrainingSlide();
     switchView('training');
 }
+function startTrainingFromPhrase(phraseId) {
+    // Buscar la frase y su isla contenedora
+    let foundPhrase = null;
+    let foundIsland = null;
+    for (let isl of appData.islands) {
+        if (isl.phrases) {
+            const idx = isl.phrases.findIndex(p => p.id === phraseId);
+            if (idx !== -1) {
+                foundPhrase = isl.phrases[idx];
+                foundIsland = isl;
+                break;
+            }
+        }
+    }
+    if (!foundPhrase || !foundIsland) {
+        alert('Frase no encontrada.');
+        return;
+    }
+
+    // Obtener todas las frases de la isla y aplicar el orden configurado
+    let phrases = [...foundIsland.phrases];
+    if (phrases.length === 0) return;
+
+    const order = document.getElementById('cfg-order').value;
+    if (order === 'random') {
+        phrases.sort(() => Math.random() - 0.5);
+    } else if (order === 'worst') {
+        phrases.sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+    }
+
+    // Encontrar la posición de la frase elegida en la lista ordenada
+    let startIndex = phrases.findIndex(p => p.id === phraseId);
+    if (startIndex === -1) startIndex = 0;
+
+    // Configurar la sesión de entrenamiento
+    trainingQueue = phrases;
+    currentTrainIndex = startIndex;
+    trainingDirection = confirm('¿Modo Producción (ES → DE)? Aceptar = Producción, Cancelar = Comprensión') ? 'normal' : 'inverse';
+    currentActiveIslandId = foundIsland.id;
+
+    document.getElementById('train-total-index').innerText = trainingQueue.length;
+    document.getElementById('train-mode-label').innerText = trainingDirection === 'normal' ? 'PRODUCCIÓN (ES ➔ DE)' : 'COMPRENSION (DE ➔ ES)';
+    document.getElementById('detail-island-title').innerText = foundIsland.name;
+
+    startTrainingTimer();
+    setupTrainingSlide();
+    switchView('training');
+}
 
 function exitTrainingSession() {
     pauseTrainingTimer();
