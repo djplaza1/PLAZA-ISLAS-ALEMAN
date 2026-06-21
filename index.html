@@ -1820,6 +1820,42 @@ function showFlashcard() {
     isFlipped = false;
     document.getElementById('srs-buttons').classList.add('hidden');
     updateFlashcardProgress();
+
+    // --- Añadir botones de audio en la cara frontal y trasera ---
+    const frontCard = document.querySelector('.flashcard-front');
+    const backCard = document.querySelector('.flashcard-back');
+
+    [frontCard, backCard].forEach(card => {
+        if (!card) return;
+        // Eliminar botones de audio anteriores
+        const oldBtns = card.querySelectorAll('.audio-btn');
+        oldBtns.forEach(b => b.remove());
+
+        // Crear botón para la palabra (siempre en alemán)
+        const btnWord = document.createElement('button');
+        btnWord.className = 'audio-btn absolute top-2 right-2 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
+        btnWord.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        btnWord.title = 'Escuchar palabra';
+        btnWord.onclick = (e) => {
+            e.stopPropagation();
+            speakText(word.word);
+        };
+        card.style.position = 'relative';
+        card.appendChild(btnWord);
+
+        // Crear botón para la frase (si hay ejemplo en alemán)
+        if (word.example_de) {
+            const btnPhrase = document.createElement('button');
+            btnPhrase.className = 'audio-btn absolute top-2 right-10 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
+            btnPhrase.innerHTML = '<i class="fa-solid fa-file-audio"></i>';
+            btnPhrase.title = 'Escuchar frase';
+            btnPhrase.onclick = (e) => {
+                e.stopPropagation();
+                speakText(word.example_de);
+            };
+            card.appendChild(btnPhrase);
+        }
+    });
 }
 
 function flipFlashcard() {
@@ -3123,6 +3159,19 @@ function fireLocalSpeak(text) {
     utter.pitch = 1.0;
     window.speechSynthesis.speak(utter);
 }
+function speakText(text) {
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voice = getBestGermanVoice();
+    if (voice) utter.voice = voice;
+    utter.lang = 'de-DE';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+}
+
+
 async function playMyRecording() {
     const phrase = trainingQueue[currentTrainIndex];
     if (!phrase) return;
