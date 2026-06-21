@@ -2184,6 +2184,7 @@ function selectVocabFolder(folderId) {
 }
 
 // --- LISTA DE PALABRAS (solo carpeta actual) ---
+// --- LISTA DE PALABRAS (solo carpeta actual) ---
 function renderVocabularyList() {
     const container = document.getElementById('vocabulary-list-container');
     const search = document.getElementById('vocab-search')?.value.toLowerCase() || '';
@@ -2194,11 +2195,27 @@ function renderVocabularyList() {
     selectedWordIds.clear();
     updateBulkWordPanel();
 
+    // Contador de palabras directas en esta carpeta
+    const directCount = (appData.vocabulary || []).filter(w => w.folderId === currentVocabFolderId).length;
+    const totalRecursive = countWordsInFolderRecursive(currentVocabFolderId);
+    // Mostrar contador al inicio del contenedor
+    let headerHtml = '';
+    if (currentVocabFolderId) {
+        headerHtml = `<div class="text-xs text-slate-400 mb-2 flex gap-4">
+            <span>📄 Palabras directas: <strong class="text-slate-200">${directCount}</strong></span>
+            <span>📁 Total incluyendo subcarpetas: <strong class="text-slate-200">${totalRecursive}</strong></span>
+        </div>`;
+    } else {
+        headerHtml = `<div class="text-xs text-slate-400 mb-2">
+            <span>📄 Palabras en raíz: <strong class="text-slate-200">${directCount}</strong> · Total general: <strong class="text-slate-200">${totalRecursive}</strong></span>
+        </div>`;
+    }
+
     if (words.length === 0) {
-        container.innerHTML = `<p class="text-slate-500 text-center py-8">${currentVocabFolderId ? 'Carpeta vacía.' : 'No hay palabras en la raíz.'}</p>`;
+        container.innerHTML = headerHtml + `<p class="text-slate-500 text-center py-8">${currentVocabFolderId ? 'Carpeta vacía.' : 'No hay palabras en la raíz.'}</p>`;
         return;
     }
-    container.innerHTML = '';
+    container.innerHTML = headerHtml;
     words.forEach(v => {
         const badgeColor = v.lastQuality === 1 ? 'bg-rose-600' :
                            v.lastQuality === 2 ? 'bg-amber-500' :
