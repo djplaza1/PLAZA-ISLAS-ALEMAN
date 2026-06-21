@@ -467,9 +467,7 @@
         <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa (s):</label><input type="number" id="cfg-pause" value="4" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400"></div>
         <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Veloc.:</label><input type="number" id="cfg-speed" value="0.9" step="0.1" min="0.5" max="1.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400"></div>
         <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Voz:</label><select id="cfg-voice-source" onchange="saveSettings()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200"><option value="app">🤖 App</option><option value="user">🎙️ Mía</option></select></div>
-        <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Refuerzo Vocab.</label><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="cfg-reinforce-vocab" class="sr-only peer" onchange="saveSettings()"><div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div></label></div>
-        <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa repet. (s)</label><input type="number" id="cfg-repeat-pause" value="2" step="0.5" min="0.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400"></div>   
- </div>
+    </div>
     <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 text-center shadow-2xl relative min-h-[340px] flex flex-col justify-between">
         <div class="flex justify-between items-center border-b border-slate-700/50 pb-3 mb-4">
             <span id="train-status-indicator" class="text-xs uppercase font-black tracking-widest text-blue-400">Listo</span>
