@@ -147,6 +147,25 @@
         display: inline-block;
         white-space: nowrap;
     }
+    #flashcard-area.overlay-active {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--bg-primary);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 1rem;
+}
+.flashcard {
+    /* ...conserva sus propiedades... */
+    overflow: hidden;          /* evita que el giro desplace la tarjeta */
+    position: relative;
+    transform-origin: center center;
+}
 </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col transition-colors duration-300">
@@ -349,9 +368,8 @@
     <button onclick="deleteAllWordsInFolder()" class="bg-red-700 hover:bg-red-600 px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shrink-0 shadow-md ml-2">💀 Borrar todas</button>
 </div>
 
-<!-- Flashcards (con botón para volver y SRS) -->
-<div id="flashcard-area" class="hidden space-y-4">
-    <div class="flex justify-between items-center max-w-lg mx-auto">
+<div id="flashcard-area" class="hidden">
+    <div class="flex justify-between items-center w-full max-w-lg mx-auto mb-4">
         <button onclick="exitFlashcardsToVocabList()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-arrow-left"></i> Volver a lista</button>
         <select id="flashcard-direction" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white">
             <option value="de-es">Alemán → Español</option>
@@ -364,8 +382,7 @@
         </div>
     </div>
 
-    <!-- Barra de progreso y estadísticas en tiempo real -->
-    <div id="flashcard-progress-area" class="max-w-lg mx-auto mb-4 space-y-2">
+    <div id="flashcard-progress-area" class="w-full max-w-lg mx-auto mb-4 space-y-2">
         <div class="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
             <span>Progreso</span>
             <span id="fc-progress-text">0/0</span>
@@ -380,7 +397,9 @@
             <span>🔵 <span id="fc-count-easy">0</span></span>
             <span>⏱️ <span id="fc-timer">00:00</span></span>
         </div>
-    </div>    <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
+    </div>
+
+    <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
         <div class="flashcard-inner">
             <div class="flashcard-front">
                 <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
@@ -392,6 +411,14 @@
             </div>
         </div>
     </div>
+
+    <div id="srs-buttons" class="hidden flex justify-center gap-2 mt-4">
+        <button onclick="rateSRS(1)" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold">🔴 Otra vez</button>
+        <button onclick="rateSRS(2)" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🟠 Difícil</button>
+        <button onclick="rateSRS(3)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🟢 Bien</button>
+        <button onclick="rateSRS(4)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🔵 Fácil</button>
+    </div>
+</div>
     <!-- Botones SRS (aparecen tras voltear la tarjeta) -->
     <div id="srs-buttons" class="hidden flex justify-center gap-2 mt-4">
         <button onclick="rateSRS(1)" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold">🔴 Otra vez</button>
@@ -1787,7 +1814,9 @@ updateFlashcardProgress();
     document.getElementById('flashcard-direction').value = direction === 'mix' ? 'de-es' : direction;
     window.customDirection = direction; // para alternar en mix
 
-    document.getElementById('flashcard-area').classList.remove('hidden');
+    const fa = document.getElementById('flashcard-area');
+    fa.classList.remove('hidden');
+    fa.classList.add('overlay-active');
     document.getElementById('vocabulary-list-container').classList.add('hidden');
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
