@@ -1890,13 +1890,6 @@ function endSRSSession() {
         source: document.getElementById('cfg-practice-source').value
     });
 
-    // Limpiar estado de la sesión
-    flashcardSessionActive = false;
-    flashcardWords = [];
-    flashcardReviewedCount = 0;
-    flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
-    flashcardStartTime = null;
-
     // Guardar base de datos
     saveDatabase();
 
