@@ -275,29 +275,56 @@
             <div id="conversations-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
-        <!-- VISTA DETALLE CONVERSACIÓN -->
-        <section id="view-conversation-detail" class="view-section space-y-4">
-            <button onclick="switchView('conversations')" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 transition">
-                <i class="fa-solid fa-arrow-left"></i> Volver
-            </button>
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                <h2 id="conv-detail-title" class="text-2xl font-black text-cyan-400 mb-4"></h2>
-                <div class="flex gap-4 flex-wrap mb-6">
-                    <button id="btn-train-conv-normal" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Producción (ES➔DE)</button>
-                    <button id="btn-train-conv-inverse" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Comprensión (DE➔ES)</button>
-                    <button onclick="deleteConversation()" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
-                </div>
-                <details class="bg-slate-900/40 border border-slate-700/60 rounded-xl p-4">
-                    <summary class="text-xs font-bold text-slate-300 cursor-pointer uppercase">Añadir frase</summary>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <input type="text" id="conv-phrase-de" placeholder="Frase en alemán" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-cyan-500">
-                        <input type="text" id="conv-phrase-es" placeholder="Traducción español" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-cyan-500">
-                    </div>
-                    <button onclick="addPhraseToConversation()" class="mt-3 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition">Guardar</button>
-                </details>
-                <div class="mt-6" id="conv-phrases-container"></div>
+<!-- VISTA DETALLE CONVERSACIÓN -->
+<section id="view-conversation-detail" class="view-section space-y-4">
+    <button onclick="switchView('conversations')" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 transition">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </button>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <h2 id="conv-detail-title" class="text-2xl font-black text-cyan-400 mb-4"></h2>
+        <div class="flex gap-4 flex-wrap mb-6">
+            <button id="btn-train-conv-normal" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Producción (ES➔DE)</button>
+            <button id="btn-train-conv-inverse" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Comprensión (DE➔ES)</button>
+            <button onclick="openGuidedReading()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-book-open-reader"></i> Lectura Guiada</button>
+            <button onclick="deleteConversation()" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
+        </div>
+        <details class="bg-slate-900/40 border border-slate-700/60 rounded-xl p-4">
+            <summary class="text-xs font-bold text-slate-300 cursor-pointer uppercase">Añadir frase</summary>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <input type="text" id="conv-phrase-de" placeholder="Frase en alemán" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-cyan-500">
+                <input type="text" id="conv-phrase-es" placeholder="Traducción español" class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-cyan-500">
             </div>
-        </section>
+            <button onclick="addPhraseToConversation()" class="mt-3 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition">Guardar</button>
+        </details>
+        <div class="mt-6" id="conv-phrases-container"></div>
+    </div>
+
+    <!-- MODAL DE LECTURA GUIADA (oculto por defecto) -->
+    <div id="guided-reading-modal" class="hidden fixed inset-0 z-[300] bg-slate-950/95 flex flex-col items-center justify-center p-4">
+        <!-- Aquí dentro construiremos el teleprompter, controles, etc. -->
+        <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl flex flex-col gap-4" style="max-height:90vh; overflow-y:auto;">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-black text-amber-400"><i class="fa-solid fa-book-open-reader"></i> Lectura Guiada</h3>
+                <button onclick="closeGuidedReading()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+            <!-- Área de texto a pegar -->
+            <textarea id="guided-reading-input" rows="8" class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-sm text-white font-mono" placeholder="Pega aquí el texto que quieras leer..."></textarea>
+            <!-- Controles de velocidad -->
+            <div class="flex items-center gap-4 flex-wrap">
+                <label class="text-xs text-slate-400 font-bold uppercase">Velocidad (WPM):</label>
+                <input type="range" id="guided-reading-wpm" min="80" max="250" value="150" step="10" class="flex-1 max-w-xs">
+                <span id="guided-reading-wpm-label" class="text-sm font-bold text-white">150 WPM</span>
+                <button onclick="startGuidedReading()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase transition">▶ Iniciar</button>
+            </div>
+            <!-- Zona del teleprompter (se llenará al iniciar) -->
+            <div id="guided-reading-prompter" class="bg-slate-950 border border-slate-700 rounded-xl p-6 text-center min-h-[100px] flex items-center justify-center">
+                <span class="text-slate-500 text-sm">El texto aparecerá aquí al iniciar la lectura.</span>
+            </div>
+            <!-- Resultados y botón de descarga (aparecerán al finalizar) -->
+            <div id="guided-reading-results" class="hidden space-y-4"></div>
+        </div>
+    </div>
+</section>
 
 <!-- VISTA VOCABULARIO (COMPLETA Y CORREGIDA) -->
 <section id="view-vocabulary" class="view-section space-y-6">
@@ -1627,6 +1654,22 @@ function renderIslandsGrid() {
             saveDatabase();
             initiateTrainingSession(virtualId, direction);
         }
+function openGuidedReading() {
+    document.getElementById('guided-reading-modal').classList.remove('hidden');
+    document.getElementById('guided-reading-input').focus();
+    // Sincronizar el label del slider
+    const slider = document.getElementById('guided-reading-wpm');
+    const label = document.getElementById('guided-reading-wpm-label');
+    if (slider && label) {
+        label.textContent = slider.value + ' WPM';
+        slider.oninput = () => { label.textContent = slider.value + ' WPM'; };
+    }
+}
+
+function closeGuidedReading() {
+    document.getElementById('guided-reading-modal').classList.add('hidden');
+    // Aquí después añadiremos limpieza de intervalos y reconocimiento
+}
 
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
 let currentVocabFolderId = null;
