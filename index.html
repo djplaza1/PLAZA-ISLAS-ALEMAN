@@ -1856,83 +1856,37 @@ function showFlashcard() {
     const frontCard = document.querySelector('.flashcard-front');
     const backCard = document.querySelector('.flashcard-back');
 
-  [frontCard, backCard].forEach(card => {
-}
+    [frontCard, backCard].forEach(card => {
+        if (!card) return;
+        // Eliminar botones de audio anteriores
+        const oldBtns = card.querySelectorAll('.audio-btn');
+        oldBtns.forEach(b => b.remove());
 
-function flipFlashcard() {
-    const card = document.getElementById('flashcard');
-    if (card.classList.contains('flipped')) {
-        card.classList.remove('flipped');
-        isFlipped = false;
-        document.getElementById('srs-buttons').classList.add('hidden');
-    } else {
-        card.classList.add('flipped');
-        isFlipped = true;
-        document.getElementById('srs-buttons').classList.remove('hidden');
-    }
-}
+        // Crear botón para la palabra (siempre en alemán)
+        const btnWord = document.createElement('button');
+        btnWord.className = 'audio-btn absolute top-2 right-2 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
+        btnWord.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        btnWord.title = 'Escuchar palabra';
+        btnWord.onclick = (e) => {
+            e.stopPropagation();
+            speakText(word.word);
+        };
+        card.appendChild(btnWord);
 
-function rateSRS(quality) {
-    if (flashcardWords.length === 0) return;
-    const word = flashcardWords[currentFlashcardIndex];
-    flashcardReviewedCount++;
-    applySRS(word, quality);
-    // Actualizar contador según calidad
-if (quality === 1) flashcardQualityCounts.again++;
-else if (quality === 2) flashcardQualityCounts.hard++;
-else if (quality === 3) flashcardQualityCounts.good++;
-else if (quality === 4) flashcardQualityCounts.easy++;
-    if (quality <= 2) {
-        flashcardWords.push(flashcardWords.splice(currentFlashcardIndex, 1)[0]);
-        if (currentFlashcardIndex >= flashcardWords.length) {
-            currentFlashcardIndex = flashcardWords.length - 1;
+        // Crear botón para la frase (si hay ejemplo en alemán)
+        if (word.example_de) {
+            const btnPhrase = document.createElement('button');
+            btnPhrase.className = 'audio-btn absolute top-2 right-10 bg-slate-700/80 hover:bg-slate-600 text-white p-1.5 rounded-full text-xs';
+            btnPhrase.innerHTML = '<i class="fa-solid fa-file-audio"></i>';
+            btnPhrase.title = 'Escuchar frase';
+            btnPhrase.onclick = (e) => {
+                e.stopPropagation();
+                speakText(word.example_de);
+            };
+            card.appendChild(btnPhrase);
         }
-        showFlashcard();
-    } else {
-        currentFlashcardIndex++;
-        if (currentFlashcardIndex >= flashcardWords.length) {
-            endSRSSession();
-        } else {
-            showFlashcard();
-        }
-    }
+    });
 }
-
-function endSRSSession() {
-    console.log('📊 endSRSSession ejecutada');
-
-    // Parar el temporizador
-    if (flashcardTimerInterval) { clearInterval(flashcardTimerInterval); flashcardTimerInterval = null; }
-
-    // Calcular tiempo real transcurrido
-    const elapsedSeconds = flashcardStartTime ? Math.floor((Date.now() - flashcardStartTime) / 1000) : 0;
-    const mins = Math.floor(elapsedSeconds / 60);
-    const secs = elapsedSeconds % 60;
-
-    // Usar tarjetas realmente calificadas, no el total del mazo
-    const total = flashcardReviewedCount || 0;
-    const aprendidas = (appData.vocabulary || []).filter(w => 
-        w.folderId === currentVocabFolderId && w.nextReviewDate > getTodayDateString()
-    ).length;
-
-    // Registrar sesión con datos reales
-appData.stats.sessions.push({
-    id: 'sess_' + Date.now(),
-    date: getTodayDateString(),
-    startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    duration: elapsedSeconds,
-    type: 'vocab',
-    cardsCount: total,
-    direction: window.customDirection || document.getElementById('flashcard-direction').value,
-    source: document.getElementById('cfg-practice-source').value,
-    quality: {
-        again: flashcardQualityCounts.again,
-        hard: flashcardQualityCounts.hard,
-        good: flashcardQualityCounts.good,
-        easy: flashcardQualityCounts.easy
-    }
-});
-
     // Guardar base de datos
     saveDatabase();
 
