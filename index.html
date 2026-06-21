@@ -416,6 +416,7 @@
             <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Velocidad</label><input type="number" id="cfg-va-speed" value="0.9" step="0.1" min="0.5" max="1.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
             <div class="flex items-end">
                 <button onclick="startVocabAudioPractice()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-lg text-xs font-black uppercase transition">▶️ Iniciar Audio</button>
+                <button onclick="stopVocabAudioPractice()" id="btn-stop-vocab-audio" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-lg text-xs font-black uppercase transition hidden">⏹️ Detener</button>
             </div>
         </div>
     </div>
@@ -1625,6 +1626,8 @@ function renderIslandsGrid() {
 let currentVocabFolderId = null;
 let selectedPracticeIslandIds = [];
 let selectedWordIds = new Set(); // Para mover múltiples palabras
+let vocabAudioActive = false;
+let vocabAudioTimeout = null;
 function migrateVocabData() {
     console.log('Migrando datos de vocabulario...');
     if (appData.vocabFolders && appData.vocabFolders.length > 0 && typeof appData.vocabFolders[0] === 'string') {
@@ -2228,6 +2231,122 @@ function toggleVocabAudioPanel() {
         panel.classList.add('hidden');
         if (btn) btn.classList.remove('hidden');
     }
+}
+
+function stopVocabAudio() {
+    vocabAudioActive = false;
+    if (vocabAudioTimeout) {
+        clearTimeout(vocabAudioTimeout);
+        vocabAudioTimeout = null;
+    }
+    window.speechSynthesis.cancel();
+    document.getElementById('btn-stop-vocab-audio').classList.add('hidden');
+    document.getElementById('btn-start-vocab-audio').classList.remove('hidden');
+}
+
+function startVocabAudioPractice() {
+    const words = (appData.vocabulary || []).filter(w => 
+        w.folderId === currentVocabFolderId && w.example_de
+    );
+    if (words.length === 0) {
+        alert('No hay palabras con frase de ejemplo en esta carpeta.');
+        return;
+    }
+
+    const flowType = document.getElementById('cfg-va-flow').value;
+    const order = document.getElementById('cfg-va-order').value;
+    const loops = parseInt(document.getElementById('cfg-va-loops').value) || 2;
+    const pauseBefore = parseFloat(document.getElementById('cfg-va-pause-before').value) * 1000;
+    const pauseRepeat = parseFloat(document.getElementById('cfg-va-pause-repeat').value) * 1000;
+    const pauseVocab = parseFloat(document.getElementById('cfg-va-pause-vocab').value) * 1000;
+    const speed = parseFloat(document.getElementById('cfg-va-speed').value) || 0.9;
+
+    // Preparar la cola de frases
+    let queue = [...words];
+    if (order === 'random') {
+        queue.sort(() => Math.random() - 0.5);
+    }
+
+    vocabAudioActive = true;
+    document.getElementById('btn-start-vocab-audio').classList.add('hidden');
+    document.getElementById('btn-stop-vocab-audio').classList.remove('hidden');
+
+    let currentIndex = 0;
+
+    async function playNext() {
+        if (!vocabAudioActive) return;
+        if (currentIndex >= queue.length) {
+            // Repetir la carpeta completa si está activo
+            if (flowType === 'auto') {
+                currentIndex = 0;
+                if (order === 'random') queue.sort(() => Math.random() - 0.5);
+                vocabAudioTimeout = setTimeout(playNext, 500);
+                return;
+            } else {
+                stopVocabAudio();
+                alert('🎉 Práctica de audio finalizada.');
+                return;
+            }
+        }
+
+        const word = queue[currentIndex];
+        const phraseEs = word.example_es || '';
+        const phraseDe = word.example_de || '';
+        const vocabWord = word.word;
+        const vocabTrans = word.translation;
+
+        // Buscar vocabulario relacionado por sourcePhraseId
+        const relatedWords = (appData.vocabulary || []).filter(w => w.sourcePhraseId === word.sourcePhraseId && w.id !== word.id);
+
+        // 1. Español
+        if (phraseEs) {
+            speakText(phraseEs, 'es-ES');
+            await sleep(pauseBefore || 2000);
+        }
+
+        // 2. Alemán repetido
+        for (let i = 0; i < loops; i++) {
+            if (!vocabAudioActive) return;
+            speakText(phraseDe, 'de-DE', speed);
+            if (i < loops - 1) {
+                await sleep(pauseRepeat);
+            }
+        }
+
+        // 3. Pausa antes de vocabulario
+        await sleep(pauseVocab);
+
+        // 4. Palabra principal
+        if (vocabWord && vocabActive) {
+            speakText(vocabWord, 'de-DE', speed);
+            await sleep(800);
+            speakText(vocabTrans, 'es-ES', speed);
+            await sleep(500);
+        }
+
+        // 5. Palabras relacionadas
+        for (const rw of relatedWords) {
+            if (!vocabAudioActive) return;
+            speakText(rw.word, 'de-DE', speed);
+            await sleep(600);
+            speakText(rw.translation, 'es-ES', speed);
+            await sleep(400);
+        }
+
+        currentIndex++;
+        vocabAudioTimeout = setTimeout(playNext, 500);
+    }
+
+    playNext();
+}
+
+function sleep(ms) {
+    return new Promise(resolve => {
+        vocabAudioTimeout = setTimeout(() => {
+            vocabAudioTimeout = null;
+            resolve();
+        }, ms);
+    });
 }
 
 function updateBulkWordPanel() {
@@ -3192,18 +3311,19 @@ function fireLocalSpeak(text) {
     utter.pitch = 1.0;
     window.speechSynthesis.speak(utter);
 }
-function speakText(text) {
+function speakText(text, lang = 'de-DE', rate = 0.9) {
     if (!text) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    const voice = getBestGermanVoice();
-    if (voice) utter.voice = voice;
-    utter.lang = 'de-DE';
-    utter.rate = 0.9;
+    if (lang === 'de-DE') {
+        const voice = getBestGermanVoice();
+        if (voice) utter.voice = voice;
+    }
+    utter.lang = lang;
+    utter.rate = rate;
     utter.pitch = 1.0;
     window.speechSynthesis.speak(utter);
 }
-
 
 async function playMyRecording() {
     const phrase = trainingQueue[currentTrainIndex];
