@@ -3288,25 +3288,23 @@ function setupTrainingSlide() {
         }
     }
 }
-        function navigateTrainingQueue(step) {
-            stopAudioAndTimers();
-            if (step > 0 && appData.settings.order === 'random') {
-                // Avance aleatorio: elige cualquier frase al azar (puede repetir)
-                currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
-            } else {
-                let tempIndex = currentTrainIndex + step;
-                if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
-                    currentTrainIndex = tempIndex;
-                } else if (tempIndex >= trainingQueue.length) {
-                    handleIslandTransitionOrLoop();
-                    return;
-                } else {
-                    // tempIndex < 0: se mantiene en la primera
-                    currentTrainIndex = 0;
-                }
-            }
-            setupTrainingSlide();
+ function navigateTrainingQueue(step) {
+    stopAudioAndTimers();
+    if (step > 0 && appData.settings.order === 'random') {
+        currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
+    } else {
+        let tempIndex = currentTrainIndex + step;
+        if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
+            currentTrainIndex = tempIndex;
+        } else if (tempIndex >= trainingQueue.length) {
+            handleIslandTransitionOrLoop();
+            return;
+        } else {
+            currentTrainIndex = 0;
         }
+    }
+    setupTrainingSlide();
+}
         function handleFlowTypeChange() {
             saveSettings();
             stopAudioAndTimers();
