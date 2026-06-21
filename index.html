@@ -400,31 +400,9 @@
         <button onclick="rateSRS(4)" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold">🔵 Fácil</button>
     </div>
 </div>
-    <!-- Panel de práctica de audio de vocabulario -->
-    <div id="vocab-audio-panel" class="bg-slate-800 border border-cyan-500/50 rounded-xl p-4 space-y-3 hidden">
-        <div class="flex justify-between items-center">
-            <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400">🔊 Práctica de Audio</h3>
-            <button onclick="toggleVocabAudioPanel()" class="text-slate-400 hover:text-white text-sm">✕</button>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Flujo</label><select id="cfg-va-flow" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200"><option value="manual">Manual</option><option value="auto">Auto</option></select></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Orden</label><select id="cfg-va-order" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200"><option value="sequential">Secuencial</option><option value="random">Aleatorio</option></select></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Bucles</label><input type="number" id="cfg-va-loops" value="2" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa inicio (s)</label><input type="number" id="cfg-va-pause-before" value="2" step="0.5" min="0" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa repet. (s)</label><input type="number" id="cfg-va-pause-repeat" value="2" step="0.5" min="0.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Pausa vocab. (s)</label><input type="number" id="cfg-va-pause-vocab" value="1.5" step="0.5" min="0" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
-            <div><label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Velocidad</label><input type="number" id="cfg-va-speed" value="0.9" step="0.1" min="0.5" max="1.5" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-cyan-400"></div>
-            <div class="flex items-end">
-                <button onclick="startVocabAudioPractice()" id="btn-start-vocab-audio" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-lg text-xs font-black uppercase transition">▶️ Iniciar Audio</button>
-                <button onclick="stopVocabAudio()" id="btn-stop-vocab-audio" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-lg text-xs font-black uppercase transition hidden">⏹️ Detener</button>
-            </div>
-        </div>
-    </div>
-    <button onclick="toggleVocabAudioPanel()" id="btn-show-vocab-audio" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-2"><i class="fa-solid fa-volume-high"></i> Practicar Audio</button>
     <!-- Lista de palabras -->
     <div id="vocabulary-list-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 divide-y divide-slate-700"></div>
 </section>
-
 <!-- VISTA DETALLE DE ISLA -->
         <section id="view-island-detail" class="view-section space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-1 rounded-xl">
