@@ -2726,11 +2726,13 @@ function importVocabFromText() {
         let pendingExampleEs = '';
 
         for (let i = 0; i < lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
             const rawLine = lines[i].trim();
             if (!rawLine) continue;
 
-            // Detectar encabezados (todo en mayúsculas o empezando con 📂)
-            if (/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN|SCHREIBEN|EXTRA)/.test(rawLine) || /^[A-ZÄÖÜ]{3,}/.test(rawLine)) {
+            // Detectar SOLO encabezados reales (palabras clave exactas, no cualquier mayúscula)
+            const headerMatch = rawLine.match(/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN|SCHREIBEN|EXTRA)\b/i);
+            if (headerMatch) {
                 continue;
             }
 
@@ -2782,7 +2784,7 @@ function importVocabFromText() {
                 continue;
             }
 
-            // Usar ejemplo pendiente (de frase anterior o posterior)
+            // Usar ejemplo pendiente (de frase anterior)
             const exampleDe = pendingExampleDe || '';
             const exampleEs = pendingExampleEs || '';
             pendingExampleDe = '';
@@ -2806,7 +2808,7 @@ function importVocabFromText() {
             });
             added++;
         }
-
+        
         await saveDatabase();
         overlay.remove();
         renderVocabFolderSelector();
