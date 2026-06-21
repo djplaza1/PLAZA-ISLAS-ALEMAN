@@ -401,17 +401,20 @@
         </div>
     </div>
 
-    <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
-        <div class="flashcard-inner">
-            <div class="flashcard-front">
-                <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
-                <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
-            </div>
-            <div class="flashcard-back">
-                <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
-                <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+    <div class="flashcard-wrapper">
+        <div class="flashcard" id="flashcard" onclick="flipFlashcard()">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <p id="fc-front-word" class="text-3xl font-black text-emerald-400"></p>
+                    <p id="fc-front-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+                </div>
+                <div class="flashcard-back">
+                    <p id="fc-back-word" class="text-3xl font-black text-amber-400"></p>
+                    <p id="fc-back-example" class="text-sm text-slate-400 mt-4 italic text-center"></p>
+                </div>
             </div>
         </div>
+    </div>
     <!-- Botones SRS (aparecen tras voltear la tarjeta) -->
     <div id="srs-buttons" class="hidden flex justify-center gap-2 mt-4">
         <button onclick="rateSRS(1)" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold">🔴 Otra vez</button>
