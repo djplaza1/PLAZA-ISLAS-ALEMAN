@@ -3180,7 +3180,7 @@ function startTrainingFromPhrase(phraseId) {
     let phrases = [...foundIsland.phrases];
     if (phrases.length === 0) return;
 
-    const order = document.getElementById('cfg-order').value;
+        const order = appData.settings.order || 'sequential';
     let startIndex = 0;
 
     if (order === 'random') {
