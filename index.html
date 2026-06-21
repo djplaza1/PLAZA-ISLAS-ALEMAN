@@ -1662,6 +1662,7 @@ function migrateVocabData() {
 function switchVocabMode(mode) {
     if (mode === 'flashcards') {
         document.getElementById('flashcard-area').classList.remove('hidden');
+        document.getElementById('flashcard-area').classList.remove('overlay-active');
         document.getElementById('vocabulary-list-container').classList.add('hidden');
         document.getElementById('vocab-folder-tabs').classList.add('hidden');
         startFlashcardSession();
@@ -1696,6 +1697,7 @@ function exitFlashcardsToVocabList() {
         flashcardReviewedCount = 0;
         flashcardQualityCounts = { again: 0, hard: 0, good: 0, easy: 0 };
         document.getElementById('flashcard-area').classList.add('hidden');
+        document.getElementById('flashcard-area').classList.remove('overlay-active');
         document.getElementById('vocabulary-list-container').classList.remove('hidden');
         document.getElementById('vocab-folder-tabs').classList.remove('hidden');
         renderVocabFolderSelector();
@@ -1969,7 +1971,10 @@ appData.stats.sessions.push({
     const tabs = document.getElementById('vocab-folder-tabs');
 
     // Ocultar área de flashcards y mostrar contenedor de lista
-    if (flashcardArea) flashcardArea.classList.add('hidden');
+        if (flashcardArea) {
+        flashcardArea.classList.add('hidden');
+        flashcardArea.classList.remove('overlay-active');
+    }
     if (tabs) tabs.classList.remove('hidden');
     if (container) {
         container.classList.remove('hidden');
