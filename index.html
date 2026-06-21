@@ -335,12 +335,13 @@
         <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
         <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
         <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
-        <button onclick="backToConfigScreen()" class="...">← Volver</button>
+        <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕ Detener</button>
+        <button onclick="backToConfigScreen()" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded">Salir</button>
     </div>
 </div>
 
         <!-- Teleprompter -->
-        <div id="guided-reading-prompter" class="flex-1 overflow-y-auto p-4 md:p-8">
+        <div id="guided-reading-prompter" class="flex-1 overflow-y-auto p-4 md:p-8" style="max-height: calc(100vh - 120px);">
             <div id="guided-reading-display" class="text-2xl md:text-3xl font-medium text-slate-300 leading-relaxed max-w-4xl mx-auto"></div>
         </div>
 
@@ -1983,7 +1984,6 @@ function startReadingAudioRecording() {
 
 function stopGuidedReading() {
     if (!guidedReadingState.isActive) {
-        // Si no está activo, volver a configuración
         backToConfigScreen();
         return;
     }
@@ -1993,46 +1993,21 @@ function stopGuidedReading() {
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
     if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
 
-    // Detener reconocimiento y esperar resultado final
+    // Forzar parada del reconocimiento
     if (guidedReadingState.recognition) {
-        try { guidedReadingState.recognition.stop(); } catch(e) {}
-        // El evento onend se disparará y entonces procesaremos resultados
-        guidedReadingState.recognition.onend = () => {
-            // Detener grabación
-            if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-                guidedReadingState.mediaRecorder.stop();
-                guidedReadingState.mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
-                    showReadingResults(audioBlob);
-                };
-            } else {
-                showReadingResults(null);
-            }
+        try { guidedReadingState.recognition.abort(); } catch(e) {}
+        guidedReadingState.recognition = null;
+    }
+
+    // Detener grabación y mostrar resultados inmediatamente
+    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+        guidedReadingState.mediaRecorder.stop();
+        guidedReadingState.mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
+            showReadingResults(audioBlob);
         };
-        // Si ya no hay reconocimiento activo, forzar finalización
-        setTimeout(() => {
-            if (guidedReadingState.recognition) {
-                // Forzar cierre si no se disparó onend
-                if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-                    guidedReadingState.mediaRecorder.stop();
-                    guidedReadingState.mediaRecorder.onstop = () => {
-                        showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
-                    };
-                } else {
-                    showReadingResults(null);
-                }
-                guidedReadingState.recognition = null;
-            }
-        }, 500);
     } else {
-        if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-            guidedReadingState.mediaRecorder.stop();
-            guidedReadingState.mediaRecorder.onstop = () => {
-                showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
-            };
-        } else {
-            showReadingResults(null);
-        }
+        showReadingResults(null);
     }
 }
 
@@ -2041,7 +2016,7 @@ function showReadingResults(audioBlob) {
     document.getElementById('guided-reading-results').classList.remove('hidden');
 
     const totalWords = guidedReadingState.words.length;
-    const recognizedClean = guidedReadingState.recognizedText.replace(/[.,!?;:()]/g, '').toLowerCase().trim();
+    const recognizedClean = (guidedReadingState.recognizedText || '').replace(/[.,!?;:()]/g, '').toLowerCase().trim();
     const recognizedWords = recognizedClean.split(/\s+/).filter(w => w.length > 0);
     const originalWords = guidedReadingState.words.map(w => w.replace(/[.,!?;:()]/g, '').toLowerCase());
 
@@ -2067,6 +2042,10 @@ function showReadingResults(audioBlob) {
             <div class="col-span-2"><span class="text-slate-500">Reconocido:</span> <span class="text-slate-400 text-xs italic">"${recognizedClean}"</span></div>
         </div>
         ${audioBlob ? `<button onclick="downloadReadingAudio()" class="mt-3 w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-download"></i> Descargar lectura (MP3)</button>` : '<p class="text-xs text-rose-400 mt-2">No se pudo grabar audio.</p>'}
+        <div class="flex gap-2 mt-4">
+            <button onclick="backToReadingScreen()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold">🔄 Repetir lectura</button>
+            <button onclick="backToConfigScreen()" class="flex-1 bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 rounded-lg text-xs font-bold">📝 Nuevo texto</button>
+        </div>
     `;
 
     appData.stats.sessions.push({
@@ -2090,7 +2069,6 @@ function showReadingResults(audioBlob) {
         window._lastReadingBlob = audioBlob;
     }
 }
-
 function downloadReadingAudio() {
     if (!window._lastReadingBlob) { alert('No hay grabación disponible.'); return; }
     const url = URL.createObjectURL(window._lastReadingBlob);
