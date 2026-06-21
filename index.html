@@ -3966,7 +3966,77 @@ function renderAdvancedStatistics() {
     const sessionsListDiv = document.getElementById('sessions-list');
     sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
 
-    
+        // --- Gráfico de vocabulario últimos 7 días ---
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        last7Days.push(d.toISOString().split('T')[0]);
+    }
+    const vocabByDay = last7Days.map(day => {
+        return vocabSessions
+            .filter(s => s.date === day)
+            .reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+    });
+    const maxDayCards = Math.max(...vocabByDay, 1);
+
+    const oldVocabChart = document.getElementById('vocab-mini-chart');
+    if (oldVocabChart) oldVocabChart.remove();
+
+    const vocabChartDiv = document.createElement('div');
+    vocabChartDiv.id = 'vocab-mini-chart';
+    vocabChartDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
+    vocabChartDiv.innerHTML = `
+        <h3 class="text-xs font-black uppercase tracking-wider text-teal-400 mb-3">📊 Vocabulario (7 días)</h3>
+        <div class="flex items-end gap-1 h-16">
+            ${vocabByDay.map(val => {
+                const height = Math.max(2, (val / maxDayCards) * 64);
+                return `<div class="flex-1 bg-teal-500/60 rounded-t" style="height:${height}px" title="${val} tarjetas"></div>`;
+            }).join('')}
+        </div>
+        <div class="flex gap-1 mt-1 text-[8px] text-slate-500">
+            ${last7Days.map(day => {
+                const short = day.slice(5); // MM-DD
+                return `<span class="flex-1 text-center">${short}</span>`;
+            }).join('')}
+        </div>
+    `;
+    sessionsListDiv.parentNode.insertBefore(vocabChartDiv, sessionsListDiv);
+
+    // --- Mapa de calor por horas ---
+    const hoursCount = new Array(24).fill(0);
+    vocabSessions.forEach(s => {
+        if (s.startTime) {
+            const hour = parseInt(s.startTime.split(':')[0]);
+            if (!isNaN(hour) && hour >= 0 && hour < 24) {
+                hoursCount[hour] += s.cardsCount || 0;
+            }
+        }
+    });
+    const maxHourCards = Math.max(...hoursCount, 1);
+
+    const oldHeatmap = document.getElementById('heatmap-container');
+    if (oldHeatmap) oldHeatmap.remove();
+
+    const heatmapDiv = document.createElement('div');
+    heatmapDiv.id = 'heatmap-container';
+    heatmapDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
+    heatmapDiv.innerHTML = `
+        <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3">🔥 Actividad por horas</h3>
+        <div class="grid grid-cols-24 gap-0.5">
+            ${hoursCount.map((count, hour) => {
+                const intensity = Math.min(1, count / maxHourCards);
+                const r = Math.floor(255 * intensity);
+                const g = Math.floor(100 + 155 * (1 - intensity));
+                const b = Math.floor(255 * (1 - intensity));
+                return `<div class="h-5 rounded-sm" style="background-color: rgba(${r},${g},${b},0.7)" title="${hour}h: ${count} tarjetas"></div>`;
+            }).join('')}
+        </div>
+        <div class="flex justify-between text-[8px] text-slate-500 mt-1">
+            <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+        </div>
+    `;
+    sessionsListDiv.parentNode.insertBefore(heatmapDiv, sessionsListDiv);
     // Lista de sesiones
     const listContainer = document.getElementById('sessions-list');
     listContainer.innerHTML = '';
