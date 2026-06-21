@@ -3910,6 +3910,8 @@ function renderAdvancedStatistics() {
     document.getElementById('stats-year-label').innerText = statsSelectedYear;
     document.getElementById('stat-sessions').innerText = sessions.length;
     document.getElementById('stat-total-cards').innerText = totalCards;
+        const cardsLabel = document.querySelector('#stat-total-cards').closest('.bg-slate-800')?.querySelector('.uppercase');
+    if (cardsLabel) cardsLabel.innerText = 'Repeticiones de frases';
     document.getElementById('stat-total-time-new').innerText = `${hours}h ${minutes}m`;
     document.getElementById('stat-streak-new').innerText = `${appData.stats.streak || 0} días`;
     document.getElementById('stat-vocab-count-new').innerText = (appData.vocabulary || []).length;
