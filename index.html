@@ -3796,6 +3796,7 @@ function renderAdvancedStatistics() {
     // Calendario
     renderCalendarGrid(sessions);
     // Totales de calidad de vocabulario en el período
+    // Totales de calidad de vocabulario en el período
     const vocabSessions = sessions.filter(s => s.type === 'vocab');
     const totalQuality = vocabSessions.reduce((acc, s) => {
         if (s.quality) {
@@ -3807,7 +3808,12 @@ function renderAdvancedStatistics() {
         return acc;
     }, { again: 0, hard: 0, good: 0, easy: 0 });
 
+    // Eliminar tarjeta de calidad anterior si existe
+    const oldQuality = document.getElementById('quality-summary-card');
+    if (oldQuality) oldQuality.remove();
+
     const qualityDiv = document.createElement('div');
+    qualityDiv.id = 'quality-summary-card';
     qualityDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
     qualityDiv.innerHTML = `
         <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 mb-3">📚 Calidad de Vocabulario</h3>
@@ -3833,6 +3839,7 @@ function renderAdvancedStatistics() {
     const sessionsListDiv = document.getElementById('sessions-list');
     sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
 
+    
     // Lista de sesiones
     const listContainer = document.getElementById('sessions-list');
     listContainer.innerHTML = '';
