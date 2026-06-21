@@ -1670,6 +1670,238 @@ function closeGuidedReading() {
     document.getElementById('guided-reading-modal').classList.add('hidden');
     // Aquí después añadiremos limpieza de intervalos y reconocimiento
 }
+// ==================== LECTURA GUIADA ====================
+let guidedReadingState = {
+    words: [],
+    currentIndex: 0,
+    wpm: 150,
+    intervalId: null,
+    recognition: null,
+    recognizedText: '',
+    startTime: null,
+    mediaRecorder: null,
+    audioChunks: [],
+    isActive: false
+};
+
+function startGuidedReading() {
+    const text = document.getElementById('guided-reading-input').value.trim();
+    if (!text) { alert('Pega un texto para leer.'); return; }
+
+    // Dividir en palabras
+    guidedReadingState.words = text.split(/\s+/).filter(w => w.length > 0);
+    guidedReadingState.currentIndex = 0;
+    guidedReadingState.wpm = parseInt(document.getElementById('guided-reading-wpm').value);
+    guidedReadingState.recognizedText = '';
+    guidedReadingState.startTime = Date.now();
+    guidedReadingState.isActive = true;
+
+    // Limpiar resultados anteriores
+    document.getElementById('guided-reading-results').classList.add('hidden');
+    document.getElementById('guided-reading-results').innerHTML = '';
+
+    // Preparar prompter
+    const prompter = document.getElementById('guided-reading-prompter');
+    prompter.innerHTML = '<div id="guided-reading-display" class="text-4xl font-bold text-white leading-relaxed"></div>';
+
+    // Mostrar botón de detener
+    const controlsDiv = document.querySelector('#guided-reading-modal .flex.items-center.gap-4.flex-wrap');
+    if (controlsDiv) {
+        controlsDiv.innerHTML += '<button id="btn-stop-reading" onclick="stopGuidedReading()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition">⏹ Detener</button>';
+    }
+
+    // Iniciar teleprompter
+    const msPerWord = 60000 / guidedReadingState.wpm;
+    updateGuidedReadingDisplay();
+    guidedReadingState.intervalId = setInterval(() => {
+        guidedReadingState.currentIndex++;
+        if (guidedReadingState.currentIndex >= guidedReadingState.words.length) {
+            stopGuidedReading();
+            return;
+        }
+        updateGuidedReadingDisplay();
+    }, msPerWord);
+
+    // Iniciar reconocimiento de voz continuo
+    startContinuousRecognition();
+
+    // Iniciar grabación de audio
+    startReadingAudioRecording();
+}
+
+function updateGuidedReadingDisplay() {
+    const display = document.getElementById('guided-reading-display');
+    if (!display) return;
+    const words = guidedReadingState.words;
+    const idx = guidedReadingState.currentIndex;
+    let html = '';
+    for (let i = 0; i < words.length; i++) {
+        if (i === idx) {
+            html += `<span class="text-amber-400 bg-amber-400/10 px-1 rounded">${words[i]}</span> `;
+        } else {
+            html += `<span class="text-slate-500">${words[i]}</span> `;
+        }
+    }
+    display.innerHTML = html;
+    // Scroll para mantener palabra actual visible
+    const currentSpan = display.querySelector('.text-amber-400');
+    if (currentSpan) currentSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function startContinuousRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { console.warn('Reconocimiento no soportado'); return; }
+
+    guidedReadingState.recognition = new SpeechRecognition();
+    guidedReadingState.recognition.lang = 'de-DE';
+    guidedReadingState.recognition.continuous = true;
+    guidedReadingState.recognition.interimResults = true;
+    guidedReadingState.recognition.maxAlternatives = 1;
+
+    guidedReadingState.recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                guidedReadingState.recognizedText += event.results[i][0].transcript + ' ';
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+    };
+
+    guidedReadingState.recognition.onerror = (event) => {
+        if (event.error === 'no-speech') {
+            // Reiniciar si no detecta habla
+            if (guidedReadingState.isActive) {
+                try { guidedReadingState.recognition.stop(); } catch(e) {}
+                setTimeout(() => {
+                    if (guidedReadingState.isActive) {
+                        try { guidedReadingState.recognition.start(); } catch(e) {}
+                    }
+                }, 500);
+            }
+        }
+    };
+
+    try { guidedReadingState.recognition.start(); } catch(e) {}
+}
+
+function startReadingAudioRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        guidedReadingState.mediaRecorder = new MediaRecorder(stream);
+        guidedReadingState.audioChunks = [];
+        guidedReadingState.mediaRecorder.ondataavailable = e => {
+            guidedReadingState.audioChunks.push(e.data);
+        };
+        guidedReadingState.mediaRecorder.start();
+    }).catch(err => console.warn('Grabación no disponible:', err));
+}
+
+function stopGuidedReading() {
+    if (!guidedReadingState.isActive) return;
+    guidedReadingState.isActive = false;
+
+    // Detener intervalo del prompter
+    if (guidedReadingState.intervalId) {
+        clearInterval(guidedReadingState.intervalId);
+        guidedReadingState.intervalId = null;
+    }
+
+    // Detener reconocimiento
+    if (guidedReadingState.recognition) {
+        try { guidedReadingState.recognition.stop(); } catch(e) {}
+        guidedReadingState.recognition = null;
+    }
+
+    // Detener grabación
+    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+        guidedReadingState.mediaRecorder.stop();
+        guidedReadingState.mediaRecorder.onstop = () => {
+            // Una vez detenida, generamos el blob y mostramos resultados
+            const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
+            showReadingResults(audioBlob);
+        };
+    } else {
+        showReadingResults(null);
+    }
+}
+
+function showReadingResults(audioBlob) {
+    const totalWords = guidedReadingState.words.length;
+    const recognizedClean = guidedReadingState.recognizedText.replace(/[.,!?;:()]/g, '').toLowerCase().trim();
+    const recognizedWords = recognizedClean.split(/\s+/).filter(w => w.length > 0);
+    const originalWords = guidedReadingState.words.map(w => w.replace(/[.,!?;:()]/g, '').toLowerCase());
+
+    // Calcular precisión
+    let matches = 0;
+    for (let i = 0; i < Math.min(recognizedWords.length, originalWords.length); i++) {
+        if (recognizedWords[i] === originalWords[i]) matches++;
+    }
+    const precision = totalWords > 0 ? Math.round((matches / totalWords) * 100) : 0;
+
+    // Calcular WPM real
+    const elapsedSeconds = (Date.now() - guidedReadingState.startTime) / 1000;
+    const realWPM = elapsedSeconds > 0 ? Math.round((recognizedWords.length / elapsedSeconds) * 60) : 0;
+
+    // Índice de fluidez (0-100): combinación de precisión y velocidad normalizada
+    const fluencyIndex = Math.round((precision * 0.7) + (Math.min(100, (realWPM / 150) * 100) * 0.3));
+
+    // Construir HTML de resultados
+    const resultsDiv = document.getElementById('guided-reading-results');
+    resultsDiv.innerHTML = `
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3">
+            <h4 class="text-lg font-black text-amber-400">📊 Resultados</h4>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><span class="text-slate-500">Palabras totales:</span> <span class="text-white font-bold">${totalWords}</span></div>
+                <div><span class="text-slate-500">Precisión:</span> <span class="text-emerald-400 font-bold">${precision}%</span></div>
+                <div><span class="text-slate-500">WPM real:</span> <span class="text-blue-400 font-bold">${realWPM}</span></div>
+                <div><span class="text-slate-500">Índice de fluidez:</span> <span class="text-purple-400 font-bold">${fluencyIndex}/100</span></div>
+            </div>
+            <div class="text-xs text-slate-400 italic">Texto reconocido: "${recognizedClean}"</div>
+            ${audioBlob ? `<button onclick="downloadReadingAudio()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-download"></i> Descargar lectura (MP3)</button>` : '<p class="text-xs text-rose-400">No se pudo grabar audio.</p>'}
+        </div>
+    `;
+    resultsDiv.classList.remove('hidden');
+
+    // Guardar sesión en estadísticas
+    appData.stats.sessions.push({
+        id: 'sess_' + Date.now(),
+        date: getTodayDateString(),
+        startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        duration: Math.round(elapsedSeconds),
+        type: 'reading',
+        cardsCount: totalWords,
+        direction: 'de-es',
+        quality: {
+            precision: precision,
+            wpm: realWPM,
+            fluencyIndex: fluencyIndex
+        }
+    });
+    saveDatabase();
+
+    // Guardar referencia al blob para descarga posterior
+    if (audioBlob) {
+        window._lastReadingBlob = audioBlob;
+    }
+
+    // Eliminar botón de detener
+    const stopBtn = document.getElementById('btn-stop-reading');
+    if (stopBtn) stopBtn.remove();
+}
+
+function downloadReadingAudio() {
+    if (!window._lastReadingBlob) { alert('No hay grabación disponible.'); return; }
+    const url = URL.createObjectURL(window._lastReadingBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lectura_${getTodayDateString()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
 let currentVocabFolderId = null;
