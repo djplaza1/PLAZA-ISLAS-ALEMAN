@@ -335,7 +335,7 @@
         <button onclick="changeGuidedReadingSpeed(10)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">+10</button>
         <button onclick="changeGuidedReadingFontSize(-1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa−</button>
         <button onclick="changeGuidedReadingFontSize(1)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Aa+</button>
-        <button onclick="stopGuidedReading()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
+        <button onclick="backToConfigScreen()" class="...">← Volver</button>
     </div>
 </div>
 
@@ -355,7 +355,7 @@
         <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-6 space-y-4">
             <h4 class="text-xl font-black text-amber-400">📊 Resultados</h4>
             <div id="guided-reading-results-content"></div>
-            <button onclick="closeGuidedReading()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-xs font-bold">Cerrar</button>
+            <button onclick="backToReadingScreen()" class="w-full ...">← Volver a la lectura</button>
         </div>
     </div>
 </div>
@@ -1756,6 +1756,22 @@ function closeGuidedReading() {
     if (guidedReadingState.intervalId) clearInterval(guidedReadingState.intervalId);
     if (guidedReadingState.timerInterval) clearInterval(guidedReadingState.timerInterval);
     guidedReadingState.isActive = false;
+}
+function backToReadingScreen() {
+    // Oculta resultados y muestra la pantalla de lectura
+    document.getElementById('guided-reading-results').classList.add('hidden');
+    document.getElementById('guided-reading-reader').classList.remove('hidden');
+}
+
+function backToConfigScreen() {
+    // Oculta lector/resultados y muestra configuración inicial
+    document.getElementById('guided-reading-results').classList.add('hidden');
+    document.getElementById('guided-reading-reader').classList.add('hidden');
+    document.getElementById('guided-reading-config').classList.remove('hidden');
+    // Limpiar estado de lectura
+    guidedReadingState.isActive = false;
+    if (guidedReadingState.intervalId) clearInterval(guidedReadingState.intervalId);
+    if (guidedReadingState.timerInterval) clearInterval(guidedReadingState.timerInterval);
 }
 
 function acceptGuidedReadingText() {
