@@ -1850,13 +1850,15 @@ function updateGuidedReadingDisplay() {
     const display = document.getElementById('guided-reading-display');
     if (!display) return;
     let html = '';
+    const words = guidedReadingState.words;
+    const current = Math.min(guidedReadingState.currentIndex, words.length - 1);
     guidedReadingState.words.forEach((w, i) => {
         html += `<span class="text-slate-500 cursor-pointer" onclick="event.stopPropagation(); setTTSStartWord(${i})">${w}</span> `;
     });
     display.innerHTML = html;
-    // Si estamos en modo marca y activo, resaltar palabra actual
+    // Si estamos en modo marca y activo, resaltar la palabra actual (limitada al rango)
     if (guidedReadingState.showMark && guidedReadingState.isActive) {
-        highlightWord(guidedReadingState.currentIndex);
+        highlightWord(current);
     }
     // Si el TTS está activo, mantener resaltada su palabra actual
     if (guidedReadingState.ttsActive && !guidedReadingState.isActive) {
