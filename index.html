@@ -3140,7 +3140,10 @@ function initiateTrainingSession(islandId, direction) {
     if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
 
     const order = document.getElementById('cfg-order').value;
-    if (order === 'random') {
+        if (order === 'worst') {
+        sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
+    }
+    // Para 'random' y 'sequential' dejamos el array en su orden originalif (order === 'random') {
         sourcePhrases = [...sourcePhrases].sort(() => Math.random() - 0.5);
     } else if (order === 'worst') {
         sourcePhrases = [...sourcePhrases].sort((a, b) => (a.starsGrammarNormal || 0) - (b.starsGrammarNormal || 0));
@@ -3287,15 +3290,23 @@ function setupTrainingSlide() {
 }
         function navigateTrainingQueue(step) {
             stopAudioAndTimers();
-            let tempIndex = currentTrainIndex + step;
-            if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
-                currentTrainIndex = tempIndex;
-                setupTrainingSlide();
-            } else if (tempIndex >= trainingQueue.length) {
-                handleIslandTransitionOrLoop();
+            if (step > 0 && appData.settings.order === 'random') {
+                // Avance aleatorio: elige cualquier frase al azar (puede repetir)
+                currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
+            } else {
+                let tempIndex = currentTrainIndex + step;
+                if (tempIndex >= 0 && tempIndex < trainingQueue.length) {
+                    currentTrainIndex = tempIndex;
+                } else if (tempIndex >= trainingQueue.length) {
+                    handleIslandTransitionOrLoop();
+                    return;
+                } else {
+                    // tempIndex < 0: se mantiene en la primera
+                    currentTrainIndex = 0;
+                }
             }
+            setupTrainingSlide();
         }
-
         function handleFlowTypeChange() {
             saveSettings();
             stopAudioAndTimers();
@@ -3381,8 +3392,12 @@ function executePlaybackChain() {
             }
         }
 
-        function advanceAuto() {
-            currentTrainIndex++;
+           function advanceAuto() {
+            if (appData.settings.order === 'random') {
+                currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
+            } else {
+                currentTrainIndex++;
+            }
             if (currentTrainIndex < trainingQueue.length) {
                 setupTrainingSlide();
             } else {
