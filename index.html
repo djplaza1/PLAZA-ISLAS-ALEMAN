@@ -2140,6 +2140,18 @@ function deleteVocabFolder(folderId) {
     if (currentVocabFolderId && idsToDelete.has(currentVocabFolderId)) selectVocabFolder(parentId);
     else { renderVocabFolderSelector(); renderVocabularyList(); }
 }
+// Función auxiliar: cuenta el total de palabras en una carpeta y todas sus subcarpetas
+function countWordsInFolderRecursive(folderId) {
+    let count = 0;
+    // Palabras directas en esta carpeta
+    count += (appData.vocabulary || []).filter(w => w.folderId === folderId).length;
+    // Subcarpetas
+    const children = appData.vocabFolders.filter(f => f.parentId === folderId);
+    children.forEach(child => {
+        count += countWordsInFolderRecursive(child.id);
+    });
+    return count;
+}
 
 function renderVocabFolderSelector() {
     const container = document.getElementById('vocab-folder-tabs');
@@ -2155,8 +2167,9 @@ function renderVocabFolderSelector() {
         html += `<span class="px-3 py-1 text-xs font-bold text-slate-500">📚 Raíz</span>`;
     }
     children.forEach(f => {
+        const totalWords = countWordsInFolderRecursive(f.id);
         html += `<span class="inline-flex items-center gap-1">`;
-        html += `<button onclick="selectVocabFolder('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-slate-700 text-slate-300 hover:bg-slate-600">📁 ${f.name}</button>`;
+        html += `<button onclick="selectVocabFolder('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-slate-700 text-slate-300 hover:bg-slate-600">📁 ${f.name} <span class="text-[10px] text-slate-400 ml-1">(${totalWords})</span></button>`;
         html += `<button onclick="event.stopPropagation(); deleteVocabFolder('${f.id}')" class="text-slate-500 hover:text-rose-400 text-xs px-1">✕</button>`;
         html += `</span>`;
     });
@@ -2681,7 +2694,6 @@ function showIslandSelectionModalWithPreselection(islandList, preselectedIds = [
     }
 }
 
-// --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
 // --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
 function importVocabFromText() {
     const overlay = document.createElement('div');
