@@ -2014,6 +2014,32 @@ function flipFlashcard() {
         document.getElementById('srs-buttons').classList.remove('hidden');
     }
 }
+function rateSRS(quality) {
+    if (flashcardWords.length === 0) return;
+    const word = flashcardWords[currentFlashcardIndex];
+    flashcardReviewedCount++;
+    applySRS(word, quality);
+    // Actualizar contador según calidad
+    if (quality === 1) flashcardQualityCounts.again++;
+    else if (quality === 2) flashcardQualityCounts.hard++;
+    else if (quality === 3) flashcardQualityCounts.good++;
+    else if (quality === 4) flashcardQualityCounts.easy++;
+    if (quality <= 2) {
+        flashcardWords.push(flashcardWords.splice(currentFlashcardIndex, 1)[0]);
+        if (currentFlashcardIndex >= flashcardWords.length) {
+            currentFlashcardIndex = flashcardWords.length - 1;
+        }
+        showFlashcard();
+    } else {
+        currentFlashcardIndex++;
+        if (currentFlashcardIndex >= flashcardWords.length) {
+            endSRSSession();
+        } else {
+            showFlashcard();
+        }
+    }
+}
+
 function updateFlashcardProgress() {
     const total = flashcardWords.length;
     const done = currentFlashcardIndex;
