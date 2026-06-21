@@ -1686,39 +1686,6 @@ function renderIslandsGrid() {
             saveDatabase();
             initiateTrainingSession(virtualId, direction);
         }
-// ==================== LECTURA GUIADA ====================
-let guidedReadingState = {
-    words: [],
-    currentIndex: 0,
-    wpm: 150,
-    intervalId: null,
-    recognition: null,
-    recognizedText: '',
-    startTime: null,
-    mediaRecorder: null,
-    audioChunks: [],
-    isActive: false,
-    showMark: true,
-    fontSize: 2, // índice: 0=base, 1=md, 2=lg
-    timerInterval: null,
-    wpmHistory: []
-};
-
-const fluencyLevels = [
-    { max: 60, level: 'A1', desc: 'Principiante' },
-    { max: 80, level: 'A2', desc: 'Básico' },
-    { max: 100, level: 'B1', desc: 'Intermedio' },
-    { max: 120, level: 'B2', desc: 'Intermedio alto' },
-    { max: 140, level: 'C1', desc: 'Avanzado' },
-    { max: Infinity, level: 'C2', desc: 'Nativo' }
-];
-
-function getFluencyLevel(wpm) {
-    for (let f of fluencyLevels) {
-        if (wpm <= f.max) return f;
-    }
-    return fluencyLevels[fluencyLevels.length - 1];
-}
 
 // ==================== LECTURA GUIADA ====================
 let guidedReadingState = {
