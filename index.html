@@ -3857,18 +3857,6 @@ function renderAdvancedStatistics() {
                 </div>
                 <span class="text-[10px] text-slate-400 font-mono">⏱ ${durMin}m ${durSec}s</span>
             `;
-            // Añadir línea de calidad si es sesión de vocabulario
-            if (s.type === 'vocab' && s.quality) {
-                const qualityLine = document.createElement('div');
-                qualityLine.className = "flex gap-2 text-[10px] mt-1";
-                qualityLine.innerHTML = `
-                    <span class="text-rose-400">🔴${s.quality.again || 0}</span>
-                    <span class="text-amber-400">🟠${s.quality.hard || 0}</span>
-                    <span class="text-emerald-400">🟢${s.quality.good || 0}</span>
-                    <span class="text-blue-400">🔵${s.quality.easy || 0}</span>
-                `;
-                div.appendChild(qualityLine);
-            }
             listContainer.appendChild(div);
         });
     }
