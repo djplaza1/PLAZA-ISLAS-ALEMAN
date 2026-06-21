@@ -1789,6 +1789,11 @@ function acceptGuidedReadingText() {
 }
 
 function startGuidedReading() {
+    if (guidedReadingState.ttsActive) {
+    window.speechSynthesis.cancel();
+    guidedReadingState.ttsActive = false;
+    guidedReadingState.ttsPaused = false;
+}
     if (guidedReadingState.words.length === 0) return;
     guidedReadingState.currentIndex = 0;
     guidedReadingState.startTime = Date.now();
@@ -2042,10 +2047,9 @@ function downloadReadingAudio() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
-// ==================== REPRODUCTOR DE VOZ NATIVA ====================
+// ==================== REPRODUCTOR DE VOZ NATIVA (LECTURA FLUIDA) ====================
 function toggleTextToSpeech() {
     if (!guidedReadingState.ttsActive) {
-        // Iniciar desde la palabra marcada como inicio (por defecto 0)
         const startIdx = guidedReadingState.ttsStartWordIndex || 0;
         startTextToSpeechFrom(startIdx);
     } else if (guidedReadingState.ttsPaused) {
@@ -2063,41 +2067,45 @@ function startTextToSpeechFrom(startIndex) {
     guidedReadingState.ttsStartWordIndex = startIndex;
 
     document.getElementById('btn-guided-listen').textContent = '⏸ Pausar';
-    speakNextWord();
-}
 
-function speakNextWord() {
-    if (!guidedReadingState.ttsActive || guidedReadingState.ttsPaused) return;
-    if (guidedReadingState.ttsCurrentWordIndex >= guidedReadingState.words.length) {
-        // Terminó
-        guidedReadingState.ttsActive = false;
-        guidedReadingState.ttsPaused = false;
-        document.getElementById('btn-guided-listen').textContent = '🔊 Escuchar';
-        // Resaltar primera palabra al terminar
-        guidedReadingState.ttsCurrentWordIndex = 0;
-        highlightWord(0);
-        return;
-    }
-
-    const word = guidedReadingState.words[guidedReadingState.ttsCurrentWordIndex];
-    const utterance = new SpeechSynthesisUtterance(word);
+    // Construir el texto completo desde la palabra de inicio
+    const textToRead = guidedReadingState.words.slice(startIndex).join(' ');
+    const utterance = new SpeechSynthesisUtterance(textToRead);
     const voice = getBestGermanVoice();
     if (voice) utterance.voice = voice;
     utterance.lang = 'de-DE';
     utterance.rate = parseFloat(document.getElementById('guided-listening-speed').value) || 0.9;
     utterance.pitch = 1.0;
 
-    // Resaltar palabra actual
-    highlightWord(guidedReadingState.ttsCurrentWordIndex);
+    // Calcular offset de caracteres para mapear onboundary a índice de palabra
+    const textBefore = guidedReadingState.words.slice(0, startIndex).join(' ') + (startIndex > 0 ? ' ' : '');
+    const charOffset = textBefore.length;
+
+    utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+            const absoluteCharIndex = charOffset + event.charIndex;
+            // Determinar qué palabra corresponde
+            const fullText = textBefore + textToRead;
+            const textUpToBoundary = fullText.substring(0, absoluteCharIndex);
+            const wordIndex = textUpToBoundary.split(/\s+/).length - 1;
+            if (wordIndex >= 0 && wordIndex < guidedReadingState.words.length) {
+                guidedReadingState.ttsCurrentWordIndex = wordIndex;
+                highlightWord(wordIndex);
+            }
+        }
+    };
 
     utterance.onend = () => {
-        guidedReadingState.ttsCurrentWordIndex++;
-        speakNextWord();
+        guidedReadingState.ttsActive = false;
+        guidedReadingState.ttsPaused = false;
+        document.getElementById('btn-guided-listen').textContent = '🔊 Escuchar';
+        highlightWord(0);
     };
 
     utterance.onerror = () => {
-        guidedReadingState.ttsCurrentWordIndex++;
-        speakNextWord();
+        guidedReadingState.ttsActive = false;
+        guidedReadingState.ttsPaused = false;
+        document.getElementById('btn-guided-listen').textContent = '🔊 Escuchar';
     };
 
     window.speechSynthesis.speak(utterance);
@@ -2126,8 +2134,15 @@ function highlightWord(index) {
             span.className = 'text-slate-500';
         }
     });
-    // Scroll a la palabra actual
     if (spans[index]) spans[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Permite hacer clic en una palabra para establecer el punto de inicio de la escucha
+function setTTSStartWord(index) {
+    guidedReadingState.ttsStartWordIndex = index;
+    if (!guidedReadingState.ttsActive) {
+        highlightWord(index);
+    }
 }
 
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
