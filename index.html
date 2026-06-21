@@ -3390,18 +3390,18 @@ function executePlaybackChain() {
             }
         }
 
-           function advanceAuto() {
-            if (appData.settings.order === 'random') {
-                currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
-            } else {
-                currentTrainIndex++;
-            }
-            if (currentTrainIndex < trainingQueue.length) {
-                setupTrainingSlide();
-            } else {
-                handleIslandTransitionOrLoop();
-            }
-        }
+ function advanceAuto() {
+    if (appData.settings.order === 'random') {
+        currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
+    } else {
+        currentTrainIndex++;
+    }
+    if (currentTrainIndex < trainingQueue.length) {
+        setupTrainingSlide();
+    } else {
+        handleIslandTransitionOrLoop();
+    }
+}
 
         function handleIslandTransitionOrLoop() {
             stopAudioAndTimers();
