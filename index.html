@@ -2692,7 +2692,7 @@ function importVocabFromText() {
     content.innerHTML = `
         <h3 class="font-bold text-lg text-emerald-400 mb-2">Pegar lista de vocabulario</h3>
         <p class="text-xs text-slate-400 mb-3">Formatos admitidos:<br>
-        • <code>palabra : traducción</code><br>
+        • <code>palabra : traducción</code> o <code>palabra - traducción</code><br>
         • <code>frase: Frase en alemán // Traducción</code> (antes o después de la palabra)<br>
         • <code>ejemplo: ...</code> o <code>beispiel: ...</code><br>
         • Con o sin emojis (🔴🟢🔵)</p>
@@ -2717,50 +2717,72 @@ function importVocabFromText() {
         const folderId = document.getElementById('vocab-text-folder').value || null;
         if (!text) { alert('Pega algún texto.'); return; }
 
+        // Limpiar emojis y símbolos decorativos (pero conservar caracteres alemanes y signos normales)
+        const cleanLine = (str) => str.replace(/[🔴🟢🔵🟡⚪️✅❌⭐🔥●○■□♦]/g, '').trim();
+
         const lines = text.split('\n');
         let added = 0;
         let pendingExampleDe = '';
         let pendingExampleEs = '';
-        let lastWasExample = false;
 
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
+            const rawLine = lines[i].trim();
+            if (!rawLine) continue;
 
             // Detectar encabezados (todo en mayúsculas o empezando con 📂)
-            if (/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN|SCHREIBEN|EXTRA)/.test(line) || /^[A-ZÄÖÜ]{3,}/.test(line)) {
+            if (/^(📂|EINSTIEG|SPRECHEN|LESEN|HÖREN|WORTSCHATZ|SEHEN|SCHREIBEN|EXTRA)/.test(rawLine) || /^[A-ZÄÖÜ]{3,}/.test(rawLine)) {
                 continue;
             }
 
-            // Detectar frases de ejemplo (antes o después de una palabra)
-            const exampleMatch = line.match(/^(frase|ejemplo|beispiel)\s*:\s*(.+)/i);
+            // Detectar frases de ejemplo
+            const exampleMatch = rawLine.match(/^(frase|ejemplo|beispiel)\s*:\s*(.+)/i);
             if (exampleMatch) {
                 const rest = exampleMatch[2];
-                // Buscar separador //
                 const parts = rest.split('//');
-                pendingExampleDe = parts[0].trim();
-                pendingExampleEs = parts[1]?.trim() || pendingExampleDe;
-                lastWasExample = true;
+                pendingExampleDe = cleanLine(parts[0].trim());
+                pendingExampleEs = parts[1] ? cleanLine(parts[1].trim()) : pendingExampleDe;
                 continue;
             }
 
-            // Intentar detectar línea de palabra:traducción
-            const cleanLine = line.replace(/[🔴🟢🔵🟡⚪️✅❌⭐🔥]/g, '').trim();
-            const colonIndex = cleanLine.indexOf(':');
-            if (colonIndex === -1) continue;
+            // Intentar detectar línea de palabra:traducción o palabra - traducción
+            let wordPart = null, transPart = null;
+            // Primero probar con " : " (dos puntos con espacios)
+            const colonMatch = rawLine.match(/^(.+?)\s*:\s*(.+)$/);
+            if (colonMatch) {
+                wordPart = colonMatch[1].trim();
+                transPart = colonMatch[2].trim();
+            } else {
+                // Probar con " - " (guión rodeado de espacios)
+                const dashMatch = rawLine.match(/^(.+?)\s+-\s+(.+)$/);
+                if (dashMatch) {
+                    wordPart = dashMatch[1].trim();
+                    transPart = dashMatch[2].trim();
+                }
+            }
 
-            const germanPart = cleanLine.substring(0, colonIndex).trim();
-            const spanishPart = cleanLine.substring(colonIndex + 1).trim();
+            if (!wordPart || !transPart) continue; // no es una línea de palabra válida
 
-            // Eliminar información de género/plural entre paréntesis
-            const wordOnly = germanPart.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+            // Limpiar la palabra: eliminar información de género/plural entre paréntesis y plurales tras guiones
+            let wordClean = wordPart.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+            // Si queda algo como "die Parallele -n", tomamos solo "die Parallele"
+            const articleMatch = wordClean.match(/^(der|die|das)\s+(.+?)(\s+-[a-zäöüß]+)?$/i);
+            if (articleMatch) {
+                wordClean = articleMatch[1] + ' ' + articleMatch[2];
+            }
+            wordClean = cleanLine(wordClean);
 
-            if (wordOnly.length < 2 || spanishPart.length < 2) continue;
+            // Limpiar traducción
+            transPart = cleanLine(transPart).replace(/\s*\/\s*/g, ' / '); // normalizar barras
+
+            if (wordClean.length < 2 || transPart.length < 2) continue;
 
             // Verificar duplicados
-            if (appData.vocabulary.some(v => v.word.toLowerCase() === wordOnly.toLowerCase())) continue;
+            if (appData.vocabulary.some(v => v.word.toLowerCase() === wordClean.toLowerCase())) {
+                pendingExampleDe = ''; pendingExampleEs = '';
+                continue;
+            }
 
-            // Usar frase de ejemplo pendiente o vacía
+            // Usar ejemplo pendiente (de frase anterior o posterior)
             const exampleDe = pendingExampleDe || '';
             const exampleEs = pendingExampleEs || '';
             pendingExampleDe = '';
@@ -2768,8 +2790,8 @@ function importVocabFromText() {
 
             appData.vocabulary.push({
                 id: 'vocab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
-                word: wordOnly,
-                translation: spanishPart,
+                word: wordClean,
+                translation: transPart,
                 example_de: exampleDe,
                 example_es: exampleEs,
                 folderId: folderId,
@@ -2783,7 +2805,6 @@ function importVocabFromText() {
                 lapses: 0
             });
             added++;
-            lastWasExample = false;
         }
 
         await saveDatabase();
