@@ -538,9 +538,23 @@
                 </div>
             </div>
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                <h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2"><i class="fa-solid fa-database text-blue-500"></i> Oraciones (<span id="phrase-count">0</span>)</h3>
-                <div id="phrases-container" class="divide-y divide-slate-700 overflow-x-auto"></div>
-            </div>
+              <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+    <h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400 flex items-center gap-2">
+        <input type="checkbox" id="phrase-select-all" onchange="toggleAllPhrases(this.checked)" class="w-4 h-4 cursor-pointer accent-blue-600 mr-1">
+        <i class="fa-solid fa-database text-blue-500"></i> Oraciones (<span id="phrase-count">0</span>)
+    </h3>
+    <!-- Panel de acciones masivas (oculto por defecto) -->
+    <div id="bulk-phrase-actions" class="hidden bg-slate-900/80 border border-blue-500/30 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <span class="text-xs font-bold text-slate-300">Seleccionadas: <span id="selected-phrase-count" class="text-blue-400 font-black text-lg">0</span></span>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="moveSelectedPhrases()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-arrow-right-arrow-left"></i> Mover seleccionadas</button>
+            <button onclick="moveAllPhrasesInIsland()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-angles-right"></i> Mover todas</button>
+            <button onclick="deleteSelectedPhrases()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-trash"></i> Borrar seleccionadas</button>
+            <button onclick="deleteAllPhrasesInIsland()" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-skull"></i> Borrar todas</button>
+        </div>
+    </div>
+    <div id="phrases-container" class="divide-y divide-slate-700 overflow-x-auto"></div>
+</div>
         </section>
 
         <!-- VISTA ENTRENAMIENTO -->
@@ -768,6 +782,7 @@ async function saveToIDB(key, value) {
         };
 
 let currentActiveIslandId = null;
+let selectedPhraseIds = new Set();
 let currentConversationId = null;
 let trainingQueue = [];
 let currentTrainIndex = 0;
@@ -3671,8 +3686,8 @@ function addBulkPhrasesBlock() {
 }
 
 function deletePhrase(phraseId) {
+    if (!confirm('¿Eliminar esta frase?')) return;
     appData.islands.forEach(isl => {
-        // Protección para que no busque frases dentro de un Grupo
         if (isl.phrases) {
             isl.phrases = isl.phrases.filter(p => p.id !== phraseId);
         }
@@ -3726,9 +3741,11 @@ function renderPhrasesList() {
     const container = document.getElementById('phrases-container');
     const phrases = getPhrasesArray(currentActiveIslandId);
     document.getElementById('phrase-count').innerText = phrases.length;
+    document.getElementById('phrase-select-all').checked = false;
     container.innerHTML = '';
 
     if (phrases.length === 0) {
+        document.getElementById('bulk-phrase-actions').classList.add('hidden');
         container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Esta sección no contiene oraciones indexadas en este momento.</div>`;
         return;
     }
@@ -3738,16 +3755,19 @@ function renderPhrasesList() {
         row.className = "py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-800/50 px-3 rounded-xl transition";
         
         const deClass = hideGermanList ? "hidden-content" : "font-bold text-slate-200";
-       const esClass = hideSpanishList ? "hidden-content" : "text-emerald-400 italic";   // ← sin text-xs
+        const esClass = hideSpanishList ? "hidden-content" : "text-emerald-400 italic";
         const tagsBadge = phrase.tags ? `<span class="text-[10px] bg-slate-900 text-amber-400 font-mono px-1.5 py-0.5 rounded border border-slate-700">${phrase.tags}</span>` : '';
 
         row.innerHTML = `
-            <div class="space-y-1 flex-grow">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
-      <p class="${deClass} text-2xl">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</p>                 ${tagsBadge}
+            <div class="flex items-start gap-3 flex-grow">
+                <input type="checkbox" class="phrase-checkbox shrink-0 w-4 h-4 mt-1 cursor-pointer accent-blue-600" value="${phrase.id}" onchange="handlePhraseCheckbox()">
+                <div class="space-y-1 flex-grow">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-mono font-bold text-slate-500">${index + 1}.</span>
+                        <p class="${deClass} text-2xl">${applyClickableWordsToHtml(highlightVerbPrepositions(phrase.de))}</p> ${tagsBadge}
+                    </div>
+                    <p class="${esClass} text-2xl">"${phrase.es}"</p>
                 </div>
-                <p class="${esClass} text-2xl">"${phrase.es}"</p>
             </div>
             <div class="flex items-center gap-1 shrink-0 self-end sm:self-center">
                 <button class="bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 p-2 text-xs rounded-lg transition speak-btn" data-text="${phrase.de.replace(/"/g, '&quot;')}"><i class="fa-solid fa-volume-high"></i></button>
@@ -3766,6 +3786,133 @@ function renderPhrasesList() {
             e.stopPropagation();
             fireLocalSpeak(this.getAttribute('data-text'));
         });
+    });
+}
+
+function handlePhraseCheckbox() {
+    const checked = document.querySelectorAll('.phrase-checkbox:checked');
+    selectedPhraseIds = new Set(Array.from(checked).map(cb => cb.value));
+    updateBulkPhrasePanel();
+}
+
+function toggleAllPhrases(checked) {
+    const checkboxes = document.querySelectorAll('.phrase-checkbox');
+    checkboxes.forEach(cb => { cb.checked = checked; });
+    if (checked) {
+        selectedPhraseIds = new Set(Array.from(checkboxes).map(cb => cb.value));
+    } else {
+        selectedPhraseIds.clear();
+    }
+    updateBulkPhrasePanel();
+}
+
+function updateBulkPhrasePanel() {
+    const panel = document.getElementById('bulk-phrase-actions');
+    const countSpan = document.getElementById('selected-phrase-count');
+    const count = selectedPhraseIds.size;
+    if (count > 0) {
+        panel.classList.remove('hidden');
+        countSpan.innerText = count;
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+async function moveSelectedPhrases() {
+    if (selectedPhraseIds.size === 0) return;
+    const targetIsland = await showPhraseMoveModal();
+    if (!targetIsland) return;
+    movePhrasesToIsland(Array.from(selectedPhraseIds), targetIsland.id);
+}
+
+async function moveAllPhrasesInIsland() {
+    if (!confirm('¿Mover TODAS las frases de esta isla a otra?')) return;
+    const targetIsland = await showPhraseMoveModal();
+    if (!targetIsland) return;
+    movePhrasesToIsland(null, targetIsland.id); // null = todas
+}
+
+function deleteSelectedPhrases() {
+    if (selectedPhraseIds.size === 0) return;
+    if (!confirm(`¿Eliminar las ${selectedPhraseIds.size} frases seleccionadas?`)) return;
+    const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+    if (island && island.phrases) {
+        island.phrases = island.phrases.filter(p => !selectedPhraseIds.has(p.id));
+    }
+    selectedPhraseIds.clear();
+    saveDatabase();
+    openIslandDetail(currentActiveIslandId);
+}
+
+function deleteAllPhrasesInIsland() {
+    if (!confirm('¿Eliminar TODAS las frases de esta isla? Esta acción no se puede deshacer.')) return;
+    const island = appData.islands.find(isl => isl.id === currentActiveIslandId);
+    if (island && island.phrases) {
+        island.phrases = [];
+    }
+    selectedPhraseIds.clear();
+    saveDatabase();
+    openIslandDetail(currentActiveIslandId);
+}
+
+function movePhrasesToIsland(phraseIds, targetIslandId) {
+    const sourceIsland = appData.islands.find(isl => isl.id === currentActiveIslandId);
+    const targetIsland = appData.islands.find(isl => isl.id === targetIslandId);
+    if (!sourceIsland || !targetIsland) return;
+    if (sourceIsland.id === targetIsland.id) { alert('No puedes mover a la misma isla.'); return; }
+    
+    let phrasesToMove;
+    if (phraseIds === null) {
+        // Mover todas
+        phrasesToMove = [...sourceIsland.phrases];
+        sourceIsland.phrases = [];
+    } else {
+        phrasesToMove = sourceIsland.phrases.filter(p => phraseIds.includes(p.id));
+        sourceIsland.phrases = sourceIsland.phrases.filter(p => !phraseIds.includes(p.id));
+    }
+    
+    targetIsland.phrases.push(...phrasesToMove);
+    selectedPhraseIds.clear();
+    saveDatabase();
+    openIslandDetail(currentActiveIslandId);
+    alert(`${phrasesToMove.length} frase(s) movidas correctamente.`);
+}
+
+function showPhraseMoveModal() {
+    return new Promise(resolve => {
+        const old = document.getElementById('phrase-move-modal');
+        if (old) old.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'phrase-move-modal';
+        overlay.className = 'popup-overlay';
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        const content = document.createElement('div');
+        content.className = 'popup-content max-w-md';
+        content.innerHTML = `
+            <h3 class="font-bold text-lg text-emerald-400 mb-4">Mover frases a...</h3>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                ${appData.islands.filter(isl => isl.type !== 'group' && isl.id !== currentActiveIslandId).map(isl => `
+                    <button class="w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold text-slate-200" data-island-id="${isl.id}">
+                        🏝️ ${isl.name} (${isl.phrases ? isl.phrases.length : 0} frases)
+                    </button>
+                `).join('')}
+            </div>
+            <div class="flex justify-end mt-4">
+                <button id="cancel-phrase-move" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            </div>
+        `;
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        
+        content.querySelectorAll('[data-island-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const islandId = btn.getAttribute('data-island-id');
+                const island = appData.islands.find(isl => isl.id === islandId);
+                overlay.remove();
+                resolve(island);
+            });
+        });
+        document.getElementById('cancel-phrase-move').onclick = () => { overlay.remove(); resolve(null); };
     });
 }
 
