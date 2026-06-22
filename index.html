@@ -2016,6 +2016,7 @@ function stopGuidedReading() {
 function showReadingResults(audioBlob) {
     document.getElementById('guided-reading-reader').classList.add('hidden');
     document.getElementById('guided-reading-results').classList.remove('hidden');
+    if (!guidedReadingState.startTime) guidedReadingState.startTime = Date.now();
 
     const totalWords = guidedReadingState.words.length;
     const recognizedClean = (guidedReadingState.recognizedText || '').replace(/[.,!?;:()]/g, '').toLowerCase().trim();
