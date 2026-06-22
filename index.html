@@ -5376,6 +5376,44 @@ function renderAdvancedStatistics() {
         sessionsListDiv.parentNode.insertBefore(readingDiv, sessionsListDiv);
     }
 
+    // --- Tarjeta de Diálogos ---
+    const dialogueSessions = sessions.filter(s => s.type === 'dialogue');
+    const oldDialogue = document.getElementById('dialogue-summary-card');
+    if (oldDialogue) oldDialogue.remove();
+    if (dialogueSessions.length > 0) {
+        const totalPhrases = dialogueSessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+        const avgDuration = Math.round(dialogueSessions.reduce((sum, s) => sum + (s.duration || 0), 0) / dialogueSessions.length);
+        const roleCount = dialogueSessions.filter(s => s.quality?.mode === 'role').length;
+        const fullCount = dialogueSessions.filter(s => s.quality?.mode === 'full').length;
+
+        const dialogueDiv = document.createElement('div');
+        dialogueDiv.id = 'dialogue-summary-card';
+        dialogueDiv.className = "bg-slate-800 border border-cyan-500/30 rounded-xl p-4 mb-4";
+        dialogueDiv.innerHTML = `
+            <h3 class="text-xs font-black uppercase tracking-wider text-cyan-400 mb-3">🎭 Diálogos</h3>
+            <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div class="bg-slate-900/60 p-2 rounded-lg">
+                    <span class="text-slate-400 font-bold block">Sesiones</span>
+                    <span class="text-white font-black text-lg">${dialogueSessions.length}</span>
+                </div>
+                <div class="bg-slate-900/60 p-2 rounded-lg">
+                    <span class="text-slate-400 font-bold block">Frases</span>
+                    <span class="text-white font-black text-lg">${totalPhrases}</span>
+                </div>
+                <div class="bg-slate-900/60 p-2 rounded-lg">
+                    <span class="text-slate-400 font-bold block">Duración prom.</span>
+                    <span class="text-blue-400 font-black text-lg">${Math.floor(avgDuration/60)}m ${avgDuration%60}s</span>
+                </div>
+                <div class="bg-slate-900/60 p-2 rounded-lg">
+                    <span class="text-slate-400 font-bold block">Modo</span>
+                    <span class="text-emerald-400 font-black text-lg">${roleCount} 🎭 / ${fullCount} 🎤</span>
+                </div>
+            </div>
+        `;
+        const sessionsListDiv = document.getElementById('sessions-list');
+        sessionsListDiv.parentNode.insertBefore(dialogueDiv, sessionsListDiv);
+    }
+
     // Eliminar tarjeta de calidad anterior si existe
     const oldQuality = document.getElementById('quality-summary-card');
     if (oldQuality) oldQuality.remove();
@@ -5406,7 +5444,6 @@ function renderAdvancedStatistics() {
     `;
     const sessionsListDiv = document.getElementById('sessions-list');
     sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
-
         // --- Gráfico de vocabulario últimos 7 días ---
     const last7Days = [];
     for (let i = 6; i >= 0; i--) {
