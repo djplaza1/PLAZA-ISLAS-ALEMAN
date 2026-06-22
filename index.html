@@ -286,6 +286,8 @@
             <button id="btn-train-conv-normal" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Producción (ES➔DE)</button>
             <button id="btn-train-conv-inverse" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Comprensión (DE➔ES)</button>
             <button onclick="openGuidedReading()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-book-open-reader"></i> Lectura Guiada</button>
+            <button onclick="openDialogPlayer('role')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-user"></i> Diálogo (mi papel)</button>
+            <button onclick="openDialogPlayer('full')" class="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-users"></i> Diálogo (todo mi voz)</button>
             <button onclick="importDialog()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-file-import"></i> Importar diálogo</button>
             <button onclick="deleteConversation()" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
         </div>
@@ -323,6 +325,37 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
             <button onclick="closeImportDialog()" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
             <button onclick="processImportDialog()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Importar</button>
         </div>
+    </div>
+</div>
+<!-- MODAL REPRODUCTOR DE DIÁLOGOS -->
+<div id="dialog-player-modal" class="hidden fixed inset-0 z-[400] bg-black flex flex-col">
+    <!-- Barra superior -->
+    <div id="dialog-player-topbar" class="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-slate-800">
+        <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span id="dialog-player-mode-label" class="text-white font-bold"></span>
+            <span class="text-slate-600">|</span>
+            <span>Frase <span id="dialog-player-index" class="text-white font-bold">0</span>/<span id="dialog-player-total">0</span></span>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="text-[10px] text-slate-400">Pausa(s):</label>
+            <input type="number" id="dialog-player-pause" value="1" min="0" max="10" step="0.5" class="w-10 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-[10px] text-white text-center font-bold">
+            <button onclick="toggleDialogPlayback()" id="btn-dialog-play" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-bold">▶ Play</button>
+            <button onclick="prevDialogPhrase()" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded">◀</button>
+            <button onclick="nextDialogPhrase()" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded">▶</button>
+            <button onclick="stopDialogPlayback()" class="text-[10px] bg-rose-700 hover:bg-rose-600 text-white px-2 py-1 rounded font-bold">✕</button>
+        </div>
+    </div>
+
+    <!-- Zona de la frase -->
+    <div id="dialog-player-content" class="flex-1 flex flex-col items-center justify-center p-6">
+        <span id="dialog-player-speaker" class="text-lg font-black uppercase tracking-wider mb-4"></span>
+        <p id="dialog-player-phrase" class="text-3xl font-bold text-white text-center max-w-2xl"></p>
+        <p id="dialog-player-translation" class="text-lg text-slate-400 italic mt-4 text-center max-w-2xl"></p>
+    </div>
+
+    <!-- Barra de progreso -->
+    <div id="dialog-player-progress" class="h-1 bg-slate-800">
+        <div id="dialog-player-progress-fill" class="h-full bg-cyan-500 transition-all duration-300" style="width:0%"></div>
     </div>
 </div>
 </section>
@@ -1874,6 +1907,159 @@ function processImportDialog() {
             saveDatabase();
             renderConvPhrases();
         }
+// ==================== REPRODUCTOR DE DIÁLOGOS ====================
+let dialogPlayerState = {
+    phrases: [],
+    currentIndex: 0,
+    mode: 'role', // 'role' o 'full'
+    isPlaying: false,
+    playbackTimeout: null
+};
+
+function openDialogPlayer(mode) {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv || conv.phrases.length === 0) { alert('No hay frases en esta conversación.'); return; }
+
+    dialogPlayerState.phrases = [...conv.phrases];
+    dialogPlayerState.currentIndex = 0;
+    dialogPlayerState.mode = mode;
+    dialogPlayerState.isPlaying = false;
+
+    document.getElementById('dialog-player-modal').classList.remove('hidden');
+    document.getElementById('dialog-player-mode-label').innerText = mode === 'role' ? '🎭 Mi papel' : '🎤 Todo mi voz';
+    document.getElementById('dialog-player-total').innerText = dialogPlayerState.phrases.length;
+    document.getElementById('dialog-player-pause').value = 1;
+    document.getElementById('btn-dialog-play').textContent = '▶ Play';
+
+    updateDialogPlayerDisplay();
+}
+
+function closeDialogPlayer() {
+    stopDialogPlayback();
+    document.getElementById('dialog-player-modal').classList.add('hidden');
+}
+
+function toggleDialogPlayback() {
+    if (dialogPlayerState.isPlaying) {
+        pauseDialogPlayback();
+    } else {
+        startDialogPlayback();
+    }
+}
+
+function startDialogPlayback() {
+    dialogPlayerState.isPlaying = true;
+    document.getElementById('btn-dialog-play').textContent = '⏸ Pause';
+    playCurrentDialogPhrase();
+}
+
+function pauseDialogPlayback() {
+    dialogPlayerState.isPlaying = false;
+    document.getElementById('btn-dialog-play').textContent = '▶ Play';
+    if (dialogPlayerState.playbackTimeout) {
+        clearTimeout(dialogPlayerState.playbackTimeout);
+        dialogPlayerState.playbackTimeout = null;
+    }
+    window.speechSynthesis.cancel();
+}
+
+function stopDialogPlayback() {
+    dialogPlayerState.isPlaying = false;
+    document.getElementById('btn-dialog-play').textContent = '▶ Play';
+    if (dialogPlayerState.playbackTimeout) {
+        clearTimeout(dialogPlayerState.playbackTimeout);
+        dialogPlayerState.playbackTimeout = null;
+    }
+    window.speechSynthesis.cancel();
+    dialogPlayerState.currentIndex = 0;
+    updateDialogPlayerDisplay();
+    closeDialogPlayer();
+}
+
+async function playCurrentDialogPhrase() {
+    if (!dialogPlayerState.isPlaying) return;
+    if (dialogPlayerState.currentIndex >= dialogPlayerState.phrases.length) {
+        // Diálogo terminado
+        dialogPlayerState.isPlaying = false;
+        document.getElementById('btn-dialog-play').textContent = '▶ Play';
+        alert('✅ Diálogo completado.');
+        return;
+    }
+
+    updateDialogPlayerDisplay();
+    const phrase = dialogPlayerState.phrases[dialogPlayerState.currentIndex];
+    const mode = dialogPlayerState.mode;
+
+    // Decidir si usar grabación o TTS
+    let useRecording = false;
+    if (mode === 'full') {
+        // Intentar grabación para todas las frases
+        const blob = await getAudioBlob(phrase.id);
+        useRecording = !!blob;
+    } else if (mode === 'role') {
+        // Solo usar grabación si el hablante es "Ich" (o similar)
+        if (phrase.speaker && phrase.speaker.toLowerCase() === 'ich') {
+            const blob = await getAudioBlob(phrase.id);
+            useRecording = !!blob;
+        }
+    }
+
+    const onEnd = () => {
+        // Avanzar a la siguiente frase tras la pausa configurada
+        const pauseSec = parseFloat(document.getElementById('dialog-player-pause').value) * 1000;
+        dialogPlayerState.playbackTimeout = setTimeout(() => {
+            dialogPlayerState.currentIndex++;
+            playCurrentDialogPhrase();
+        }, pauseSec);
+    };
+
+    if (useRecording) {
+        const blob = await getAudioBlob(phrase.id);
+        playAudioBlob(blob, 1.0, onEnd);
+    } else {
+        speakText(phrase.de, 'de-DE', 0.9);
+        // speakText no tiene callback, así que estimamos duración y lanzamos onEnd después
+        const estimatedDuration = phrase.de.split(' ').length * 500; // 500ms por palabra aprox
+        dialogPlayerState.playbackTimeout = setTimeout(onEnd, estimatedDuration);
+    }
+}
+
+function nextDialogPhrase() {
+    const wasPlaying = dialogPlayerState.isPlaying;
+    if (wasPlaying) pauseDialogPlayback();
+    if (dialogPlayerState.currentIndex < dialogPlayerState.phrases.length - 1) {
+        dialogPlayerState.currentIndex++;
+    }
+    updateDialogPlayerDisplay();
+    if (wasPlaying) startDialogPlayback();
+}
+
+function prevDialogPhrase() {
+    const wasPlaying = dialogPlayerState.isPlaying;
+    if (wasPlaying) pauseDialogPlayback();
+    if (dialogPlayerState.currentIndex > 0) {
+        dialogPlayerState.currentIndex--;
+    }
+    updateDialogPlayerDisplay();
+    if (wasPlaying) startDialogPlayback();
+}
+
+function updateDialogPlayerDisplay() {
+    const phrase = dialogPlayerState.phrases[dialogPlayerState.currentIndex];
+    if (!phrase) return;
+    document.getElementById('dialog-player-index').innerText = dialogPlayerState.currentIndex + 1;
+    document.getElementById('dialog-player-speaker').innerText = phrase.speaker || '—';
+    // Color del hablante
+    const speakerEl = document.getElementById('dialog-player-speaker');
+    speakerEl.className = 'text-lg font-black uppercase tracking-wider mb-4 ' + 
+        (phrase.speaker && phrase.speaker.toLowerCase() === 'ich' ? 'text-emerald-400' : 'text-blue-400');
+    document.getElementById('dialog-player-phrase').innerText = phrase.de;
+    document.getElementById('dialog-player-translation').innerText = phrase.es || '';
+
+    // Progreso
+    const progress = ((dialogPlayerState.currentIndex) / dialogPlayerState.phrases.length) * 100;
+    document.getElementById('dialog-player-progress-fill').style.width = progress + '%';
+}
 
         function initiateConvTraining(direction) {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
