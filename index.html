@@ -5685,24 +5685,23 @@ function renderExerciseCard() {
     let masked = phrase.de;
     let answers = [];
 
-    // Buscar conectores en la frase
-    // 1. Dobles primero (para evitar que partes de un doble coincidan con uno simple)
+    // Buscar conectores dobles primero
+    let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
         const posFirst = lower.indexOf(d.first);
         const posSecond = lower.indexOf(d.second);
         if (posFirst !== -1 && posSecond !== -1 && posSecond > posFirst) {
-            // Reemplazar ambas partes
             masked = masked.replace(new RegExp(escapeRegex(d.first), 'i'), '______');
             masked = masked.replace(new RegExp(escapeRegex(d.second), 'i'), '______');
             answers.push(d.first, d.second);
-            break; // solo un conector doble por frase para simplificar
+            doubleFound = true;
+            break;
         }
     }
 
-    // 2. Simples (solo si no se encontró doble)
-    if (answers.length === 0) {
+    // Si no hay doble, buscar simple
+    if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
-            // Buscar el conector completo (puede incluir espacios para "um...zu" etc.)
             const regex = new RegExp(escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+'), 'i');
             const match = lower.match(regex);
             if (match) {
@@ -5719,20 +5718,17 @@ function renderExerciseCard() {
     document.getElementById('ex-card').innerHTML = `
         <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
         <p class="text-lg text-white font-bold mb-4">${masked}</p>
-        <div class="flex gap-2 mb-4">
-            <button onclick="speakText('${phrase.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs"><i class="fa-solid fa-volume-high"></i> Escuchar</button>
-        </div>
         <div class="flex gap-2">
             <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el conector que falta...">
-            <button onclick="checkExerciseAnswer([${answers.map(a => `'${a}'`).join(',')}])" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+            <button onclick="checkExerciseAnswer([${answers.map(a => `'${a}'`).join(',')}], '${phrase.de.replace(/'/g, "\\'")}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
         </div>
     `;
 }
 
-function checkExerciseAnswer(expectedAnswers) {
-    const input = document.getElementById('ex-answer').value.trim().toLowerCase();
-    // Para dos huecos, esperamos que el usuario escriba ambos separados por coma o espacio
-    const userAnswers = input.split(/[,\s]+/).filter(w => w.length > 0);
+function checkExerciseAnswer(expectedAnswers, originalPhrase) {
+    const input = document.getElementById('ex-answer');
+    const answer = input ? input.value.trim().toLowerCase() : '';
+    const userAnswers = answer.split(/[,\s]+/).filter(w => w.length > 0);
     let correct = false;
     if (expectedAnswers.length === 1) {
         correct = userAnswers.length === 1 && userAnswers[0] === expectedAnswers[0].toLowerCase();
@@ -5741,12 +5737,26 @@ function checkExerciseAnswer(expectedAnswers) {
                   userAnswers[0] === expectedAnswers[0].toLowerCase() && 
                   userAnswers[1] === expectedAnswers[1].toLowerCase();
     }
-    if (correct) {
-        exerciseScore++;
-        alert('✅ Correcto');
-    } else {
-        alert(`❌ Respuesta: ${expectedAnswers.join(' + ')}`);
-    }
+    
+    const phrase = exerciseQueue[exerciseIndex];
+    const feedback = correct 
+        ? '<span class="text-emerald-400 font-bold">✅ Correcto</span>' 
+        : `<span class="text-rose-400 font-bold">❌ Respuesta: ${expectedAnswers.join(' + ')}</span>`;
+    
+    document.getElementById('ex-card').innerHTML = `
+        <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
+        <p class="text-lg text-white font-bold mb-4">${originalPhrase}</p>
+        <div class="text-sm mb-4">${feedback}</div>
+        <div class="flex gap-2">
+            <button onclick="speakText('${originalPhrase.replace(/'/g, "\\'")}')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i> Escuchar frase</button>
+            <button onclick="nextExercise()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Siguiente ▶</button>
+        </div>
+    `;
+    
+    if (correct) exerciseScore++;
+}
+
+function nextExercise() {
     exerciseIndex++;
     renderExerciseCard();
 }
