@@ -1993,42 +1993,20 @@ function startReadingAudioRecording() {
 }
 
 function stopGuidedReading() {
-    // Si no hay texto cargado, volver a configuración sin más
-    if (guidedReadingState.words.length === 0) {
+    if (!guidedReadingState.words || guidedReadingState.words.length === 0) {
         backToConfigScreen();
         return;
     }
-
-    // Marcar como inactivo para detener el teleprompter y el reconocimiento
     guidedReadingState.isActive = false;
-
-    // Detener temporizadores
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
     if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
-
-    // Función que muestra los resultados después de detener la grabación
-    const finalizeAndShow = () => {
-        if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-            guidedReadingState.mediaRecorder.stop();
-            guidedReadingState.mediaRecorder.onstop = () => {
-                showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
-            };
-        } else {
-            showReadingResults(null);
-        }
-    };
-
-    // Detener el reconocimiento de voz y esperar el último resultado
-    if (guidedReadingState.recognition) {
-        guidedReadingState.recognition.onend = () => {
-            setTimeout(finalizeAndShow, 200);
-        };
-        try { guidedReadingState.recognition.stop(); } catch(e) {
-            guidedReadingState.recognition = null;
-            finalizeAndShow();
-        }
+    if (guidedReadingState.recognition) { try { guidedReadingState.recognition.abort(); } catch(e) {} guidedReadingState.recognition = null; }
+    
+    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+        guidedReadingState.mediaRecorder.onstop = () => showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
+        guidedReadingState.mediaRecorder.stop();
     } else {
-        finalizeAndShow();
+        showReadingResults(null);
     }
 }
 
