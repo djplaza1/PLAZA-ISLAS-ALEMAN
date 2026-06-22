@@ -299,7 +299,7 @@
         </details>
                 <div class="mt-6" id="conv-phrases-container"></div>
     </div>
-    <!-- MODAL IMPORTAR DIÁLOGO -->
+   <!-- MODAL IMPORTAR DIÁLOGO -->
 <div id="import-dialog-modal" class="hidden fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
     <div class="w-full max-w-2xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
         <div class="flex justify-between items-center">
@@ -309,13 +309,13 @@
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 space-y-2">
             <p class="font-bold text-amber-400">📋 Formato esperado:</p>
             <p class="text-slate-400">Cada línea debe tener el formato:</p>
-            <code class="block bg-slate-950 p-2 rounded text-emerald-300">Nombre del personaje: Frase en alemán</code>
+            <code class="block bg-slate-950 p-2 rounded text-emerald-300">Nombre del personaje: Frase en alemán // Traducción al español</code>
             <p class="text-slate-400 mt-2">Ejemplo:</p>
-            <pre class="bg-slate-950 p-2 rounded text-slate-300 text-xs overflow-x-auto">Herr Schneider: Guten Tag, wie heißen Sie?
-Daniel Plaza: Ich heiße Daniel Plaza.
-Herr Schneider: Woher kommen Sie?
-Daniel Plaza: Ich komme aus Spanien.</pre>
-            <p class="text-slate-500 italic">Puedes copiar este prompt y pedirle a una IA que te genere un diálogo completo.</p>
+            <pre class="bg-slate-950 p-2 rounded text-slate-300 text-xs overflow-x-auto">Herr Schneider: Guten Tag, wie heißen Sie? // Buenos días, ¿cómo se llama usted?
+Daniel Plaza: Ich heiße Daniel Plaza. // Me llamo Daniel Plaza.
+Herr Schneider: Woher kommen Sie? // ¿De dónde es usted?
+Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
+            <p class="text-slate-500 italic">Puedes copiar este prompt y pedirle a una IA que te genere un diálogo completo de nivel B1 alto / B2.</p>
             <button onclick="copyDialogPrompt()" class="mt-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-copy"></i> Copiar prompt para IA</button>
         </div>
         <textarea id="import-dialog-text" rows="10" class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-sm text-white font-mono" placeholder="Pega aquí el diálogo completo..."></textarea>
@@ -1704,13 +1704,15 @@ function closeImportDialog() {
 }
 
 function copyDialogPrompt() {
-    const prompt = `Genera un diálogo en alemán para practicar speaking. Formato:
-Nombre del personaje: Frase en alemán
-(No incluyas traducciones, solo las frases en alemán con el nombre del personaje seguido de dos puntos y la frase.)
+    const prompt = `Genera un diálogo en alemán de nivel B1 alto / B2 para practicar speaking.
+Formato exacto (una línea por intervención):
+Nombre del personaje: Frase en alemán // Traducción al español
+
 Ejemplo:
-Herr Müller: Wie heißen Sie?
-Ich: Ich heiße Anna.
-(Usa "Ich" para referirte a mí.)`;
+Herr Schneider: Guten Tag, wie heißen Sie? // Buenos días, ¿cómo se llama usted?
+Ich: Ich heiße Anna. // Me llamo Anna.
+
+Usa "Ich" para referirte a mí. Incluye siempre la traducción al español después de "//". Haz que el diálogo tenga al menos 10 intervenciones.`;
     navigator.clipboard.writeText(prompt).then(() => {
         alert('✅ Prompt copiado. Pégalo en tu IA favorita para generar el diálogo.');
     });
@@ -1727,15 +1729,21 @@ function processImportDialog() {
     for (let line of lines) {
         line = line.trim();
         if (!line) continue;
-        // Formatos aceptados: "Nombre: Frase", "Nombre - Frase", "Nombre: Frase (opcional)"
-        const match = line.match(/^(.+?)\s*[:|-]\s*(.+)$/);
+        // Formato: "Nombre: Frase en alemán // Traducción al español"
+        // También acepta "Nombre: Frase en alemán" (sin traducción)
+        const match = line.match(/^(.+?)\s*:\s*(.+)$/);
         if (match) {
             const speaker = match[1].trim();
-            const phrase = match[2].trim();
+            const phrasePart = match[2].trim();
+            // Separar alemán y español si existe "//"
+            const parts = phrasePart.split('//');
+            const de = parts[0].trim();
+            const es = parts[1] ? parts[1].trim() : '';
+            
             conv.phrases.push({
                 id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
-                de: phrase,
-                es: '',
+                de: de,
+                es: es,
                 speaker: speaker
             });
             added++;
