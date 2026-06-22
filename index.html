@@ -1974,13 +1974,13 @@ function startReadingAudioRecording() {
 }
 
 function stopGuidedReading() {
-    // Si nunca se inició la lectura, simplemente vuelve a la pantalla de configuración
-    if (!guidedReadingState.startTime) {
+    // Si no hay texto cargado, volver a configuración sin más
+    if (guidedReadingState.words.length === 0) {
         backToConfigScreen();
         return;
     }
 
-    // Marcar como inactivo solo para detener el teleprompter y el reconocimiento
+    // Marcar como inactivo para detener el teleprompter y el reconocimiento
     guidedReadingState.isActive = false;
 
     // Detener temporizadores
@@ -2002,7 +2002,6 @@ function stopGuidedReading() {
     // Detener el reconocimiento de voz y esperar el último resultado
     if (guidedReadingState.recognition) {
         guidedReadingState.recognition.onend = () => {
-            // Pequeño retraso para asegurar que el último onresult se haya procesado
             setTimeout(finalizeAndShow, 200);
         };
         try { guidedReadingState.recognition.stop(); } catch(e) {
