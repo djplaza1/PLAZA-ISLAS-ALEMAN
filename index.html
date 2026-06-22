@@ -1759,9 +1759,26 @@ function closeGuidedReading() {
     guidedReadingState.isActive = false;
 }
 function backToReadingScreen() {
-    // Oculta resultados y muestra la pantalla de lectura
+    // Limpiar cualquier residuo de la lectura anterior
+    guidedReadingState.isActive = false;
+    guidedReadingState.startTime = null;
+    guidedReadingState.recognizedText = '';
+    if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
+    if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
+    if (guidedReadingState.recognition) { try { guidedReadingState.recognition.abort(); } catch(e) {} guidedReadingState.recognition = null; }
+    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') { guidedReadingState.mediaRecorder.stop(); }
+
+    // Mostrar pantalla de lectura y ocultar resultados
     document.getElementById('guided-reading-results').classList.add('hidden');
     document.getElementById('guided-reading-reader').classList.remove('hidden');
+    // Resetear la vista del prompter al principio
+    guidedReadingState.currentIndex = 0;
+    updateGuidedReadingDisplay();
+    document.getElementById('guided-reading-progress-fill').style.width = '0%';
+    document.getElementById('guided-reading-timer').textContent = '00:00';
+    document.getElementById('guided-reading-wpm-live').textContent = '0';
+    document.getElementById('guided-reading-level-live').textContent = '—';
+    document.getElementById('btn-guided-start').classList.remove('hidden');
 }
 
 function backToConfigScreen() {
@@ -1806,16 +1823,18 @@ function acceptGuidedReadingText() {
 }
 
 function startGuidedReading() {
+        if (guidedReadingState.words.length === 0) return;
+    guidedReadingState.currentIndex = 0;
+    guidedReadingState.startTime = Date.now();
+    guidedReadingState.isActive = true;
+    guidedReadingState.recognizedText = '';
+
+    
     if (guidedReadingState.ttsActive) {
     window.speechSynthesis.cancel();
     guidedReadingState.ttsActive = false;
     guidedReadingState.ttsPaused = false;
 }
-    if (guidedReadingState.words.length === 0) return;
-    guidedReadingState.currentIndex = 0;
-    guidedReadingState.startTime = Date.now();
-    guidedReadingState.isActive = true;
-    guidedReadingState.recognizedText = '';
 
     // Ocultar botón Iniciar
     document.getElementById('btn-guided-start').classList.add('hidden');
