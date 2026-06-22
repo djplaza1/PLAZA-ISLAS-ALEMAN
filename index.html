@@ -811,6 +811,7 @@ async function saveToIDB(key, value) {
 
 let currentActiveIslandId = null;
 let selectedPhraseIds = new Set();
+let hideConvTranslations = false;
 let selectedChildIslandIds = new Set();
 let currentConversationId = null;
 let trainingQueue = [];
@@ -1682,17 +1683,104 @@ function renderIslandsGrid() {
         }
 
         function renderConvPhrases() {
-            const conv = appData.conversations.find(c => c.id === currentConversationId);
-            if (!conv) return;
-            const container = document.getElementById('conv-phrases-container');
-            container.innerHTML = '';
-            conv.phrases.forEach(p => {
-                const div = document.createElement('div');
-                div.className = "flex justify-between items-center py-2 border-b border-slate-700";
-                div.innerHTML = `<div><span class="font-bold text-emerald-400">${p.de}</span><span class="text-slate-400 ml-4 italic">${p.es}</span></div><button onclick="deleteConvPhrase('${p.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>`;
-                container.appendChild(div);
-            });
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+    const container = document.getElementById('conv-phrases-container');
+    container.innerHTML = '';
+
+    // Botón para ocultar/mostrar traducciones
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'mb-3 bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded-lg text-xs font-bold transition';
+    toggleBtn.innerHTML = hideConvTranslations ? '<i class="fa-solid fa-eye"></i> Mostrar ES' : '<i class="fa-solid fa-eye-slash"></i> Ocultar ES';
+    toggleBtn.onclick = () => { hideConvTranslations = !hideConvTranslations; renderConvPhrases(); };
+    container.appendChild(toggleBtn);
+
+    conv.phrases.forEach(p => {
+        const div = document.createElement('div');
+        div.className = "py-3 border-b border-slate-700 space-y-1";
+        
+        const esClass = hideConvTranslations ? 'hidden' : 'text-slate-400 italic text-sm';
+        const speakerBadge = p.speaker 
+            ? `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${p.speaker === 'Ich' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}">${p.speaker}</span>` 
+            : '';
+
+        div.innerHTML = `
+            <div class="flex items-center gap-2 mb-1">${speakerBadge}</div>
+            <div class="flex justify-between items-start gap-3">
+                <div class="flex-grow">
+                    <p class="font-bold text-emerald-400 text-lg">${p.de}</p>
+                    <p class="${esClass}">${p.es || ''}</p>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button class="record-conv-btn bg-slate-900 border border-slate-700 text-slate-300 hover:text-rose-400 p-2 text-xs rounded-lg transition" data-phrase-id="${p.id}" title="Grabar/Reproducir"><i class="fa-solid fa-microphone"></i></button>
+                    <button onclick="editConvPhrase('${p.id}')" class="text-slate-500 hover:text-amber-400 p-2 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
+                    <button onclick="deleteConvPhrase('${p.id}')" class="text-slate-600 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    // Asignar eventos a los botones de grabación
+    document.querySelectorAll('.record-conv-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const phraseId = btn.getAttribute('data-phrase-id');
+            const blob = await getAudioBlob(phraseId);
+            if (blob) {
+                // Si ya existe grabación, reproducirla
+                playAudioBlob(blob, 1.0);
+            } else {
+                // Si no, iniciar grabación
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    stopRecording();
+                }
+                const started = startRecording(phraseId);
+                if (started) {
+                    btn.innerHTML = '<i class="fa-solid fa-stop text-rose-400"></i>';
+                    btn.title = 'Grabando... (pulsa de nuevo para detener)';
+                    // Reasignar evento para detener
+                    btn.onclick = async (e2) => {
+                        e2.stopPropagation();
+                        stopRecording();
+                        btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                        btn.title = 'Grabar/Reproducir';
+                        renderConvPhrases(); // Refrescar para mostrar nuevo estado
+                    };
+                }
+            }
+        });
+    });
+
+    // Actualizar iconos de grabación según exista audio
+    document.querySelectorAll('.record-conv-btn').forEach(async (btn) => {
+        const phraseId = btn.getAttribute('data-phrase-id');
+        const blob = await getAudioBlob(phraseId);
+        if (blob) {
+            btn.innerHTML = '<i class="fa-solid fa-play text-cyan-400"></i>';
+            btn.title = 'Reproducir grabación';
         }
+    });
+}
+function editConvPhrase(phraseId) {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+    const phrase = conv.phrases.find(p => p.id === phraseId);
+    if (!phrase) return;
+    
+    const newDe = prompt('Frase en alemán:', phrase.de);
+    if (newDe === null) return;
+    const newEs = prompt('Traducción español:', phrase.es || '');
+    if (newEs === null) return;
+    const newSpeaker = prompt('Hablante:', phrase.speaker || '');
+    if (newSpeaker === null) return;
+    
+    phrase.de = newDe.trim();
+    phrase.es = newEs.trim();
+    phrase.speaker = newSpeaker.trim();
+    saveDatabase();
+    renderConvPhrases();
+}
 
         function importDialog() {
     document.getElementById('import-dialog-modal').classList.remove('hidden');
@@ -1704,15 +1792,22 @@ function closeImportDialog() {
 }
 
 function copyDialogPrompt() {
-    const prompt = `Genera un diálogo en alemán de nivel B1 alto / B2 para practicar speaking.
-Formato exacto (una línea por intervención):
+    const prompt = `Genera un diálogo en alemán de nivel B1+/B2 para practicar speaking. Sigue estas reglas estrictamente:
+
+1. Formato exacto (una línea por intervención):
 Nombre del personaje: Frase en alemán // Traducción al español
 
-Ejemplo:
-Herr Schneider: Guten Tag, wie heißen Sie? // Buenos días, ¿cómo se llama usted?
-Ich: Ich heiße Anna. // Me llamo Anna.
+2. Usa "Ich" para referirte a mí. Cuando me toque hablar, mi intervención debe ser larga (4-6 oraciones) con conectores B2 como: weil, deshalb, obwohl, trotzdem, außerdem, allerdings, hingegen, daher, darum, sodass, entweder... oder, sowohl... als auch, weder... noch, nicht nur... sondern auch. Quiero practicar conectores dobles y estructuras complejas.
 
-Usa "Ich" para referirte a mí. Incluye siempre la traducción al español después de "//". Haz que el diálogo tenga al menos 10 intervenciones.`;
+3. El examinador puede hacer preguntas o comentarios cortos.
+
+4. Incluye siempre la traducción al español después de "//".
+
+5. El diálogo debe tener al menos 12 intervenciones totales.
+
+Ejemplo:
+Herr Schneider: Guten Tag, stellen Sie sich bitte vor. // Buenos días, preséntese por favor.
+Ich: Ich heiße Daniel und bin 28 Jahre alt. Ich komme aus Spanien, aber seit vier Jahren wohne ich in Berlin, weil ich hier eine interessante Arbeitsstelle gefunden habe. Außerdem finde ich die deutsche Kultur sehr spannend, sodass ich viel Zeit damit verbringe, Deutsch zu lernen. Darum möchte ich heute meine Sprachkenntnisse verbessern. // Me llamo Daniel y tengo 28 años...`;
     navigator.clipboard.writeText(prompt).then(() => {
         alert('✅ Prompt copiado. Pégalo en tu IA favorita para generar el diálogo.');
     });
