@@ -299,6 +299,32 @@
         </details>
                 <div class="mt-6" id="conv-phrases-container"></div>
     </div>
+    <!-- MODAL IMPORTAR DIÁLOGO -->
+<div id="import-dialog-modal" class="hidden fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-xl font-black text-cyan-400">📥 Importar diálogo</h3>
+            <button onclick="closeImportDialog()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 space-y-2">
+            <p class="font-bold text-amber-400">📋 Formato esperado:</p>
+            <p class="text-slate-400">Cada línea debe tener el formato:</p>
+            <code class="block bg-slate-950 p-2 rounded text-emerald-300">Nombre del personaje: Frase en alemán</code>
+            <p class="text-slate-400 mt-2">Ejemplo:</p>
+            <pre class="bg-slate-950 p-2 rounded text-slate-300 text-xs overflow-x-auto">Herr Schneider: Guten Tag, wie heißen Sie?
+Daniel Plaza: Ich heiße Daniel Plaza.
+Herr Schneider: Woher kommen Sie?
+Daniel Plaza: Ich komme aus Spanien.</pre>
+            <p class="text-slate-500 italic">Puedes copiar este prompt y pedirle a una IA que te genere un diálogo completo.</p>
+            <button onclick="copyDialogPrompt()" class="mt-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-copy"></i> Copiar prompt para IA</button>
+        </div>
+        <textarea id="import-dialog-text" rows="10" class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-sm text-white font-mono" placeholder="Pega aquí el diálogo completo..."></textarea>
+        <div class="flex justify-end gap-2">
+            <button onclick="closeImportDialog()" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            <button onclick="processImportDialog()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Importar</button>
+        </div>
+    </div>
+</div>
 </section>
 
 <!-- MODAL DE LECTURA GUIADA (oculto por defecto) -->
@@ -1669,24 +1695,47 @@ function renderIslandsGrid() {
         }
 
         function importDialog() {
-    const text = prompt('Pega el diálogo completo (formato "Nombre: Frase"):');
-    if (!text) return;
+    document.getElementById('import-dialog-modal').classList.remove('hidden');
+    document.getElementById('import-dialog-text').focus();
+}
+
+function closeImportDialog() {
+    document.getElementById('import-dialog-modal').classList.add('hidden');
+}
+
+function copyDialogPrompt() {
+    const prompt = `Genera un diálogo en alemán para practicar speaking. Formato:
+Nombre del personaje: Frase en alemán
+(No incluyas traducciones, solo las frases en alemán con el nombre del personaje seguido de dos puntos y la frase.)
+Ejemplo:
+Herr Müller: Wie heißen Sie?
+Ich: Ich heiße Anna.
+(Usa "Ich" para referirte a mí.)`;
+    navigator.clipboard.writeText(prompt).then(() => {
+        alert('✅ Prompt copiado. Pégalo en tu IA favorita para generar el diálogo.');
+    });
+}
+
+function processImportDialog() {
+    const text = document.getElementById('import-dialog-text').value.trim();
+    if (!text) { alert('Pega algún texto.'); return; }
     const conv = appData.conversations.find(c => c.id === currentConversationId);
     if (!conv) return;
-    
+
     const lines = text.split('\n');
     let added = 0;
     for (let line of lines) {
         line = line.trim();
         if (!line) continue;
-        const match = line.match(/^(.+?):\s*(.+)$/);
+        // Formatos aceptados: "Nombre: Frase", "Nombre - Frase", "Nombre: Frase (opcional)"
+        const match = line.match(/^(.+?)\s*[:|-]\s*(.+)$/);
         if (match) {
             const speaker = match[1].trim();
             const phrase = match[2].trim();
             conv.phrases.push({
                 id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
                 de: phrase,
-                es: '', // La traducción puede añadirse después manualmente si se desea
+                es: '',
                 speaker: speaker
             });
             added++;
@@ -1695,9 +1744,11 @@ function renderIslandsGrid() {
     if (added > 0) {
         saveDatabase();
         renderConvPhrases();
+        closeImportDialog();
+        document.getElementById('import-dialog-text').value = '';
         alert(`✅ ${added} frases importadas del diálogo.`);
     } else {
-        alert('No se encontraron frases con el formato "Nombre: Frase".');
+        alert('No se encontraron frases con el formato esperado.');
     }
 }
         function addPhraseToConversation() {
