@@ -5612,11 +5612,158 @@ async function selectExerciseIslands() {
     }
 }
 
+// ==================== GENERADOR DE EJERCICIOS ====================
+let exerciseQueue = [];
+let exerciseIndex = 0;
+let exerciseScore = 0;
+
+// Conectores reconocidos (simples y dobles)
+const CONNECTORS_SIMPLE = ['weil', 'dass', 'obwohl', 'trotzdem', 'deshalb', 'daher', 'darum', 'außerdem', 'allerdings', 'hingegen', 'sodass', 'so...dass', 'wenn', 'als', 'damit', 'um...zu', 'indem', 'bevor', 'nachdem', 'während', 'bis', 'seit', 'ohne...zu', 'statt...zu', 'je...desto', 'je...umso'];
+const CONNECTORS_DOUBLE = [
+    { first: 'sowohl', second: 'als auch' },
+    { first: 'weder', second: 'noch' },
+    { first: 'nicht nur', second: 'sondern auch' },
+    { first: 'entweder', second: 'oder' },
+    { first: 'zwar', second: 'aber' }
+];
+
 function startExercises() {
     const source = document.getElementById('exercise-source').value;
     const category = document.getElementById('exercise-category').value;
     const count = parseInt(document.getElementById('exercise-count').value) || 10;
-    alert(`🔧 Generando ${count} ejercicios de "${category}" desde "${source}".\n(En el siguiente paso implementaremos la lógica.)`);
+
+    // Obtener frases según la fuente
+    let phrases = [];
+    if (source === 'all-islands') {
+        appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(i => phrases.push(...i.phrases));
+    } else if (source === 'selected-islands') {
+        if (exerciseSelectedIslandIds.length === 0) { alert('Selecciona al menos una isla.'); return; }
+        appData.islands.filter(i => exerciseSelectedIslandIds.includes(i.id)).forEach(i => phrases.push(...(i.phrases || [])));
+    } else if (source === 'all-conversations') {
+        (appData.conversations || []).forEach(c => phrases.push(...(c.phrases || [])));
+    } else if (source === 'vocabulary') {
+        // Para conectores no hay frases, avisar y salir
+        alert('La fuente "Vocabulario" no es adecuada para ejercicios de conectores. Elige islas o conversaciones.');
+        return;
+    }
+    if (phrases.length === 0) { alert('No hay frases disponibles en la fuente seleccionada.'); return; }
+
+    // Filtrar frases que contengan conectores (simples o dobles)
+    const connectorPhrases = phrases.filter(p => {
+        const lower = p.de.toLowerCase();
+        return CONNECTORS_SIMPLE.some(c => lower.includes(c.replace('...',' ').replace('...',' '))) ||
+               CONNECTORS_DOUBLE.some(c => lower.includes(c.first) && lower.includes(c.second));
+    });
+    if (connectorPhrases.length === 0) { alert('Ninguna frase contiene conectores reconocidos.'); return; }
+
+    // Mezclar y tomar la cantidad deseada
+    const shuffled = [...connectorPhrases].sort(() => Math.random() - 0.5);
+    exerciseQueue = shuffled.slice(0, count);
+    exerciseIndex = 0;
+    exerciseScore = 0;
+
+    // Ocultar panel de configuración y mostrar contenedor de ejercicios
+    document.getElementById('exercises-container').innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xs text-slate-400">Ejercicio <span id="ex-current">1</span>/${exerciseQueue.length}</span>
+                <span id="ex-score" class="text-xs text-emerald-400 font-bold">0 aciertos</span>
+            </div>
+            <div id="ex-card" class="space-y-4"></div>
+        </div>
+    `;
+    renderExerciseCard();
+}
+
+function renderExerciseCard() {
+    if (exerciseIndex >= exerciseQueue.length) {
+        showExerciseSummary();
+        return;
+    }
+    const phrase = exerciseQueue[exerciseIndex];
+    const lower = phrase.de.toLowerCase();
+    let masked = phrase.de;
+    let answers = [];
+
+    // Buscar conectores en la frase
+    // 1. Dobles primero (para evitar que partes de un doble coincidan con uno simple)
+    for (let d of CONNECTORS_DOUBLE) {
+        const posFirst = lower.indexOf(d.first);
+        const posSecond = lower.indexOf(d.second);
+        if (posFirst !== -1 && posSecond !== -1 && posSecond > posFirst) {
+            // Reemplazar ambas partes
+            masked = masked.replace(new RegExp(escapeRegex(d.first), 'i'), '______');
+            masked = masked.replace(new RegExp(escapeRegex(d.second), 'i'), '______');
+            answers.push(d.first, d.second);
+            break; // solo un conector doble por frase para simplificar
+        }
+    }
+
+    // 2. Simples (solo si no se encontró doble)
+    if (answers.length === 0) {
+        for (let c of CONNECTORS_SIMPLE) {
+            // Buscar el conector completo (puede incluir espacios para "um...zu" etc.)
+            const regex = new RegExp(escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+'), 'i');
+            const match = lower.match(regex);
+            if (match) {
+                masked = masked.replace(match[0], '______');
+                answers.push(match[0]);
+                break;
+            }
+        }
+    }
+
+    document.getElementById('ex-current').textContent = exerciseIndex + 1;
+    document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
+
+    document.getElementById('ex-card').innerHTML = `
+        <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
+        <p class="text-lg text-white font-bold mb-4">${masked}</p>
+        <div class="flex gap-2 mb-4">
+            <button onclick="speakText('${phrase.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs"><i class="fa-solid fa-volume-high"></i> Escuchar</button>
+        </div>
+        <div class="flex gap-2">
+            <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el conector que falta...">
+            <button onclick="checkExerciseAnswer([${answers.map(a => `'${a}'`).join(',')}])" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+        </div>
+    `;
+}
+
+function checkExerciseAnswer(expectedAnswers) {
+    const input = document.getElementById('ex-answer').value.trim().toLowerCase();
+    // Para dos huecos, esperamos que el usuario escriba ambos separados por coma o espacio
+    const userAnswers = input.split(/[,\s]+/).filter(w => w.length > 0);
+    let correct = false;
+    if (expectedAnswers.length === 1) {
+        correct = userAnswers.length === 1 && userAnswers[0] === expectedAnswers[0].toLowerCase();
+    } else if (expectedAnswers.length === 2) {
+        correct = userAnswers.length === 2 && 
+                  userAnswers[0] === expectedAnswers[0].toLowerCase() && 
+                  userAnswers[1] === expectedAnswers[1].toLowerCase();
+    }
+    if (correct) {
+        exerciseScore++;
+        alert('✅ Correcto');
+    } else {
+        alert(`❌ Respuesta: ${expectedAnswers.join(' + ')}`);
+    }
+    exerciseIndex++;
+    renderExerciseCard();
+}
+
+function showExerciseSummary() {
+    document.getElementById('exercises-container').innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 text-center">
+            <h3 class="text-xl font-black text-emerald-400 mb-4">✅ Ejercicio completado</h3>
+            <p class="text-lg text-white">Aciertos: ${exerciseScore}/${exerciseQueue.length}</p>
+            <button onclick="renderExercisesView()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Volver al panel</button>
+        </div>
+    `;
+    // Aquí podríamos guardar sesión en estadísticas
+}
+
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // --- ESTADÍSTICAS DE HABILIDAD ---
