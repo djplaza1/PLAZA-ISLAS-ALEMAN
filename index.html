@@ -5586,8 +5586,37 @@ function renderAdvancedStatistics() {
         });
     }
 }
+let exerciseSelectedIslandIds = [];
+
 function renderExercisesView() {
-    // De momento solo muestra el esqueleto; en los próximos pasos lo rellenaremos.
+    const source = document.getElementById('exercise-source');
+    const btn = document.getElementById('btn-select-exercise-islands');
+    if (source && btn) {
+        source.onchange = () => {
+            if (source.value === 'selected-islands') {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        };
+    }
+}
+
+async function selectExerciseIslands() {
+    const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
+    if (islandList.length === 0) { alert('No hay islas disponibles.'); return; }
+    const selected = await showIslandSelectionModalWithPreselection(islandList, exerciseSelectedIslandIds);
+    if (selected) {
+        exerciseSelectedIslandIds = selected.map(isl => isl.id);
+        document.getElementById('btn-select-exercise-islands').innerHTML = `Elegir islas (${exerciseSelectedIslandIds.length})`;
+    }
+}
+
+function startExercises() {
+    const source = document.getElementById('exercise-source').value;
+    const category = document.getElementById('exercise-category').value;
+    const count = parseInt(document.getElementById('exercise-count').value) || 10;
+    alert(`🔧 Generando ${count} ejercicios de "${category}" desde "${source}".\n(En el siguiente paso implementaremos la lógica.)`);
 }
 
 // --- ESTADÍSTICAS DE HABILIDAD ---
