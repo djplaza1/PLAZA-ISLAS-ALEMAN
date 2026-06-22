@@ -1936,7 +1936,7 @@ function startContinuousRecognition() {
 
     // Detener cualquier instancia previa
     if (guidedReadingState.recognition) {
-        try { guidedReadingState.recognition.stop(); } catch(e) {}
+        try { guidedReadingState.recognition.abort(); } catch(e) {}
     }
 
     guidedReadingState.recognition = new SpeechRecognition();
@@ -1954,17 +1954,8 @@ function startContinuousRecognition() {
     };
 
     guidedReadingState.recognition.onerror = (event) => {
-        if (event.error === 'no-speech') {
-            // Simplemente reintentamos si no se detecta voz
-            if (guidedReadingState.isActive) {
-                try { guidedReadingState.recognition.stop(); } catch(e) {}
-                setTimeout(() => {
-                    if (guidedReadingState.isActive) {
-                        try { guidedReadingState.recognition.start(); } catch(e) {}
-                    }
-                }, 300);
-            }
-        }
+        // Ignoramos errores de "no-speech" para no interrumpir
+        console.warn('Reconocimiento:', event.error);
     };
 
     try { guidedReadingState.recognition.start(); } catch(e) {}
@@ -1993,21 +1984,32 @@ function stopGuidedReading() {
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
     if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
 
-    // Forzar parada del reconocimiento
-    if (guidedReadingState.recognition) {
-        try { guidedReadingState.recognition.abort(); } catch(e) {}
-        guidedReadingState.recognition = null;
-    }
+    // Función que muestra resultados después de detener grabación y reconocimiento
+    const finalizeAndShow = () => {
+        if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
+            guidedReadingState.mediaRecorder.stop();
+            guidedReadingState.mediaRecorder.onstop = () => {
+                showReadingResults(new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' }));
+            };
+        } else {
+            showReadingResults(null);
+        }
+    };
 
-    // Detener grabación y mostrar resultados inmediatamente
-    if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
-        guidedReadingState.mediaRecorder.stop();
-        guidedReadingState.mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(guidedReadingState.audioChunks, { type: 'audio/webm' });
-            showReadingResults(audioBlob);
+    // Detener el reconocimiento de voz correctamente (stop espera el último resultado)
+    if (guidedReadingState.recognition) {
+        // Quitamos cualquier onend anterior y ponemos el nuestro
+        guidedReadingState.recognition.onend = () => {
+            // Pequeño delay para asegurar que el último onresult se haya procesado
+            setTimeout(finalizeAndShow, 200);
         };
+        try { guidedReadingState.recognition.stop(); } catch(e) {
+            // Si falla, forzamos finalización
+            guidedReadingState.recognition = null;
+            finalizeAndShow();
+        }
     } else {
-        showReadingResults(null);
+        finalizeAndShow();
     }
 }
 
