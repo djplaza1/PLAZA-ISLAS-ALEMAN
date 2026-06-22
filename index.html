@@ -2130,6 +2130,7 @@ function openDialogPlayer(mode) {
     dialogPlayerState.phrases = [...conv.phrases];
     dialogPlayerState.currentIndex = 0;
     dialogPlayerState.mode = mode;
+    dialogPlayerState.startTime = Date.now();
     dialogPlayerState.isPlaying = false;
 
     document.getElementById('dialog-player-modal').classList.remove('hidden');
@@ -2191,6 +2192,19 @@ async function playCurrentDialogPhrase() {
         // Diálogo terminado
         dialogPlayerState.isPlaying = false;
         document.getElementById('btn-dialog-play').textContent = '▶ Play';
+                // Registrar sesión en estadísticas
+        const durationSec = Math.round((Date.now() - (dialogPlayerState.startTime || Date.now())) / 1000);
+        appData.stats.sessions.push({
+            id: 'sess_' + Date.now(),
+            date: getTodayDateString(),
+            startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            duration: durationSec,
+            type: 'dialogue',
+            cardsCount: dialogPlayerState.phrases.length,
+            direction: dialogPlayerState.mode === 'role' ? 'mi papel' : 'todo mi voz',
+            quality: { mode: dialogPlayerState.mode }
+        });
+        saveDatabase();
         alert('✅ Diálogo completado.');
         return;
     }
