@@ -1868,11 +1868,17 @@ function processImportDialog() {
             const de = parts[0].trim();
             const es = parts[1] ? parts[1].trim() : '';
             
-            conv.phrases.push({
+                        conv.phrases.push({
                 id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
                 de: de,
                 es: es,
-                speaker: speaker
+                speaker: speaker,
+                interval: 1,
+                nextReviewDate: getTodayDateString(),
+                easeFactor: 2.5,
+                reps: 0,
+                lapses: 0,
+                lastQuality: 0
             });
             added++;
         }
@@ -1887,18 +1893,29 @@ function processImportDialog() {
         alert('No se encontraron frases con el formato esperado.');
     }
 }
-        function addPhraseToConversation() {
-            const de = document.getElementById('conv-phrase-de').value.trim();
-            const es = document.getElementById('conv-phrase-es').value.trim();
-            if (!de || !es) return;
-            const conv = appData.conversations.find(c => c.id === currentConversationId);
-            if (!conv) return;
-            conv.phrases.push({ id: 'p_' + Date.now(), de, es });
-            saveDatabase();
-            document.getElementById('conv-phrase-de').value = '';
-            document.getElementById('conv-phrase-es').value = '';
-            renderConvPhrases();
-        }
+      function addPhraseToConversation() {
+    const de = document.getElementById('conv-phrase-de').value.trim();
+    const es = document.getElementById('conv-phrase-es').value.trim();
+    if (!de || !es) return;
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+    conv.phrases.push({
+        id: 'p_' + Date.now(),
+        de,
+        es,
+        speaker: 'Ich', // Por defecto, el hablante eres tú
+        interval: 1,
+        nextReviewDate: getTodayDateString(),
+        easeFactor: 2.5,
+        reps: 0,
+        lapses: 0,
+        lastQuality: 0
+    });
+    saveDatabase();
+    document.getElementById('conv-phrase-de').value = '';
+    document.getElementById('conv-phrase-es').value = '';
+    renderConvPhrases();
+}
 
         function deleteConvPhrase(phraseId) {
             const conv = appData.conversations.find(c => c.id === currentConversationId);
