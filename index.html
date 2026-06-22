@@ -282,10 +282,11 @@
     </button>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
         <h2 id="conv-detail-title" class="text-2xl font-black text-cyan-400 mb-4"></h2>
-        <div class="flex gap-4 flex-wrap mb-6">
+                <div class="flex gap-4 flex-wrap mb-6">
             <button id="btn-train-conv-normal" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Producción (ES➔DE)</button>
             <button id="btn-train-conv-inverse" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition">Comprensión (DE➔ES)</button>
             <button onclick="openGuidedReading()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-book-open-reader"></i> Lectura Guiada</button>
+            <button onclick="importDialog()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-file-import"></i> Importar diálogo</button>
             <button onclick="deleteConversation()" class="bg-rose-700 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
         </div>
         <details class="bg-slate-900/40 border border-slate-700/60 rounded-xl p-4">
@@ -296,8 +297,9 @@
             </div>
             <button onclick="addPhraseToConversation()" class="mt-3 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition">Guardar</button>
         </details>
-        <div class="mt-6" id="conv-phrases-container"></div>
+                <div class="mt-6" id="conv-phrases-container"></div>
     </div>
+</section>
 
 <!-- MODAL DE LECTURA GUIADA (oculto por defecto) -->
 <div id="guided-reading-modal" class="hidden fixed inset-0 z-[300] bg-black flex flex-col">
@@ -1666,6 +1668,38 @@ function renderIslandsGrid() {
             });
         }
 
+        function importDialog() {
+    const text = prompt('Pega el diálogo completo (formato "Nombre: Frase"):');
+    if (!text) return;
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+    
+    const lines = text.split('\n');
+    let added = 0;
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+        const match = line.match(/^(.+?):\s*(.+)$/);
+        if (match) {
+            const speaker = match[1].trim();
+            const phrase = match[2].trim();
+            conv.phrases.push({
+                id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                de: phrase,
+                es: '', // La traducción puede añadirse después manualmente si se desea
+                speaker: speaker
+            });
+            added++;
+        }
+    }
+    if (added > 0) {
+        saveDatabase();
+        renderConvPhrases();
+        alert(`✅ ${added} frases importadas del diálogo.`);
+    } else {
+        alert('No se encontraron frases con el formato "Nombre: Frase".');
+    }
+}
         function addPhraseToConversation() {
             const de = document.getElementById('conv-phrase-de').value.trim();
             const es = document.getElementById('conv-phrase-es').value.trim();
