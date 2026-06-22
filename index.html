@@ -193,6 +193,8 @@
                 </button>
                 <button onclick="switchView('stats')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-chart-bar text-amber-400"></i> Estadísticas
+                    <button onclick="switchView('exercises')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-dumbbell text-green-400"></i> Ejercicios
                 </button>
                 <button onclick="switchView('sync')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-rotate text-purple-400"></i> Sync
@@ -1452,6 +1454,7 @@ async function saveDatabase() {
             else if (viewName === 'conversations') renderConversationsList();
            else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
             else if (viewName === 'stats') renderAdvancedStatistics();
+            else if (viewName === 'exercises') renderExercisesView();
             if (viewName !== 'training') {
                 if (sessionActive) pauseTrainingTimer();
                 sessionActive = false;
