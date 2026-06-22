@@ -1974,17 +1974,20 @@ function startReadingAudioRecording() {
 }
 
 function stopGuidedReading() {
-    if (!guidedReadingState.isActive) {
+    // Si nunca se inició la lectura, simplemente vuelve a la pantalla de configuración
+    if (!guidedReadingState.startTime) {
         backToConfigScreen();
         return;
     }
+
+    // Marcar como inactivo solo para detener el teleprompter y el reconocimiento
     guidedReadingState.isActive = false;
 
     // Detener temporizadores
     if (guidedReadingState.intervalId) { clearInterval(guidedReadingState.intervalId); guidedReadingState.intervalId = null; }
     if (guidedReadingState.timerInterval) { clearInterval(guidedReadingState.timerInterval); guidedReadingState.timerInterval = null; }
 
-    // Función que muestra resultados después de detener grabación y reconocimiento
+    // Función que muestra los resultados después de detener la grabación
     const finalizeAndShow = () => {
         if (guidedReadingState.mediaRecorder && guidedReadingState.mediaRecorder.state === 'recording') {
             guidedReadingState.mediaRecorder.stop();
@@ -1996,15 +1999,13 @@ function stopGuidedReading() {
         }
     };
 
-    // Detener el reconocimiento de voz correctamente (stop espera el último resultado)
+    // Detener el reconocimiento de voz y esperar el último resultado
     if (guidedReadingState.recognition) {
-        // Quitamos cualquier onend anterior y ponemos el nuestro
         guidedReadingState.recognition.onend = () => {
-            // Pequeño delay para asegurar que el último onresult se haya procesado
+            // Pequeño retraso para asegurar que el último onresult se haya procesado
             setTimeout(finalizeAndShow, 200);
         };
         try { guidedReadingState.recognition.stop(); } catch(e) {
-            // Si falla, forzamos finalización
             guidedReadingState.recognition = null;
             finalizeAndShow();
         }
