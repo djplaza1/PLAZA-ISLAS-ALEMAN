@@ -359,6 +359,26 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
         <div id="dialog-player-progress-fill" class="h-full bg-cyan-500 transition-all duration-300" style="width:0%"></div>
     </div>
 </div>
+<!-- MODAL EJERCICIOS -->
+<div id="exercises-modal" class="hidden fixed inset-0 z-[400] bg-black/90 flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-black text-orange-400">🧩 Ejercicios</h3>
+            <button onclick="closeExercises()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div id="exercises-menu" class="space-y-4">
+            <button onclick="startOrderingExercise()" class="w-full bg-slate-700 hover:bg-slate-600 p-4 rounded-xl text-left">
+                <span class="text-lg font-bold text-white block">📋 Ordenar diálogo</span>
+                <span class="text-xs text-slate-400">Coloca las frases en el orden correcto para reconstruir el diálogo.</span>
+            </button>
+            <button onclick="startGapFillExercise()" class="w-full bg-slate-700 hover:bg-slate-600 p-4 rounded-xl text-left">
+                <span class="text-lg font-bold text-white block">✏️ Rellenar huecos</span>
+                <span class="text-xs text-slate-400">Completa las palabras clave que faltan en cada frase.</span>
+            </button>
+        </div>
+        <div id="exercises-area" class="hidden flex-1 flex flex-col"></div>
+    </div>
+</div>
 </section>
 
 <!-- MODAL DE LECTURA GUIADA (oculto por defecto) -->
@@ -1928,6 +1948,138 @@ function processImportDialog() {
             saveDatabase();
             renderConvPhrases();
         }
+// ==================== EJERCICIOS DE RECONSTRUCCIÓN ====================
+function openExercises() {
+    document.getElementById('exercises-modal').classList.remove('hidden');
+    document.getElementById('exercises-menu').classList.remove('hidden');
+    document.getElementById('exercises-area').classList.add('hidden');
+    document.getElementById('exercises-area').innerHTML = '';
+}
+
+function closeExercises() {
+    document.getElementById('exercises-modal').classList.add('hidden');
+}
+
+// --- ORDENAR DIÁLOGO ---
+let orderingExercise = { phrases: [], userOrder: [] };
+
+function startOrderingExercise() {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv || conv.phrases.length < 2) { alert('Necesitas al menos 2 frases.'); return; }
+    orderingExercise.phrases = [...conv.phrases].sort(() => Math.random() - 0.5);
+    orderingExercise.userOrder = [];
+    renderOrderingExercise();
+}
+
+function renderOrderingExercise() {
+    const area = document.getElementById('exercises-area');
+    area.classList.remove('hidden');
+    document.getElementById('exercises-menu').classList.add('hidden');
+    area.innerHTML = `
+        <p class="text-xs text-slate-400 mb-3">Haz clic en las frases en el orden correcto:</p>
+        <div id="ordering-phrases" class="flex flex-wrap gap-2 mb-4"></div>
+        <div id="ordering-user" class="bg-slate-900 p-3 rounded-xl min-h-[60px] mb-4 space-y-1"></div>
+        <div class="flex gap-2">
+            <button onclick="undoLastOrdered()" class="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs font-bold">↩ Deshacer</button>
+            <button onclick="checkOrdering()" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-xs font-bold">✅ Comprobar</button>
+            <button onclick="closeExercises()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs">Salir</button>
+        </div>
+    `;
+    const phrasesDiv = document.getElementById('ordering-phrases');
+    orderingExercise.phrases.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded text-sm text-left';
+        btn.innerText = `${p.speaker ? p.speaker + ': ' : ''}${p.de}`;
+        btn.onclick = () => {
+            orderingExercise.userOrder.push(p);
+            orderingExercise.phrases = orderingExercise.phrases.filter(x => x.id !== p.id);
+            renderOrderingExercise();
+        };
+        phrasesDiv.appendChild(btn);
+    });
+    const userDiv = document.getElementById('ordering-user');
+    orderingExercise.userOrder.forEach(p => {
+        userDiv.innerHTML += `<div class="text-emerald-400 text-sm">${p.speaker ? p.speaker + ': ' : ''}${p.de}</div>`;
+    });
+}
+
+function undoLastOrdered() {
+    if (orderingExercise.userOrder.length > 0) {
+        const last = orderingExercise.userOrder.pop();
+        orderingExercise.phrases.push(last);
+        renderOrderingExercise();
+    }
+}
+
+function checkOrdering() {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    const original = conv.phrases;
+    let correct = 0;
+    const total = original.length;
+    for (let i = 0; i < Math.min(original.length, orderingExercise.userOrder.length); i++) {
+        if (original[i].id === orderingExercise.userOrder[i].id) correct++;
+    }
+    alert(`Has acertado ${correct} de ${total} frases (${Math.round(correct/total*100)}%).`);
+}
+
+// --- RELLENAR HUECOS ---
+let gapExercise = { phrases: [], current: 0, score: 0 };
+
+function startGapFillExercise() {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv || conv.phrases.length === 0) { alert('No hay frases.'); return; }
+    gapExercise.phrases = [...conv.phrases];
+    gapExercise.current = 0;
+    gapExercise.score = 0;
+    renderGapExercise();
+}
+
+function renderGapExercise() {
+    const area = document.getElementById('exercises-area');
+    area.classList.remove('hidden');
+    document.getElementById('exercises-menu').classList.add('hidden');
+    if (gapExercise.current >= gapExercise.phrases.length) {
+        area.innerHTML = `
+            <p class="text-xl text-center text-emerald-400 font-black mb-4">✅ Ejercicio completado</p>
+            <p class="text-center text-white text-lg">Puntuación: ${gapExercise.score}/${gapExercise.phrases.length}</p>
+            <button onclick="closeExercises()" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold">Salir</button>
+        `;
+        return;
+    }
+    const p = gapExercise.phrases[gapExercise.current];
+    const words = p.de.split(' ');
+    // Elegir una palabra larga o conector para ocultar
+    const candidates = words.filter(w => w.length > 3 && !w.match(/^[.,!?;:()]/));
+    if (candidates.length === 0) {
+        gapExercise.current++;
+        renderGapExercise();
+        return;
+    }
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    const masked = p.de.replace(chosen, '______');
+    area.innerHTML = `
+        <p class="text-xs text-slate-400 mb-2">Frase ${gapExercise.current+1} de ${gapExercise.phrases.length}</p>
+        <p class="text-lg text-white mb-4">${masked}</p>
+        <input type="text" id="gap-answer" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white mb-4" placeholder="Escribe la palabra que falta">
+        <div class="flex gap-2">
+            <button onclick="checkGapAnswer('${chosen}')" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded text-xs font-bold">✅ Comprobar</button>
+            <button onclick="closeExercises()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs">Salir</button>
+        </div>
+    `;
+}
+
+function checkGapAnswer(correct) {
+    const answer = document.getElementById('gap-answer').value.trim();
+    if (answer.toLowerCase() === correct.toLowerCase()) {
+        gapExercise.score++;
+        alert('✅ Correcto');
+    } else {
+        alert(`❌ La respuesta era: ${correct}`);
+    }
+    gapExercise.current++;
+    renderGapExercise();
+}
+
 function startConvSRSReview() {
     const conv = appData.conversations.find(c => c.id === currentConversationId);
     if (!conv || conv.phrases.length === 0) return;
