@@ -1737,8 +1737,15 @@ function renderIslandsGrid() {
             ? `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${p.speaker === 'Ich' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}">${p.speaker}</span>` 
             : '';
 
+        // Badge SRS (última calidad)
+        const srsColors = ['', 'bg-rose-600', 'bg-amber-500', 'bg-emerald-500', 'bg-blue-500'];
+        const srsLabels = ['', 'Otra vez', 'Difícil', 'Bien', 'Fácil'];
+        const srsBadge = (p.lastQuality && p.lastQuality > 0) 
+            ? `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full text-white ${srsColors[p.lastQuality]}">${srsLabels[p.lastQuality]}</span>`
+            : '';
+
         div.innerHTML = `
-            <div class="flex items-center gap-2 mb-1">${speakerBadge}</div>
+            <div class="flex items-center gap-2 mb-1">${speakerBadge} ${srsBadge}</div>
             <div class="flex justify-between items-start gap-3">
                 <div class="flex-grow">
                     <p class="font-bold text-emerald-400 text-lg">${p.de}</p>
@@ -1754,17 +1761,15 @@ function renderIslandsGrid() {
         container.appendChild(div);
     });
 
-    // Asignar eventos a los botones de grabación
+    // Asignar eventos a los botones de grabación (sin cambios)
     document.querySelectorAll('.record-conv-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const phraseId = btn.getAttribute('data-phrase-id');
             const blob = await getAudioBlob(phraseId);
             if (blob) {
-                // Si ya existe grabación, reproducirla
                 playAudioBlob(blob, 1.0);
             } else {
-                // Si no, iniciar grabación
                 if (mediaRecorder && mediaRecorder.state === 'recording') {
                     stopRecording();
                 }
@@ -1772,20 +1777,18 @@ function renderIslandsGrid() {
                 if (started) {
                     btn.innerHTML = '<i class="fa-solid fa-stop text-rose-400"></i>';
                     btn.title = 'Grabando... (pulsa de nuevo para detener)';
-                    // Reasignar evento para detener
                     btn.onclick = async (e2) => {
                         e2.stopPropagation();
                         stopRecording();
                         btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
                         btn.title = 'Grabar/Reproducir';
-                        renderConvPhrases(); // Refrescar para mostrar nuevo estado
+                        renderConvPhrases();
                     };
                 }
             }
         });
     });
 
-    // Actualizar iconos de grabación según exista audio
     document.querySelectorAll('.record-conv-btn').forEach(async (btn) => {
         const phraseId = btn.getAttribute('data-phrase-id');
         const blob = await getAudioBlob(phraseId);
@@ -1924,6 +1927,40 @@ function processImportDialog() {
             saveDatabase();
             renderConvPhrases();
         }
+function startConvSRSReview() {
+    const conv = appData.conversations.find(c => c.id === currentConversationId);
+    if (!conv || conv.phrases.length === 0) return;
+    const today = getTodayDateString();
+    let reviewPhrases = conv.phrases.filter(p => !p.nextReviewDate || p.nextReviewDate <= today);
+    if (reviewPhrases.length === 0) {
+        alert("🎉 ¡No hay frases pendientes de repaso en esta conversación!");
+        return;
+    }
+    reviewPhrases.sort((a, b) => (a.lastQuality || 0) - (b.lastQuality || 0));
+    const MAX = 20;
+    if (reviewPhrases.length > MAX) reviewPhrases = reviewPhrases.slice(0, MAX);
+    const virtualId = 'conv_srs_' + conv.id;
+    appData.islands = appData.islands.filter(isl => isl.id !== virtualId);
+    appData.islands.push({
+        id: virtualId,
+        name: '🧠 SRS ' + conv.name,
+        phrases: reviewPhrases.map(p => ({
+            id: p.id, de: p.de, es: p.es, tags: '',
+            starsGrammarNormal: 0, starsFluencyNormal: 0,
+            starsGrammarInverse: 0, starsFluencyInverse: 0,
+            isFavorite: false, isFocus: false,
+            interval: p.interval || 1,
+            nextReviewDate: p.nextReviewDate || today,
+            easeFactor: p.easeFactor || 2.5
+        })),
+        type: 'island',
+        parentId: null
+    });
+    saveDatabase();
+    const direction = confirm('¿Modo Producción (ES→DE)? Pulsa Cancelar para Comprensión (DE→ES).') ? 'normal' : 'inverse';
+    initiateTrainingSession(virtualId, direction);
+}
+
 // ==================== REPRODUCTOR DE DIÁLOGOS ====================
 let dialogPlayerState = {
     phrases: [],
@@ -4706,6 +4743,22 @@ function executePlaybackChain() {
                 }
             });
             saveDatabase();
+                const convMatch = currentActiveIslandId?.startsWith('conv_srs_');
+    if (convMatch) {
+        const convId = currentActiveIslandId.replace('conv_srs_', '');
+        const conv = appData.conversations.find(c => c.id === convId);
+        if (conv) {
+            const convPhrase = conv.phrases.find(p => p.id === currentPhrase.id);
+            if (convPhrase) {
+                convPhrase.interval = target.interval;
+                convPhrase.nextReviewDate = target.nextReviewDate;
+                convPhrase.easeFactor = target.easeFactor;
+                convPhrase.reps = (convPhrase.reps || 0) + 1;
+                if (localGrammarRating <= 2) convPhrase.lapses = (convPhrase.lapses || 0) + 1;
+                convPhrase.lastQuality = localGrammarRating;
+            }
+        }
+    }
             advanceAuto();
             // Registrar sesión de frase
 appData.stats.sessions.push({
