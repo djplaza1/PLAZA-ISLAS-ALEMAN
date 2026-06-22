@@ -5685,28 +5685,34 @@ function renderExerciseCard() {
     let masked = phrase.de;
     let answers = [];
 
-    // Buscar conectores dobles primero
+    // Buscar conectores dobles primero (insensible a mayúsculas)
     let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
-        const posFirst = lower.indexOf(d.first);
-        const posSecond = lower.indexOf(d.second);
-        if (posFirst !== -1 && posSecond !== -1 && posSecond > posFirst) {
-            masked = masked.replace(new RegExp(escapeRegex(d.first), 'i'), '______');
-            masked = masked.replace(new RegExp(escapeRegex(d.second), 'i'), '______');
+        const regexFirst = new RegExp(escapeRegex(d.first), 'i');
+        const regexSecond = new RegExp(escapeRegex(d.second), 'i');
+        const matchFirst = lower.match(regexFirst);
+        const matchSecond = lower.match(regexSecond);
+        if (matchFirst && matchSecond && matchSecond.index > matchFirst.index) {
+            // Reemplazar en masked usando los mismos regex (insensibles)
+            masked = masked.replace(regexFirst, '______');
+            masked = masked.replace(regexSecond, '______');
             answers.push(d.first, d.second);
             doubleFound = true;
             break;
         }
     }
 
-    // Si no hay doble, buscar simple
+    // Si no hay doble, buscar simple (insensible a mayúsculas)
     if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
-            const regex = new RegExp(escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+'), 'i');
+            // Construir patrón: manejar conectores con espacios o '...'
+            let pattern = escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+');
+            const regex = new RegExp(pattern, 'i');
             const match = lower.match(regex);
             if (match) {
-                masked = masked.replace(match[0], '______');
-                answers.push(match[0]);
+                // Reemplazar en masked usando el mismo regex (insensible)
+                masked = masked.replace(regex, '______');
+                answers.push(match[0]); // Guardamos la versión real (con mayúsculas/minúsculas) para mostrar después
                 break;
             }
         }
