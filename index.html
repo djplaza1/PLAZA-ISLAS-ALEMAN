@@ -5685,15 +5685,23 @@ function renderExerciseCard() {
     let masked = phrase.de;
     let answers = [];
 
-    // Buscar conectores dobles primero (insensible a mayúsculas)
+    // --- Conectores dobles (insensible a mayúsculas + límites de palabra) ---
     let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
-        const regexFirst = new RegExp(escapeRegex(d.first), 'i');
-        const regexSecond = new RegExp(escapeRegex(d.second), 'i');
+        // Construir patrón para la primera parte (puede contener espacios)
+        const firstPattern = d.first.includes(' ') 
+            ? '\\b' + escapeRegex(d.first).replace(/ /g, '\\s+') + '\\b'
+            : '\\b' + escapeRegex(d.first) + '\\b';
+        const secondPattern = d.second.includes(' ')
+            ? '\\b' + escapeRegex(d.second).replace(/ /g, '\\s+') + '\\b'
+            : '\\b' + escapeRegex(d.second) + '\\b';
+        
+        const regexFirst = new RegExp(firstPattern, 'i');
+        const regexSecond = new RegExp(secondPattern, 'i');
         const matchFirst = lower.match(regexFirst);
         const matchSecond = lower.match(regexSecond);
+        
         if (matchFirst && matchSecond && matchSecond.index > matchFirst.index) {
-            // Reemplazar en masked usando los mismos regex (insensibles)
             masked = masked.replace(regexFirst, '______');
             masked = masked.replace(regexSecond, '______');
             answers.push(d.first, d.second);
@@ -5702,17 +5710,26 @@ function renderExerciseCard() {
         }
     }
 
-    // Si no hay doble, buscar simple (insensible a mayúsculas)
+    // --- Conectores simples (insensible a mayúsculas + límites de palabra) ---
     if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
-            // Construir patrón: manejar conectores con espacios o '...'
-            let pattern = escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+');
+            let pattern;
+            if (c.includes('...')) {
+                // Conector discontinuo (ej. um...zu, je...desto)
+                // Reemplazamos '...' por '\s+\w+\s+' y ponemos límites de palabra alrededor
+                pattern = '\\b' + escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+') + '\\b';
+            } else if (c.includes(' ')) {
+                // Conector compuesto por varias palabras (ej. "nicht nur" ya es un doble, pero por si acaso)
+                pattern = '\\b' + escapeRegex(c).replace(/ /g, '\\s+') + '\\b';
+            } else {
+                // Palabra única
+                pattern = '\\b' + escapeRegex(c) + '\\b';
+            }
             const regex = new RegExp(pattern, 'i');
             const match = lower.match(regex);
             if (match) {
-                // Reemplazar en masked usando el mismo regex (insensible)
                 masked = masked.replace(regex, '______');
-                answers.push(match[0]); // Guardamos la versión real (con mayúsculas/minúsculas) para mostrar después
+                answers.push(match[0]);
                 break;
             }
         }
