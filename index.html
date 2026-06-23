@@ -5888,15 +5888,25 @@ function generateSeparableVerbExercises(phrases, count) {
 }
 
 function generateVerbPrepositionExercises(phrases, count) {
-    // Filtrar frases que contengan algún verbo con preposición fija
+    // Filtrar frases que contengan algún verbo con preposición fija (excluyendo falsos positivos con "preposición + zu")
     const filtered = phrases.filter(p => {
         const lower = p.de.toLowerCase();
         return VERB_PREPOSITIONS.some(vp => {
-            // Buscar el verbo (o parte de él) y la preposición en cualquier orden
+            // Verbo: deben aparecer todas las partes (ej. "sich freuen" -> "sich" y "freuen")
             const verbParts = vp.verb.split(' ');
             const verbFound = verbParts.every(part => lower.includes(part));
+            if (!verbFound) return false;
+            // Preposición: debe aparecer en la frase
             const prepFound = lower.includes(vp.preposition);
-            return verbFound && prepFound;
+            if (!prepFound) return false;
+            // Excluir falsos positivos: si la preposición va seguida de "zu" (prefijo separable), no vale
+            const prepZuPattern = new RegExp('\\b' + escapeRegex(vp.preposition) + '\\s+zu\\b', 'i');
+            if (prepZuPattern.test(lower)) return false;
+            // Adicional: para verbos como "arbeiten an", aseguramos que la preposición aparezca después del verbo
+            const verbPos = lower.lastIndexOf(verbParts[verbParts.length-1]); // última palabra del verbo
+            const prepPos = lower.indexOf(vp.preposition);
+            if (verbPos !== -1 && prepPos !== -1 && prepPos < verbPos) return false; // preposición antes del verbo
+            return true;
         });
     });
     if (filtered.length === 0) { alert('Ninguna frase contiene verbos con preposición fija.'); return; }
@@ -6036,25 +6046,24 @@ function renderVerbPrepositionCard() {
     }
     const phrase = exerciseQueue[exerciseIndex];
     const lower = phrase.de.toLowerCase();
-    // Buscar el primer verbo+preposición que coincida
+    // Elegir la primera combinación válida verbo+preposición (con las mismas reglas de filtrado)
     let chosenVP = null;
     let prepPos = -1;
     for (let vp of VERB_PREPOSITIONS) {
         const verbParts = vp.verb.split(' ');
-        const allVerbFound = verbParts.every(part => lower.includes(part));
-        if (!allVerbFound) continue;
-        // Buscar la preposición (debe aparecer después o en cualquier orden)
-        const idx = lower.indexOf(vp.preposition);
-        if (idx !== -1) {
-            // Asegurarse de que sea la preposición exacta (puede estar dentro de otra palabra)
-            const before = idx > 0 ? lower[idx-1] : ' ';
-            const after = idx+vp.preposition.length < lower.length ? lower[idx+vp.preposition.length] : ' ';
-            if (/\s/.test(before) && /\s/.test(after)) {
-                chosenVP = vp;
-                prepPos = idx;
-                break;
-            }
-        }
+        const verbFound = verbParts.every(part => lower.includes(part));
+        if (!verbFound) continue;
+        if (!lower.includes(vp.preposition)) continue;
+        // Excluir "preposición + zu"
+        const prepZuPattern = new RegExp('\\b' + escapeRegex(vp.preposition) + '\\s+zu\\b', 'i');
+        if (prepZuPattern.test(lower)) continue;
+        // La preposición debe aparecer después del verbo
+        const verbPos = lower.lastIndexOf(verbParts[verbParts.length-1]);
+        const prepIdx = lower.indexOf(vp.preposition);
+        if (verbPos !== -1 && prepIdx !== -1 && prepIdx < verbPos) continue;
+        chosenVP = vp;
+        prepPos = prepIdx;
+        break;
     }
     if (!chosenVP) {
         exerciseIndex++;
