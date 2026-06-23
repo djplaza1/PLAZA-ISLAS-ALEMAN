@@ -918,6 +918,7 @@ let activePlaybackTimeout = null;
 let sessionTimerInterval = null;
 let sessionStartTime = null;
 let sessionActive = false;
+let autoSaveCounter = 0;
 let totalSessionTime = 0; // Acumula los segundos de práctica de la sesión
 let autoSaveCounter = 0;
 let hideGermanList = false;
@@ -1550,7 +1551,8 @@ function updatePracticeTimerDisplay() {
         const secs = (elapsedTotal % 60).toString().padStart(2,'0');
         display.textContent = `${mins}:${secs}`;
 
-        // Guardado automático cada 30 segundos
+        // Guardado automático cada 30 segundos (protegido por si acaso)
+        if (typeof autoSaveCounter === 'undefined') autoSaveCounter = 0;
         autoSaveCounter++;
         if (autoSaveCounter >= 30) {
             trackNetPracticeTime();
