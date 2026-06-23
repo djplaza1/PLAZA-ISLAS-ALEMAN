@@ -1610,6 +1610,31 @@ function trackNetPracticeTime() {
     }
     sessionStartTime = now;
 }
+function endTrainingSession() {
+    console.log('endTrainingSession llamada. sessionPhraseCount:', sessionPhraseCount, 'totalSessionTime:', totalSessionTime);
+    if (sessionActive) trackNetPracticeTime();
+    if (sessionPhraseCount > 0 && totalSessionTime > 0) {
+        appData.stats.sessions.push({
+            id: 'sess_' + Date.now(),
+            date: getTodayDateString(),
+            startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            duration: totalSessionTime,
+            type: trainingDirection === 'normal' ? 'production' : 'comprehension',
+            cardsCount: sessionPhraseCount,
+            direction: trainingDirection
+        });
+        saveDatabase();
+    }
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+    }
+    sessionActive = false;
+    sessionStartTime = null;
+    totalSessionTime = 0;
+    sessionPhraseCount = 0;
+    updatePracticeTimerDisplay();
+}
 
 function exitTrainingSession() {
     endTrainingSession();
@@ -1672,31 +1697,7 @@ function submitPerformanceScores() {
     advanceAuto();
 }
 
-function endTrainingSession() {
-    console.log('endTrainingSession llamada. sessionPhraseCount:', sessionPhraseCount, 'totalSessionTime:', totalSessionTime);
-    if (sessionActive) trackNetPracticeTime();
-    if (sessionPhraseCount > 0 && totalSessionTime > 0) {
-        appData.stats.sessions.push({
-            id: 'sess_' + Date.now(),
-            date: getTodayDateString(),
-            startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            duration: totalSessionTime,
-            type: trainingDirection === 'normal' ? 'production' : 'comprehension',
-            cardsCount: sessionPhraseCount,
-            direction: trainingDirection
-        });
-        saveDatabase();
-    }
-    if (sessionTimerInterval) {
-        clearInterval(sessionTimerInterval);
-        sessionTimerInterval = null;
-    }
-    sessionActive = false;
-    sessionStartTime = null;
-    totalSessionTime = 0;
-    sessionPhraseCount = 0;
-    updatePracticeTimerDisplay();
-}
+
 
 // ==================== ISLAS ====================
 function createIsland() {
