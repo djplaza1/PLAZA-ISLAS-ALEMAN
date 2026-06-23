@@ -1517,97 +1517,173 @@ function stopAudioAndTimers() {
     // Ya NO ponemos sessionActive = false ni totalSessionTime = 0
 }
 
-        // Timer práctica
+ // ==================== REEMPLAZO COMPLETO DE FUNCIONES DEL TEMPORIZADOR ====================
+
+// Nueva variable global (añadir junto a las demás globales, al principio del <script>)
+let sessionPhraseCount = 0;
+
+// Sustituir startTrainingTimer
 function startTrainingTimer() {
-    // Si la sesión está activa, simplemente reanudamos el intervalo
+    // Si ya hay sesión activa, solo reanudamos el intervalo (sin reiniciar contadores)
     if (sessionActive) {
         if (sessionTimerInterval) clearInterval(sessionTimerInterval);
         sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
         return;
     }
-    // Si no hay sesión activa, la iniciamos
+    // Nueva sesión: inicializar tiempos y contador de frases
     sessionStartTime = Date.now();
     totalSessionTime = 0;
+    sessionPhraseCount = 0;               // ← nuevo
     sessionActive = true;
     sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
     updatePracticeTimerDisplay();
 }
-        function pauseTrainingTimer() {
-            if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
-            if (sessionActive && sessionStartTime) trackNetPracticeTime();
-            sessionActive = false;
-            sessionStartTime = null;
-            updatePracticeTimerDisplay();
-        }
+
+// Sustituir updatePracticeTimerDisplay (muestra el total acumulado)
 function updatePracticeTimerDisplay() {
     const display = document.getElementById('practice-timer-live');
     if (!display) return;
     
     if (sessionActive && sessionStartTime) {
-        const elapsedTotal = Math.floor((Date.now() - sessionStartTime) / 1000);
-        const mins = Math.floor(elapsedTotal / 60).toString().padStart(2,'0');
-        const secs = (elapsedTotal % 60).toString().padStart(2,'0');
+        // Calcular el tiempo actual del tramo (desde el último reset de sessionStartTime)
+        const segmentElapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+        // Tiempo total = acumulado anterior + tramo actual
+        const totalElapsed = totalSessionTime + segmentElapsed;
+        const mins = Math.floor(totalElapsed / 60).toString().padStart(2,'0');
+        const secs = (totalElapsed % 60).toString().padStart(2,'0');
         display.textContent = `${mins}:${secs}`;
 
-        // Guardado automático cada 30 segundos (protegido por si acaso)
+        // Guardado automático cada 30 segundos (mantiene dailyTime actualizado)
         if (typeof autoSaveCounter === 'undefined') autoSaveCounter = 0;
         autoSaveCounter++;
         if (autoSaveCounter >= 30) {
-            trackNetPracticeTime();
+            trackNetPracticeTime();      // acumula el tramo en totalSessionTime y reinicia sessionStartTime
             autoSaveCounter = 0;
         }
     } else {
-        display.textContent = '00:00';
+        // Sesión inactiva: mostrar el acumulado que haya quedado (útil tras pausa)
+        const totalElapsed = totalSessionTime;
+        const mins = Math.floor(totalElapsed / 60).toString().padStart(2,'0');
+        const secs = (totalElapsed % 60).toString().padStart(2,'0');
+        display.textContent = `${mins}:${secs}`;
     }
 }
-function trackNetPracticeTime() {
-    if (sessionStartTime) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - sessionStartTime) / 1000);
-        if (elapsed > 0) {
-            totalSessionTime += elapsed; // Acumulamos en vez de sumar directamente a dailyTime
-            const today = getTodayDateString();
-            appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
-            saveDatabase();
-            sessionStartTime = now; // Reiniciamos para el siguiente tramo
+
+// trackNetPracticeTime permanece igual (ya funciona bien acumulando en totalSessionTime)
+// No es necesario modificarla.
+
+// Sustituir exitTrainingSession para que guarde la sesión correctamente
+function exitTrainingSession() {
+    // Finalizar la sesión y guardar estadísticas
+    endTrainingSession();
+    
+    // Limpiar islas virtuales
+    if (currentActiveIslandId && 
+        (currentActiveIslandId.startsWith('conv_virtual_') || 
+         currentActiveIslandId === 'vocab_virtual' || 
+         currentActiveIslandId.startsWith('srs_review_'))) {
+        appData.islands = appData.islands.filter(isl => isl.id !== currentActiveIslandId);
+        saveDatabase();
+    }
+    switchView('islands');
+}
+
+// Sustituir submitPerformanceScores (ya no crea una sesión por frase)
+function submitPerformanceScores() {
+    if (localGrammarRating === 0 || localFluencyRating === 0) { 
+        alert("Asigna puntuación a ambos campos analíticos."); 
+        return; 
+    }
+    
+    const currentPhrase = trainingQueue[currentTrainIndex];
+    let target = null;
+    appData.islands.forEach(isl => {
+        const t = isl.phrases?.find(p => p.id === currentPhrase.id);
+        if (t) target = t;
+    });
+    
+    if (target) {
+        if (trainingDirection === 'normal') {
+            target.starsGrammarNormal = localGrammarRating;
+            target.starsFluencyNormal = localFluencyRating;
+        } else {
+            target.starsGrammarInverse = localGrammarRating;
+            target.starsFluencyInverse = localFluencyRating;
+        }
+        if (localGrammarRating <= 2) target.isFocus = true;
+        
+        // Ajustar SRS
+        if (localGrammarRating >= 4) {
+            target.interval = Math.min(target.interval * target.easeFactor, 365);
+        } else if (localGrammarRating === 3) {
+            target.interval = Math.max(1, target.interval);
+        } else {
+            target.interval = 1;
+        }
+        target.easeFactor = Math.max(1.3, target.easeFactor + (0.1 - (5 - localGrammarRating) * (0.08 + (5 - localGrammarRating) * 0.02)));
+        const d = new Date();
+        d.setDate(d.getDate() + Math.ceil(target.interval));
+        target.nextReviewDate = d.toISOString().split('T')[0];
+    }
+    
+    // Incrementar contador de frases de la sesión (en lugar de guardar una sesión nueva)
+    sessionPhraseCount++;
+    
+    saveDatabase();
+    
+    // Sincronizar SRS con conversación si la isla es virtual de conversación
+    const convMatch = currentActiveIslandId?.startsWith('conv_srs_');
+    if (convMatch) {
+        const convId = currentActiveIslandId.replace('conv_srs_', '');
+        const conv = appData.conversations.find(c => c.id === convId);
+        if (conv) {
+            const convPhrase = conv.phrases.find(p => p.id === currentPhrase.id);
+            if (convPhrase) {
+                convPhrase.interval = target?.interval || 1;
+                convPhrase.nextReviewDate = target?.nextReviewDate || getTodayDateString();
+                convPhrase.easeFactor = target?.easeFactor || 2.5;
+                convPhrase.reps = (convPhrase.reps || 0) + 1;
+                if (localGrammarRating <= 2) convPhrase.lapses = (convPhrase.lapses || 0) + 1;
+                convPhrase.lastQuality = localGrammarRating;
+            }
         }
     }
+    
+    advanceAuto();  // avanza a la siguiente frase (la lógica de fin de cola llamará a exitTrainingSession)
 }
-        function getTodayDateString() {
-            const d = new Date();
-            return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
-        }
-        function checkAndUpdateStreak() {
-            const today = getTodayDateString();
-            if (appData.stats.lastPracticeDate) {
-                if (appData.stats.lastPracticeDate === today) return;
-                const last = new Date(appData.stats.lastPracticeDate);
-                const now = new Date(today);
-                const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
-                if (diff > 1) appData.stats.streak = 0;
-            } else {
-                appData.stats.streak = 0;
-            }
-            saveDatabase();
-        }
-        function logRepetitionImpact() {
-            const today = getTodayDateString();
-            appData.stats.dailyRepetitions[today] = (appData.stats.dailyRepetitions[today] || 0) + 1;
-            
-            if (appData.stats.lastPracticeDate !== today) {
-                if (appData.stats.lastPracticeDate) {
-                    const last = new Date(appData.stats.lastPracticeDate);
-                    const now = new Date(today);
-                    const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
-                    if (diff === 1) appData.stats.streak++;
-                    else if (diff > 1) appData.stats.streak = 1;
-                } else {
-                    appData.stats.streak = 1;
-                }
-                appData.stats.lastPracticeDate = today;
-            }
-            saveDatabase();
-        }
+
+// NUEVA FUNCIÓN: finaliza la sesión y guarda una única entrada en estadísticas
+function endTrainingSession() {
+    // Acumular el último tramo de tiempo
+    if (sessionActive) {
+        trackNetPracticeTime();  // añade el tramo actual a totalSessionTime y dailyTime
+    }
+    
+    // Solo guardar si realmente hubo actividad (frases evaluadas)
+    if (sessionPhraseCount > 0 && totalSessionTime > 0) {
+        appData.stats.sessions.push({
+            id: 'sess_' + Date.now(),
+            date: getTodayDateString(),
+            startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            duration: totalSessionTime,
+            type: trainingDirection === 'normal' ? 'production' : 'comprehension',
+            cardsCount: sessionPhraseCount,
+            direction: trainingDirection
+        });
+        saveDatabase();
+    }
+    
+    // Detener temporizador y resetear estado
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+    }
+    sessionActive = false;
+    sessionStartTime = null;
+    totalSessionTime = 0;
+    sessionPhraseCount = 0;
+    updatePracticeTimerDisplay();  // pondrá 00:00
+}
 
 // ==================== ISLAS ====================
 function createIsland() {
