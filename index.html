@@ -1673,6 +1673,7 @@ function submitPerformanceScores() {
 }
 
 function endTrainingSession() {
+    console.log('endTrainingSession llamada. sessionPhraseCount:', sessionPhraseCount, 'totalSessionTime:', totalSessionTime);
     if (sessionActive) trackNetPracticeTime();
     if (sessionPhraseCount > 0 && totalSessionTime > 0) {
         appData.stats.sessions.push({
@@ -5020,6 +5021,7 @@ function executePlaybackChain() {
         }
 
         function submitPerformanceScores() {
+            console.log('submitPerformanceScores llamada. Frase actual:', trainingQueue[currentTrainIndex]?.id);
             if (localGrammarRating === 0 || localFluencyRating === 0) { alert("Asigna puntuación a ambos campos analíticos."); return; }
             
             const currentPhrase = trainingQueue[currentTrainIndex];
