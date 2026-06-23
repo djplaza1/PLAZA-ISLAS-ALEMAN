@@ -4808,6 +4808,7 @@ function exitTrainingSession() {
 }
 
 function setupTrainingSlide() {
+    if (sessionActive) sessionPhraseCount++;
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
     window.speechSynthesis.cancel();
     const phrase = trainingQueue[currentTrainIndex];
