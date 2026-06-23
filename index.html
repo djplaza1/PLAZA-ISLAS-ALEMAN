@@ -1502,36 +1502,35 @@ async function saveDatabase() {
         }
 
 function stopAudioAndTimers() {
-    // Detener cualquier TTS pendiente
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
     window.speechSynthesis.cancel();
-    
-    // Detener cualquier grabación en reproducción (Audio blob)
     if (currentAudioElement) {
         currentAudioElement.pause();
         currentAudioElement = null;
     }
-    
-    // Detener el temporizador de práctica
+    // Solo detenemos el intervalo, pero no cerramos la sesión
     if (sessionTimerInterval) {
         clearInterval(sessionTimerInterval);
         sessionTimerInterval = null;
-        if (sessionActive) trackNetPracticeTime();
+        if (sessionActive) trackNetPracticeTime(); // acumula el último tramo
     }
-    // IMPORTANTE: Marcar sesión como inactiva para que la siguiente pueda arrancar
-    sessionActive = false;
-    totalSessionTime = 0;
+    // Ya NO ponemos sessionActive = false ni totalSessionTime = 0
 }
 
         // Timer práctica
 function startTrainingTimer() {
-    if (!sessionActive) {
-        sessionStartTime = Date.now();
-        totalSessionTime = 0; // Reiniciamos acumulador de sesión
-        sessionActive = true;
+    // Si la sesión está activa, simplemente reanudamos el intervalo
+    if (sessionActive) {
+        if (sessionTimerInterval) clearInterval(sessionTimerInterval);
         sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
-        updatePracticeTimerDisplay();
+        return;
     }
+    // Si no hay sesión activa, la iniciamos
+    sessionStartTime = Date.now();
+    totalSessionTime = 0;
+    sessionActive = true;
+    sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
+    updatePracticeTimerDisplay();
 }
         function pauseTrainingTimer() {
             if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
@@ -4762,6 +4761,7 @@ function setupTrainingSlide() {
             btnMyVoice.classList.add('hidden');
         }
     }
+        if (sessionActive) startTrainingTimer();
 }
  function navigateTrainingQueue(step) {
     stopAudioAndTimers();
