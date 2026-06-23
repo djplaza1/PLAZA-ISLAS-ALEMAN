@@ -4968,41 +4968,47 @@ function executePlaybackChain() {
     }
 }
 
-        function handleIslandTransitionOrLoop() {
-            stopAudioAndTimers();
-            if (currentActiveIslandId?.startsWith('virtual_') || currentActiveIslandId?.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual') {
-                currentTrainIndex = 0;
-                setupTrainingSlide();
-                return;
-            }
+function handleIslandTransitionOrLoop() {
+    // Guardar la sesión actual antes de reiniciar o cambiar de isla
+    if (sessionActive) endTrainingSession();
+    
+    stopAudioAndTimers();
+    if (currentActiveIslandId?.startsWith('virtual_') || currentActiveIslandId?.startsWith('conv_virtual_') || currentActiveIslandId === 'vocab_virtual') {
+        currentTrainIndex = 0;
+        setupTrainingSlide();
+        startTrainingTimer(); // Iniciar nueva sesión para la siguiente vuelta
+        return;
+    }
 
-            const idx = appData.islands.findIndex(isl => isl.id === currentActiveIslandId);
-            if (idx !== -1 && idx + 1 < appData.islands.length) {
-                const next = appData.islands[idx + 1];
-                currentActiveIslandId = next.id;
-                trainingQueue = [...next.phrases];
-                currentTrainIndex = 0;
-                if (trainingQueue.length === 0) {
-                    handleIslandTransitionOrLoop();
-                    return;
-                }
-                document.getElementById('train-total-index').innerText = trainingQueue.length;
-                document.getElementById('detail-island-title').innerText = next.name;
-                setupTrainingSlide();
-            } else {
-                if (appData.islands.length > 0) {
-                    const first = appData.islands[0];
-                    currentActiveIslandId = first.id;
-                    trainingQueue = [...first.phrases];
-                    currentTrainIndex = 0;
-                    document.getElementById('train-total-index').innerText = trainingQueue.length;
-                    document.getElementById('detail-island-title').innerText = first.name;
-                    setupTrainingSlide();
-                } else {
-                    exitTrainingSession();
-                }
-            }
+    const idx = appData.islands.findIndex(isl => isl.id === currentActiveIslandId);
+    if (idx !== -1 && idx + 1 < appData.islands.length) {
+        const next = appData.islands[idx + 1];
+        currentActiveIslandId = next.id;
+        trainingQueue = [...next.phrases];
+        currentTrainIndex = 0;
+        if (trainingQueue.length === 0) {
+            handleIslandTransitionOrLoop();
+            return;
         }
+        document.getElementById('train-total-index').innerText = trainingQueue.length;
+        document.getElementById('detail-island-title').innerText = next.name;
+        setupTrainingSlide();
+        startTrainingTimer(); // Nueva sesión para la nueva isla
+    } else {
+        if (appData.islands.length > 0) {
+            const first = appData.islands[0];
+            currentActiveIslandId = first.id;
+            trainingQueue = [...first.phrases];
+            currentTrainIndex = 0;
+            document.getElementById('train-total-index').innerText = trainingQueue.length;
+            document.getElementById('detail-island-title').innerText = first.name;
+            setupTrainingSlide();
+            startTrainingTimer();
+        } else {
+            exitTrainingSession();
+        }
+    }
+}
 
         function renderDynamicStars(type, score) {
             const container = document.getElementById(type === 'grammar' ? 'stars-grammar' : 'stars-fluency');
