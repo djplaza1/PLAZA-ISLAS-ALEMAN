@@ -5616,7 +5616,8 @@ async function selectExerciseIslands() {
 let exerciseQueue = [];
 let exerciseIndex = 0;
 let exerciseScore = 0;
-let currentExerciseCard = null; // Guarda datos de la tarjeta actual para el Enter
+let currentExerciseCard = null;
+let currentGapAnswerWord = '';
 
 // Conectores reconocidos (simples y dobles)
 const CONNECTORS_SIMPLE = ['weil', 'dass', 'obwohl', 'trotzdem', 'deshalb', 'daher', 'darum', 'außerdem', 'allerdings', 'hingegen', 'sodass', 'so...dass', 'wenn', 'als', 'damit', 'um...zu', 'indem', 'bevor', 'nachdem', 'während', 'bis', 'seit', 'ohne...zu', 'statt...zu', 'je...desto', 'je...umso'];
@@ -5628,12 +5629,57 @@ const CONNECTORS_DOUBLE = [
     { first: 'zwar', second: 'aber' }
 ];
 
+// Grupos de sinónimos (mismo comportamiento sintáctico y significado similar)
+const CONNECTOR_SYNONYMS = {
+    'weil': ['weil', 'da'],
+    'da': ['da', 'weil'],
+    'obwohl': ['obwohl', 'obgleich', 'obschon'],
+    'obgleich': ['obgleich', 'obwohl', 'obschon'],
+    'obschon': ['obschon', 'obwohl', 'obgleich'],
+    'wenn': ['wenn', 'falls'],
+    'falls': ['falls', 'wenn'],
+    'als': ['als'],
+    'damit': ['damit'],
+    'um...zu': ['um...zu'],
+    'ohne...zu': ['ohne...zu'],
+    'statt...zu': ['statt...zu'],
+    'bevor': ['bevor'],
+    'nachdem': ['nachdem'],
+    'während': ['während'],
+    'bis': ['bis'],
+    'seit': ['seit', 'seitdem'],
+    'seitdem': ['seitdem', 'seit'],
+    'sodass': ['sodass', 'so...dass'],
+    'so...dass': ['so...dass', 'sodass'],
+    'indem': ['indem'],
+    'dass': ['dass'],
+    'deshalb': ['deshalb', 'deswegen', 'darum', 'daher'],
+    'deswegen': ['deswegen', 'deshalb', 'darum', 'daher'],
+    'darum': ['darum', 'deshalb', 'deswegen', 'daher'],
+    'daher': ['daher', 'deshalb', 'deswegen', 'darum'],
+    'trotzdem': ['trotzdem', 'dennoch'],
+    'dennoch': ['dennoch', 'trotzdem'],
+    'außerdem': ['außerdem', 'zudem'],
+    'zudem': ['zudem', 'außerdem'],
+    'allerdings': ['allerdings', 'jedoch'],
+    'jedoch': ['jedoch', 'allerdings'],
+    'hingegen': ['hingegen', 'dagegen'],
+    'dagegen': ['dagegen', 'hingegen'],
+    'sowohl...als auch': ['sowohl...als auch'],
+    'weder...noch': ['weder...noch'],
+    'nicht nur...sondern auch': ['nicht nur...sondern auch'],
+    'entweder...oder': ['entweder...oder'],
+    'zwar...aber': ['zwar...aber']
+};
+
+// Prefijos separables comunes
+const SEPARABLE_PREFIXES = ['ab', 'an', 'auf', 'aus', 'bei', 'ein', 'fest', 'her', 'hin', 'los', 'mit', 'nach', 'vor', 'weg', 'weiter', 'zu', 'zurück', 'zusammen', 'durch', 'über', 'unter', 'um', 'fort', 'entgegen', 'heim', 'hoch', 'frei', 'still', 'teil', 'herbei', 'hinzu', 'hinaus', 'herein', 'heraus'];
+
 function startExercises() {
     const source = document.getElementById('exercise-source').value;
     const category = document.getElementById('exercise-category').value;
     const count = parseInt(document.getElementById('exercise-count').value) || 10;
 
-    // Obtener frases según la fuente
     let phrases = [];
     if (source === 'all-islands') {
         appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(i => phrases.push(...i.phrases));
@@ -5643,23 +5689,29 @@ function startExercises() {
     } else if (source === 'all-conversations') {
         (appData.conversations || []).forEach(c => phrases.push(...(c.phrases || [])));
     } else if (source === 'vocabulary') {
-        // Para conectores no hay frases, avisar y salir
-        alert('La fuente "Vocabulario" no es adecuada para ejercicios de conectores. Elige islas o conversaciones.');
+        alert('La fuente "Vocabulario" no es adecuada para ejercicios de gramática. Elige islas o conversaciones.');
         return;
     }
-    if (phrases.length === 0) { alert('No hay frases disponibles en la fuente seleccionada.'); return; }
+    if (phrases.length === 0) { alert('No hay frases disponibles.'); return; }
 
-    // Filtrar frases que contengan conectores (simples o dobles)
-       const connectorPhrases = phrases.filter(p => {
+    if (category === 'connectors') {
+        generateConnectorExercises(phrases, count);
+    } else if (category === 'separable-verbs') {
+        generateSeparableVerbExercises(phrases, count);
+    } else {
+        alert('Categoría aún no implementada.');
+    }
+}
+
+function generateConnectorExercises(phrases, count) {
+    const connectorPhrases = phrases.filter(p => {
         const lower = p.de.toLowerCase();
-        // Comprobar conectores dobles con límites de palabra
         const hasDouble = CONNECTORS_DOUBLE.some(c => {
             const pat1 = c.first.includes(' ') ? '\\b' + escapeRegex(c.first).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(c.first) + '\\b';
             const pat2 = c.second.includes(' ') ? '\\b' + escapeRegex(c.second).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(c.second) + '\\b';
             return new RegExp(pat1, 'i').test(lower) && new RegExp(pat2, 'i').test(lower);
         });
         if (hasDouble) return true;
-        // Comprobar conectores simples con límites de palabra
         return CONNECTORS_SIMPLE.some(c => {
             let pattern;
             if (c.includes('...')) {
@@ -5672,13 +5724,11 @@ function startExercises() {
     });
     if (connectorPhrases.length === 0) { alert('Ninguna frase contiene conectores reconocidos.'); return; }
 
-    // Mezclar y tomar la cantidad deseada
     const shuffled = [...connectorPhrases].sort(() => Math.random() - 0.5);
     exerciseQueue = shuffled.slice(0, count);
     exerciseIndex = 0;
     exerciseScore = 0;
 
-    // Ocultar panel de configuración y mostrar contenedor de ejercicios
     document.getElementById('exercises-container').innerHTML = `
         <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
             <div class="flex justify-between items-center mb-4">
@@ -5689,6 +5739,30 @@ function startExercises() {
         </div>
     `;
     renderExerciseCard();
+}
+
+function generateSeparableVerbExercises(phrases, count) {
+    const filtered = phrases.filter(p => {
+        const words = p.de.toLowerCase().split(/\s+/);
+        return words.some(w => SEPARABLE_PREFIXES.includes(w));
+    });
+    if (filtered.length === 0) { alert('Ninguna frase contiene un prefijo separable suelto.'); return; }
+
+    const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+    exerciseQueue = shuffled.slice(0, count);
+    exerciseIndex = 0;
+    exerciseScore = 0;
+
+    document.getElementById('exercises-container').innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xs text-slate-400">Ejercicio <span id="ex-current">1</span>/${exerciseQueue.length}</span>
+                <span id="ex-score" class="text-xs text-emerald-400 font-bold">0 aciertos</span>
+            </div>
+            <div id="ex-card" class="space-y-4"></div>
+        </div>
+    `;
+    renderSeparableVerbCard();
 }
 
 function renderExerciseCard() {
@@ -5702,7 +5776,6 @@ function renderExerciseCard() {
     let answerSynonyms = [];
     let originalConnectors = [];
 
-    // Conectores dobles
     let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
         const firstPattern = d.first.includes(' ') ? '\\b' + escapeRegex(d.first).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(d.first) + '\\b';
@@ -5721,7 +5794,6 @@ function renderExerciseCard() {
         }
     }
 
-    // Conectores simples
     if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
             let pattern;
@@ -5745,7 +5817,6 @@ function renderExerciseCard() {
     document.getElementById('ex-current').textContent = exerciseIndex + 1;
     document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
 
-    // Guardar datos en variable global para que el Enter pueda usarlos
     currentExerciseCard = {
         synonyms: answerSynonyms,
         originals: originalConnectors,
@@ -5761,52 +5832,49 @@ function renderExerciseCard() {
         </div>
     `;
 }
-// Grupos de sinónimos (mismo comportamiento sintáctico y significado similar)
-const CONNECTOR_SYNONYMS = {
-    // Subordinantes (verbo al final)
-    'weil': ['weil', 'da'],
-    'da': ['da', 'weil'],
-    'obwohl': ['obwohl', 'obgleich', 'obschon'],
-    'obgleich': ['obgleich', 'obwohl', 'obschon'],
-    'obschon': ['obschon', 'obwohl', 'obgleich'],
-    'wenn': ['wenn', 'falls'],
-    'falls': ['falls', 'wenn'],
-    'als': ['als'], // temporal pasado único, sin sinónimo directo
-    'damit': ['damit', 'um...zu'], // um...zu es discontinuo, no intercambiable aquí
-    'um...zu': ['um...zu'],
-    'ohne...zu': ['ohne...zu'],
-    'statt...zu': ['statt...zu'],
-    'bevor': ['bevor'],
-    'nachdem': ['nachdem'],
-    'während': ['während'],
-    'bis': ['bis'],
-    'seit': ['seit', 'seitdem'],
-    'seitdem': ['seitdem', 'seit'],
-    'sodass': ['sodass', 'so...dass'],
-    'so...dass': ['so...dass', 'sodass'],
-    'indem': ['indem'],
-    'dass': ['dass'], // no tiene sinónimo subordinante exacto
-    // Adverbios conjuntivos (verbo en posición 2)
-    'deshalb': ['deshalb', 'deswegen', 'darum', 'daher'],
-    'deswegen': ['deswegen', 'deshalb', 'darum', 'daher'],
-    'darum': ['darum', 'deshalb', 'deswegen', 'daher'],
-    'daher': ['daher', 'deshalb', 'deswegen', 'darum'],
-    'trotzdem': ['trotzdem', 'dennoch'],
-    'dennoch': ['dennoch', 'trotzdem'],
-    'außerdem': ['außerdem', 'zudem', 'darüber hinaus'],
-    'zudem': ['zudem', 'außerdem'],
-    'darüber hinaus': ['darüber hinaus', 'außerdem', 'zudem'],
-    'allerdings': ['allerdings', 'jedoch'],
-    'jedoch': ['jedoch', 'allerdings'],
-    'hingegen': ['hingegen', 'dagegen'],
-    'dagegen': ['dagegen', 'hingegen'],
-    // Dobles (coordinantes, no intercambiables entre sí)
-    'sowohl...als auch': ['sowohl...als auch'],
-    'weder...noch': ['weder...noch'],
-    'nicht nur...sondern auch': ['nicht nur...sondern auch'],
-    'entweder...oder': ['entweder...oder'],
-    'zwar...aber': ['zwar...aber']
-};
+
+function renderSeparableVerbCard() {
+    if (exerciseIndex >= exerciseQueue.length) {
+        showExerciseSummary();
+        return;
+    }
+    const phrase = exerciseQueue[exerciseIndex];
+    const words = phrase.de.split(/\s+/);
+    const prefixIndices = [];
+    words.forEach((w, i) => {
+        const clean = w.replace(/[.,!?;:()]/g, '').toLowerCase();
+        if (SEPARABLE_PREFIXES.includes(clean)) {
+            prefixIndices.push(i);
+        }
+    });
+    if (prefixIndices.length === 0) {
+        exerciseIndex++;
+        renderSeparableVerbCard();
+        return;
+    }
+    const chosenIndex = prefixIndices[Math.floor(Math.random() * prefixIndices.length)];
+    const originalPrefix = words[chosenIndex].replace(/[.,!?;:()]/g, '');
+    words[chosenIndex] = '______';
+    const masked = words.join(' ');
+
+    document.getElementById('ex-current').textContent = exerciseIndex + 1;
+    document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
+
+    currentExerciseCard = {
+        synonyms: [[originalPrefix]],
+        originals: [originalPrefix],
+        phrase: phrase.de
+    };
+
+    document.getElementById('ex-card').innerHTML = `
+        <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
+        <p class="text-lg text-white font-bold mb-4">${masked}</p>
+        <div class="flex gap-2">
+            <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el prefijo que falta..." onkeydown="if(event.key==='Enter')checkExerciseAnswer()">
+            <button onclick="checkExerciseAnswer()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+        </div>
+    `;
+}
 
 function checkExerciseAnswer() {
     if (!currentExerciseCard) return;
@@ -5846,9 +5914,18 @@ function checkExerciseAnswer() {
     
     if (correct) exerciseScore++;
 }
+
 function nextExercise() {
     exerciseIndex++;
-    renderExerciseCard();
+    // Volver a la tarjeta correspondiente según la categoría actual
+    const category = document.getElementById('exercise-category').value;
+    if (category === 'connectors') {
+        renderExerciseCard();
+    } else if (category === 'separable-verbs') {
+        renderSeparableVerbCard();
+    } else {
+        renderExerciseCard(); // fallback
+    }
 }
 
 function showExerciseSummary() {
@@ -5859,7 +5936,6 @@ function showExerciseSummary() {
             <button onclick="renderExercisesView()" class="mt-4 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Volver al panel</button>
         </div>
     `;
-    // Aquí podríamos guardar sesión en estadísticas
 }
 
 function escapeRegex(string) {
