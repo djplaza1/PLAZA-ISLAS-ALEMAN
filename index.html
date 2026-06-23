@@ -4695,9 +4695,9 @@ function startTrainingFromPhrase(phraseId) {
     document.getElementById('train-mode-label').innerText = trainingDirection === 'normal' ? 'PRODUCCIÓN (ES ➔ DE)' : 'COMPRENSION (DE ➔ ES)';
     document.getElementById('detail-island-title').innerText = foundIsland.name;
 
-    startTrainingTimer();
     setupTrainingSlide();
     switchView('training');
+    startTrainingTimer();
 }
 
 function exitTrainingSession() {
