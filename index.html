@@ -918,6 +918,7 @@ let activePlaybackTimeout = null;
 let sessionTimerInterval = null;
 let sessionStartTime = null;
 let sessionActive = false;
+let totalSessionTime = 0; // Acumula los segundos de práctica de la sesión
 let autoSaveCounter = 0;
 let hideGermanList = false;
 let hideSpanishList = false;
@@ -1520,14 +1521,15 @@ function stopAudioAndTimers() {
 }
 
         // Timer práctica
-        function startTrainingTimer() {
-            if (!sessionActive) {
-                sessionStartTime = Date.now();
-                sessionActive = true;
-                sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
-                updatePracticeTimerDisplay();
-            }
-        }
+function startTrainingTimer() {
+    if (!sessionActive) {
+        sessionStartTime = Date.now();
+        totalSessionTime = 0; // Reiniciamos acumulador de sesión
+        sessionActive = true;
+        sessionTimerInterval = setInterval(updatePracticeTimerDisplay, 1000);
+        updatePracticeTimerDisplay();
+    }
+}
         function pauseTrainingTimer() {
             if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
             if (sessionActive && sessionStartTime) trackNetPracticeTime();
@@ -1560,10 +1562,11 @@ function trackNetPracticeTime() {
         const now = Date.now();
         const elapsed = Math.floor((now - sessionStartTime) / 1000);
         if (elapsed > 0) {
+            totalSessionTime += elapsed; // Acumulamos en vez de sumar directamente a dailyTime
             const today = getTodayDateString();
             appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
-         saveDatabase();
-            sessionStartTime = now; // Reiniciamos el contador para no sumar doble
+            saveDatabase();
+            sessionStartTime = now; // Reiniciamos para el siguiente tramo
         }
     }
 }
@@ -4976,7 +4979,7 @@ appData.stats.sessions.push({
     id: 'sess_' + Date.now(),
     date: getTodayDateString(),
     startTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    duration: sessionActive ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0,
+    duration: totalSessionTime, // Usamos el acumulador real de la sesión
     type: trainingDirection === 'normal' ? 'production' : 'comprehension',
     cardsCount: 1,
     direction: trainingDirection
