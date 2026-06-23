@@ -4630,9 +4630,9 @@ function initiateTrainingSession(islandId, direction) {
     document.getElementById('train-total-index').innerText = trainingQueue.length;
     document.getElementById('train-mode-label').innerText = direction === 'normal' ? "PRODUCCIÓN (ES ➔ DE)" : "COMPRENSION (DE ➔ ES)";
     
-    startTrainingTimer();
     setupTrainingSlide();
     switchView('training');
+    startTrainingTimer();
 }
 function startTrainingFromPhrase(phraseId) {
     // Buscar la frase y su isla contenedora
