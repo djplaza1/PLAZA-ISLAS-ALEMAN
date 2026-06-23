@@ -4795,7 +4795,6 @@ function startTrainingFromPhrase(phraseId) {
 
 
 function setupTrainingSlide() {
-    if (sessionActive) sessionPhraseCount++;
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
     window.speechSynthesis.cancel();
     const phrase = trainingQueue[currentTrainIndex];
@@ -4907,11 +4906,12 @@ function executePlaybackChain() {
             const blob = await getAudioBlob(phrase.id);
             if (blob) {
                 // Reproducir grabación del usuario
-                playAudioBlob(blob, 1.10, () => {
-                    completedLoops++;
-                    logRepetitionImpact();
-                    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
-                });
+               playAudioBlob(blob, 1.10, () => {
+    completedLoops++;
+    sessionPhraseCount++;   // ← añadido
+    logRepetitionImpact();
+    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+});
                 return;
             }
         }
@@ -4922,11 +4922,12 @@ function executePlaybackChain() {
         if (voice) utterance.voice = voice;
         utterance.lang = 'de-DE';
         utterance.rate = speed;
-        utterance.onend = () => {
-            completedLoops++;
-            logRepetitionImpact();
-            activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
-        };
+       utterance.onend = () => {
+    completedLoops++;
+    sessionPhraseCount++;   // ← añadido
+    logRepetitionImpact();
+    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+};
         window.speechSynthesis.speak(utterance);
     }
 
@@ -5189,6 +5190,7 @@ function startVoiceRecognition(callback, lang = 'de-DE') {
         isRecognizing = false;
     }
 }function startVoiceInput() {
+    sessionPhraseCount++;
     const target = trainingQueue[currentTrainIndex].de;
     const langCode = 'de-DE';
     const langLabel = 'Alemán 🇩🇪';
