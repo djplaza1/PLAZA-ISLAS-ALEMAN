@@ -1518,6 +1518,9 @@ function stopAudioAndTimers() {
         sessionTimerInterval = null;
         if (sessionActive) trackNetPracticeTime();
     }
+    // IMPORTANTE: Marcar sesión como inactiva para que la siguiente pueda arrancar
+    sessionActive = false;
+    totalSessionTime = 0;
 }
 
         // Timer práctica
