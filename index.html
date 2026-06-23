@@ -819,6 +819,7 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
                 <select id="exercise-category" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
                     <option value="connectors">Conectores (weil, dass, obwohl...)</option>
                     <option value="separable-verbs">Verbos con prefijo separable</option>
+                    <option value="verb-prepositions">Verbos con preposición fija</option>
                     <option value="prepositions-case">Preposiciones y casos</option>
                     <option value="verb-tenses">Tiempos verbales (Perfekt, Präsens...)</option>
                     <option value="sentence-order">Ordenar frases</option>
@@ -5617,7 +5618,6 @@ let exerciseQueue = [];
 let exerciseIndex = 0;
 let exerciseScore = 0;
 let currentExerciseCard = null;
-let currentGapAnswerWord = '';
 
 // Conectores reconocidos (simples y dobles)
 const CONNECTORS_SIMPLE = ['weil', 'dass', 'obwohl', 'trotzdem', 'deshalb', 'daher', 'darum', 'außerdem', 'allerdings', 'hingegen', 'sodass', 'so...dass', 'wenn', 'als', 'damit', 'um...zu', 'indem', 'bevor', 'nachdem', 'während', 'bis', 'seit', 'ohne...zu', 'statt...zu', 'je...desto', 'je...umso'];
@@ -5629,7 +5629,6 @@ const CONNECTORS_DOUBLE = [
     { first: 'zwar', second: 'aber' }
 ];
 
-// Grupos de sinónimos (mismo comportamiento sintáctico y significado similar)
 const CONNECTOR_SYNONYMS = {
     'weil': ['weil', 'da'],
     'da': ['da', 'weil'],
@@ -5675,6 +5674,127 @@ const CONNECTOR_SYNONYMS = {
 // Prefijos separables comunes
 const SEPARABLE_PREFIXES = ['ab', 'an', 'auf', 'aus', 'bei', 'ein', 'fest', 'her', 'hin', 'los', 'mit', 'nach', 'vor', 'weg', 'weiter', 'zu', 'zurück', 'zusammen', 'durch', 'über', 'unter', 'um', 'fort', 'entgegen', 'heim', 'hoch', 'frei', 'still', 'teil', 'herbei', 'hinzu', 'hinaus', 'herein', 'heraus'];
 
+// Verbos con preposición fija (lista del usuario + añadidos)
+const VERB_PREPOSITIONS = [
+    // auf + Akk
+    { verb: 'achten', preposition: 'auf', case: 'akk' },
+    { verb: 'ankommen', preposition: 'auf', case: 'akk' },
+    { verb: 'antworten', preposition: 'auf', case: 'akk' },
+    { verb: 'aufpassen', preposition: 'auf', case: 'akk' },
+    { verb: 'sich freuen', preposition: 'auf', case: 'akk' },
+    { verb: 'hoffen', preposition: 'auf', case: 'akk' },
+    { verb: 'sich konzentrieren', preposition: 'auf', case: 'akk' },
+    { verb: 'sich vorbereiten', preposition: 'auf', case: 'akk' },
+    { verb: 'warten', preposition: 'auf', case: 'akk' },
+    { verb: 'verzichten', preposition: 'auf', case: 'akk' },
+    { verb: 'sich verlassen', preposition: 'auf', case: 'akk' },
+    { verb: 'neidisch sein', preposition: 'auf', case: 'akk' },
+    { verb: 'bestehen', preposition: 'auf', case: 'akk' },
+    // für + Akk
+    { verb: 'danken', preposition: 'für', case: 'akk' },
+    { verb: 'sich entscheiden', preposition: 'für', case: 'akk' },
+    { verb: 'sich entschuldigen', preposition: 'für', case: 'akk' },
+    { verb: 'sich interessieren', preposition: 'für', case: 'akk' },
+    { verb: 'kämpfen', preposition: 'für', case: 'akk' },
+    { verb: 'sorgen', preposition: 'für', case: 'akk' },
+    { verb: 'sein', preposition: 'für', case: 'akk' },
+    { verb: 'werben', preposition: 'für', case: 'akk' },
+    { verb: 'schwärmen', preposition: 'für', case: 'akk' },
+    { verb: 'halten', preposition: 'für', case: 'akk' },
+    { verb: 'sich eignen', preposition: 'für', case: 'akk' },
+    { verb: 'ausgeben', preposition: 'für', case: 'akk' },
+    // über + Akk
+    { verb: 'sich ärgern', preposition: 'über', case: 'akk' },
+    { verb: 'sich aufregen', preposition: 'über', case: 'akk' },
+    { verb: 'berichten', preposition: 'über', case: 'akk' },
+    { verb: 'diskutieren', preposition: 'über', case: 'akk' },
+    { verb: 'sich freuen', preposition: 'über', case: 'akk' },
+    { verb: 'sich informieren', preposition: 'über', case: 'akk' },
+    { verb: 'klagen', preposition: 'über', case: 'akk' },
+    { verb: 'lachen', preposition: 'über', case: 'akk' },
+    { verb: 'nachdenken', preposition: 'über', case: 'akk' },
+    { verb: 'reden', preposition: 'über', case: 'akk' },
+    { verb: 'sprechen', preposition: 'über', case: 'akk' },
+    { verb: 'streiten', preposition: 'über', case: 'akk' },
+    { verb: 'sich wundern', preposition: 'über', case: 'akk' },
+    { verb: 'verfügen', preposition: 'über', case: 'akk' },
+    { verb: 'spotten', preposition: 'über', case: 'akk' },
+    // um + Akk
+    { verb: 'sich bewerben', preposition: 'um', case: 'akk' },
+    { verb: 'bitten', preposition: 'um', case: 'akk' },
+    { verb: 'es geht', preposition: 'um', case: 'akk' },
+    { verb: 'sich kümmern', preposition: 'um', case: 'akk' },
+    { verb: 'sich sorgen', preposition: 'um', case: 'akk' },
+    { verb: 'trauern', preposition: 'um', case: 'akk' },
+    { verb: 'wetten', preposition: 'um', case: 'akk' },
+    // mit + Dat
+    { verb: 'anfangen', preposition: 'mit', case: 'dat' },
+    { verb: 'beginnen', preposition: 'mit', case: 'dat' },
+    { verb: 'aufhören', preposition: 'mit', case: 'dat' },
+    { verb: 'sich beschäftigen', preposition: 'mit', case: 'dat' },
+    { verb: 'einverstanden sein', preposition: 'mit', case: 'dat' },
+    { verb: 'rechnen', preposition: 'mit', case: 'dat' },
+    { verb: 'sprechen', preposition: 'mit', case: 'dat' },
+    { verb: 'reden', preposition: 'mit', case: 'dat' },
+    { verb: 'streiten', preposition: 'mit', case: 'dat' },
+    { verb: 'telefonieren', preposition: 'mit', case: 'dat' },
+    { verb: 'sich treffen', preposition: 'mit', case: 'dat' },
+    { verb: 'vergleichen', preposition: 'mit', case: 'dat' },
+    { verb: 'sich verabreden', preposition: 'mit', case: 'dat' },
+    { verb: 'zurechtkommen', preposition: 'mit', case: 'dat' },
+    { verb: 'verbinden', preposition: 'mit', case: 'dat' },
+    { verb: 'übereinstimmen', preposition: 'mit', case: 'dat' },
+    // an + Akk
+    { verb: 'denken', preposition: 'an', case: 'akk' },
+    { verb: 'sich erinnern', preposition: 'an', case: 'akk' },
+    { verb: 'glauben', preposition: 'an', case: 'akk' },
+    { verb: 'sich gewöhnen', preposition: 'an', case: 'akk' },
+    { verb: 'sich wenden', preposition: 'an', case: 'akk' },
+    // an + Dat
+    { verb: 'arbeiten', preposition: 'an', case: 'dat' },
+    { verb: 'erkennen', preposition: 'an', case: 'dat' },
+    { verb: 'leiden', preposition: 'an', case: 'dat' },
+    { verb: 'sterben', preposition: 'an', case: 'dat' },
+    { verb: 'teilnehmen', preposition: 'an', case: 'dat' },
+    { verb: 'zweifeln', preposition: 'an', case: 'dat' },
+    { verb: 'es fehlt', preposition: 'an', case: 'dat' },
+    // von + Dat
+    { verb: 'abhängen', preposition: 'von', case: 'dat' },
+    { verb: 'sich erholen', preposition: 'von', case: 'dat' },
+    { verb: 'erzählen', preposition: 'von', case: 'dat' },
+    { verb: 'halten', preposition: 'von', case: 'dat' },
+    { verb: 'handeln', preposition: 'von', case: 'dat' },
+    { verb: 'träumen', preposition: 'von', case: 'dat' },
+    { verb: 'sich trennen', preposition: 'von', case: 'dat' },
+    { verb: 'sich verabschieden', preposition: 'von', case: 'dat' },
+    { verb: 'überzeugen', preposition: 'von', case: 'dat' },
+    // zu + Dat
+    { verb: 'einladen', preposition: 'zu', case: 'dat' },
+    { verb: 'gehören', preposition: 'zu', case: 'dat' },
+    { verb: 'gratulieren', preposition: 'zu', case: 'dat' },
+    { verb: 'passen', preposition: 'zu', case: 'dat' },
+    { verb: 'überreden', preposition: 'zu', case: 'dat' },
+    { verb: 'werden', preposition: 'zu', case: 'dat' },
+    { verb: 'beitragen', preposition: 'zu', case: 'dat' },
+    { verb: 'führen', preposition: 'zu', case: 'dat' },
+    // vor + Dat
+    { verb: 'Angst haben', preposition: 'vor', case: 'dat' },
+    { verb: 'erschrecken', preposition: 'vor', case: 'dat' },
+    { verb: 'fliehen', preposition: 'vor', case: 'dat' },
+    { verb: 'schützen', preposition: 'vor', case: 'dat' },
+    { verb: 'warnen', preposition: 'vor', case: 'dat' },
+    // nach + Dat
+    { verb: 'fragen', preposition: 'nach', case: 'dat' },
+    { verb: 'suchen', preposition: 'nach', case: 'dat' },
+    { verb: 'riechen', preposition: 'nach', case: 'dat' },
+    { verb: 'schmecken', preposition: 'nach', case: 'dat' },
+    { verb: 'sich sehnen', preposition: 'nach', case: 'dat' },
+    // in + Akk (enamorarse)
+    { verb: 'sich verlieben', preposition: 'in', case: 'akk' },
+    // leiden unter + Dat
+    { verb: 'leiden', preposition: 'unter', case: 'dat' }
+];
+
 function startExercises() {
     const source = document.getElementById('exercise-source').value;
     const category = document.getElementById('exercise-category').value;
@@ -5698,6 +5818,8 @@ function startExercises() {
         generateConnectorExercises(phrases, count);
     } else if (category === 'separable-verbs') {
         generateSeparableVerbExercises(phrases, count);
+    } else if (category === 'verb-prepositions') {
+        generateVerbPrepositionExercises(phrases, count);
     } else {
         alert('Categoría aún no implementada.');
     }
@@ -5763,6 +5885,37 @@ function generateSeparableVerbExercises(phrases, count) {
         </div>
     `;
     renderSeparableVerbCard();
+}
+
+function generateVerbPrepositionExercises(phrases, count) {
+    // Filtrar frases que contengan algún verbo con preposición fija
+    const filtered = phrases.filter(p => {
+        const lower = p.de.toLowerCase();
+        return VERB_PREPOSITIONS.some(vp => {
+            // Buscar el verbo (o parte de él) y la preposición en cualquier orden
+            const verbParts = vp.verb.split(' ');
+            const verbFound = verbParts.every(part => lower.includes(part));
+            const prepFound = lower.includes(vp.preposition);
+            return verbFound && prepFound;
+        });
+    });
+    if (filtered.length === 0) { alert('Ninguna frase contiene verbos con preposición fija.'); return; }
+
+    const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+    exerciseQueue = shuffled.slice(0, count);
+    exerciseIndex = 0;
+    exerciseScore = 0;
+
+    document.getElementById('exercises-container').innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xs text-slate-400">Ejercicio <span id="ex-current">1</span>/${exerciseQueue.length}</span>
+                <span id="ex-score" class="text-xs text-emerald-400 font-bold">0 aciertos</span>
+            </div>
+            <div id="ex-card" class="space-y-4"></div>
+        </div>
+    `;
+    renderVerbPrepositionCard();
 }
 
 function renderExerciseCard() {
@@ -5876,6 +6029,63 @@ function renderSeparableVerbCard() {
     `;
 }
 
+function renderVerbPrepositionCard() {
+    if (exerciseIndex >= exerciseQueue.length) {
+        showExerciseSummary();
+        return;
+    }
+    const phrase = exerciseQueue[exerciseIndex];
+    const lower = phrase.de.toLowerCase();
+    // Buscar el primer verbo+preposición que coincida
+    let chosenVP = null;
+    let prepPos = -1;
+    for (let vp of VERB_PREPOSITIONS) {
+        const verbParts = vp.verb.split(' ');
+        const allVerbFound = verbParts.every(part => lower.includes(part));
+        if (!allVerbFound) continue;
+        // Buscar la preposición (debe aparecer después o en cualquier orden)
+        const idx = lower.indexOf(vp.preposition);
+        if (idx !== -1) {
+            // Asegurarse de que sea la preposición exacta (puede estar dentro de otra palabra)
+            const before = idx > 0 ? lower[idx-1] : ' ';
+            const after = idx+vp.preposition.length < lower.length ? lower[idx+vp.preposition.length] : ' ';
+            if (/\s/.test(before) && /\s/.test(after)) {
+                chosenVP = vp;
+                prepPos = idx;
+                break;
+            }
+        }
+    }
+    if (!chosenVP) {
+        exerciseIndex++;
+        renderVerbPrepositionCard();
+        return;
+    }
+    // Crear hueco en la preposición original (respetando mayúsculas)
+    const originalPhrase = phrase.de;
+    const prepositionInText = originalPhrase.substring(prepPos, prepPos + chosenVP.preposition.length);
+    const masked = originalPhrase.substring(0, prepPos) + '______' + originalPhrase.substring(prepPos + chosenVP.preposition.length);
+
+    document.getElementById('ex-current').textContent = exerciseIndex + 1;
+    document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
+
+    currentExerciseCard = {
+        synonyms: [[chosenVP.preposition]],
+        originals: [prepositionInText],
+        phrase: phrase.de
+    };
+
+    document.getElementById('ex-card').innerHTML = `
+        <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
+        <p class="text-lg text-white font-bold mb-4">${masked}</p>
+        <p class="text-xs text-slate-500 mb-2">Verbo: ${chosenVP.verb} (+ ${chosenVP.case === 'akk' ? 'Acusativo' : 'Dativo'})</p>
+        <div class="flex gap-2">
+            <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe la preposición que falta..." onkeydown="if(event.key==='Enter')checkExerciseAnswer()">
+            <button onclick="checkExerciseAnswer()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+        </div>
+    `;
+}
+
 function checkExerciseAnswer() {
     if (!currentExerciseCard) return;
     const { synonyms: synonymsArray, originals: originalConnectors, phrase: originalPhrase } = currentExerciseCard;
@@ -5917,14 +6127,15 @@ function checkExerciseAnswer() {
 
 function nextExercise() {
     exerciseIndex++;
-    // Volver a la tarjeta correspondiente según la categoría actual
     const category = document.getElementById('exercise-category').value;
     if (category === 'connectors') {
         renderExerciseCard();
     } else if (category === 'separable-verbs') {
         renderSeparableVerbCard();
+    } else if (category === 'verb-prepositions') {
+        renderVerbPrepositionCard();
     } else {
-        renderExerciseCard(); // fallback
+        renderExerciseCard();
     }
 }
 
