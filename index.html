@@ -680,7 +680,7 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
     <div id="voice-feedback" class="bg-slate-900 border border-emerald-700 p-3 rounded-xl text-sm hidden"></div>
     <div id="typing-input-area" class="bg-slate-900 border border-indigo-700 p-4 rounded-xl hidden space-y-2">
         <label class="text-xs font-bold text-indigo-300">Escribe tu respuesta:</label>
-        <input type="text" id="typing-answer" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white" placeholder="Escribe aquí...">
+        <input type="text" id="typing-answer" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white" placeholder="Escribe aquí..." onkeydown="if(event.key==='Enter')submitTypingAnswer()">
         <button onclick="submitTypingAnswer()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-lg text-xs font-bold">Verificar</button>
         <p id="typing-feedback" class="text-xs text-slate-300 hidden"></p>
     </div>
@@ -2065,6 +2065,7 @@ function checkOrdering() {
 
 // --- RELLENAR HUECOS ---
 let gapExercise = { phrases: [], current: 0, score: 0 };
+let currentGapAnswerWord = ''; // Para validar con Enter
 
 function startGapFillExercise() {
     const conv = appData.conversations.find(c => c.id === currentConversationId);
@@ -2097,30 +2098,29 @@ function renderGapExercise() {
         return;
     }
     const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    currentGapAnswerWord = chosen; // guardamos respuesta para el Enter
     const masked = p.de.replace(chosen, '______');
     area.innerHTML = `
         <p class="text-xs text-slate-400 mb-2">Frase ${gapExercise.current+1} de ${gapExercise.phrases.length}</p>
         <p class="text-lg text-white mb-4">${masked}</p>
-        <input type="text" id="gap-answer" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white mb-4" placeholder="Escribe la palabra que falta">
-        <div class="flex gap-2">
-            <button onclick="checkGapAnswer('${chosen}')" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded text-xs font-bold">✅ Comprobar</button>
+        <input type="text" id="gap-answer" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white mb-4" placeholder="Escribe la palabra que falta" onkeydown="if(event.key==='Enter')checkGapAnswer()">
+            <button onclick="checkGapAnswer()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded text-xs font-bold">✅ Comprobar</button>
             <button onclick="closeExercises()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs">Salir</button>
         </div>
     `;
 }
 
-function checkGapAnswer(correct) {
+function checkGapAnswer() {
     const answer = document.getElementById('gap-answer').value.trim();
-    if (answer.toLowerCase() === correct.toLowerCase()) {
+    if (answer.toLowerCase() === currentGapAnswerWord.toLowerCase()) {
         gapExercise.score++;
         alert('✅ Correcto');
     } else {
-        alert(`❌ La respuesta era: ${correct}`);
+        alert(`❌ La respuesta era: ${currentGapAnswerWord}`);
     }
     gapExercise.current++;
     renderGapExercise();
 }
-
 function startConvSRSReview() {
     const conv = appData.conversations.find(c => c.id === currentConversationId);
     if (!conv || conv.phrases.length === 0) return;
