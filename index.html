@@ -5616,6 +5616,7 @@ async function selectExerciseIslands() {
 let exerciseQueue = [];
 let exerciseIndex = 0;
 let exerciseScore = 0;
+let currentExerciseCard = null; // Guarda datos de la tarjeta actual para el Enter
 
 // Conectores reconocidos (simples y dobles)
 const CONNECTORS_SIMPLE = ['weil', 'dass', 'obwohl', 'trotzdem', 'deshalb', 'daher', 'darum', 'außerdem', 'allerdings', 'hingegen', 'sodass', 'so...dass', 'wenn', 'als', 'damit', 'um...zu', 'indem', 'bevor', 'nachdem', 'während', 'bis', 'seit', 'ohne...zu', 'statt...zu', 'je...desto', 'je...umso'];
@@ -5698,10 +5699,10 @@ function renderExerciseCard() {
     const phrase = exerciseQueue[exerciseIndex];
     const lower = phrase.de.toLowerCase();
     let masked = phrase.de;
-    let answerSynonyms = []; // Array de arrays de sinónimos para cada hueco
-    let originalConnectors = []; // Conectores originales (para mostrar feedback)
+    let answerSynonyms = [];
+    let originalConnectors = [];
 
-    // --- Conectores dobles (sin sinónimos por ahora) ---
+    // Conectores dobles
     let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
         const firstPattern = d.first.includes(' ') ? '\\b' + escapeRegex(d.first).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(d.first) + '\\b';
@@ -5713,7 +5714,6 @@ function renderExerciseCard() {
         if (matchFirst && matchSecond && matchSecond.index > matchFirst.index) {
             masked = masked.replace(regexFirst, '______');
             masked = masked.replace(regexSecond, '______');
-            // Para dobles, sinónimos es solo el original
             answerSynonyms.push([d.first], [d.second]);
             originalConnectors.push(d.first, d.second);
             doubleFound = true;
@@ -5721,7 +5721,7 @@ function renderExerciseCard() {
         }
     }
 
-    // --- Conectores simples ---
+    // Conectores simples
     if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
             let pattern;
@@ -5734,10 +5734,9 @@ function renderExerciseCard() {
             const match = lower.match(regex);
             if (match) {
                 masked = masked.replace(regex, '______');
-                // Obtener sinónimos del grupo, o el propio conector si no tiene grupo
                 const synonyms = CONNECTOR_SYNONYMS[c] || [c];
                 answerSynonyms.push(synonyms);
-                originalConnectors.push(match[0]); // guardamos el match original (con mayúsculas)
+                originalConnectors.push(match[0]);
                 break;
             }
         }
@@ -5746,16 +5745,19 @@ function renderExerciseCard() {
     document.getElementById('ex-current').textContent = exerciseIndex + 1;
     document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
 
-    // Serializar los sinónimos para pasarlos a la función onclick
-    const synonymsJSON = JSON.stringify(answerSynonyms).replace(/"/g, '&quot;');
-    const originalsJSON = JSON.stringify(originalConnectors).replace(/"/g, '&quot;');
+    // Guardar datos en variable global para que el Enter pueda usarlos
+    currentExerciseCard = {
+        synonyms: answerSynonyms,
+        originals: originalConnectors,
+        phrase: phrase.de
+    };
 
     document.getElementById('ex-card').innerHTML = `
         <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
         <p class="text-lg text-white font-bold mb-4">${masked}</p>
         <div class="flex gap-2">
-            <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el conector que falta...">
-            <button onclick="checkExerciseAnswer(${synonymsJSON}, ${originalsJSON}, '${phrase.de.replace(/'/g, "\\'")}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+            <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el conector que falta..." onkeydown="if(event.key==='Enter')checkExerciseAnswer()">
+            <button onclick="checkExerciseAnswer()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
         </div>
     `;
 }
@@ -5806,7 +5808,10 @@ const CONNECTOR_SYNONYMS = {
     'zwar...aber': ['zwar...aber']
 };
 
-function checkExerciseAnswer(synonymsArray, originalConnectors, originalPhrase) {
+function checkExerciseAnswer() {
+    if (!currentExerciseCard) return;
+    const { synonyms: synonymsArray, originals: originalConnectors, phrase: originalPhrase } = currentExerciseCard;
+
     const input = document.getElementById('ex-answer');
     const answer = input ? input.value.trim().toLowerCase() : '';
     const userAnswers = answer.split(/[,\s]+/).filter(w => w.length > 0);
