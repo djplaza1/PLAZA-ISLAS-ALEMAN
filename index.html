@@ -999,6 +999,7 @@ function startRecording(phraseId) {
         };
 
 mediaRecorder.onstop = async () => {
+                clearTimeout(silenceDetectionTimeout);
     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
     if (currentRecordingPhraseId) {
         await saveAudioBlob(currentRecordingPhraseId, audioBlob);
@@ -1107,8 +1108,10 @@ function startRecordingWithSilenceDetection(phraseId) {
 
         mediaRecorder.start();
 
-        // Iniciar detección de silencio
-        detectSilenceAndStop(stream);
+                // Margen de 1 segundo antes de empezar a detectar silencio
+        let silenceDetectionTimeout = setTimeout(() => {
+            detectSilenceAndStop(stream);
+        }, 1000);
     }).catch(err => {
         alert('Error al acceder al micrófono: ' + err);
     });
@@ -1124,7 +1127,7 @@ function detectSilenceAndStop(stream) {
     const dataArray = new Uint8Array(bufferLength);
 
     const SILENCE_THRESHOLD = 25;  // nivel por debajo del cual es silencio
-    const SILENCE_DURATION = 500; // 0.5 segundos de silencio para parar
+    const SILENCE_DURATION = 1000; // 0.5 segundos de silencio para parar
     let silenceStart = null;
 
     function checkSilence() {
