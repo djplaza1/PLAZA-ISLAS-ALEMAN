@@ -1484,21 +1484,22 @@ async function saveDatabase() {
             document.documentElement.classList.toggle('dark', theme === 'dark');
         }
 
-        function switchView(viewName) {
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-            const target = document.getElementById(`view-${viewName}`);
-            if (target) target.classList.add('active');
-            stopAudioAndTimers();
-            if (viewName === 'islands') renderIslandsGrid();
-            else if (viewName === 'conversations') renderConversationsList();
-           else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
-            else if (viewName === 'stats') renderAdvancedStatistics();
-            else if (viewName === 'exercises') renderExercisesView();
-            if (viewName !== 'training') {
-                if (sessionActive) pauseTrainingTimer();
-                sessionActive = false;
-            }
-        }
+  function switchView(viewName) {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(`view-${viewName}`);
+    if (target) target.classList.add('active');
+    stopAudioAndTimers();
+    if (viewName === 'islands') renderIslandsGrid();
+    else if (viewName === 'conversations') renderConversationsList();
+    else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
+    else if (viewName === 'stats') renderAdvancedStatistics();
+    else if (viewName === 'exercises') renderExercisesView();
+    
+    // Si salimos de la vista de entrenamiento, cerramos la sesión correctamente
+    if (viewName !== 'training' && sessionActive) {
+        endTrainingSession();  // guarda la sesión y resetea el temporizador
+    }
+}
 
 function stopAudioAndTimers() {
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
@@ -1507,13 +1508,16 @@ function stopAudioAndTimers() {
         currentAudioElement.pause();
         currentAudioElement = null;
     }
-    // Solo detenemos el intervalo, pero no cerramos la sesión
+    // Pausar el intervalo si existe
     if (sessionTimerInterval) {
         clearInterval(sessionTimerInterval);
         sessionTimerInterval = null;
-        if (sessionActive) trackNetPracticeTime(); // acumula el último tramo
     }
-    // Ya NO ponemos sessionActive = false ni totalSessionTime = 0
+    // Acumular el tiempo transcurrido en este tramo
+    if (sessionActive && sessionStartTime) {
+        trackNetPracticeTime(); // acumula el tramo actual en totalSessionTime
+    }
+    // Ya NO ponemos sessionActive = false ni totalSessionTime = 0 aquí
 }
 
  // ==================== REEMPLAZO COMPLETO DE FUNCIONES DEL TEMPORIZADOR ====================
@@ -1566,6 +1570,31 @@ function updatePracticeTimerDisplay() {
         const secs = (totalElapsed % 60).toString().padStart(2,'0');
         display.textContent = `${mins}:${secs}`;
     }
+}
+function pauseTrainingTimer() {
+    if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+    }
+    if (sessionActive && sessionStartTime) {
+        trackNetPracticeTime(); // acumula el tramo actual
+    }
+    sessionActive = false;
+    sessionStartTime = null;
+    updatePracticeTimerDisplay();
+}
+
+function trackNetPracticeTime() {
+    if (!sessionStartTime) return;
+    const now = Date.now();
+    const elapsed = Math.floor((now - sessionStartTime) / 1000);
+    if (elapsed > 0) {
+        totalSessionTime += elapsed;
+        const today = getTodayDateString();
+        appData.stats.dailyTime[today] = (appData.stats.dailyTime[today] || 0) + elapsed;
+        saveDatabase();
+    }
+    sessionStartTime = now; // Reiniciamos para el siguiente tramo
 }
 
 // trackNetPracticeTime permanece igual (ya funciona bien acumulando en totalSessionTime)
