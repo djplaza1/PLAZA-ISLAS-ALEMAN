@@ -1659,6 +1659,44 @@ function endTrainingSession() {
     sessionPhraseCount = 0;
     updatePracticeTimerDisplay();
 }
+// ==================== FUNCIONES AUXILIARES RESTAURADAS ====================
+function getTodayDateString() {
+    const d = new Date();
+    return [d.getFullYear(), ('0'+(d.getMonth()+1)).slice(-2), ('0'+d.getDate()).slice(-2)].join('-');
+}
+
+function checkAndUpdateStreak() {
+    const today = getTodayDateString();
+    if (appData.stats.lastPracticeDate) {
+        if (appData.stats.lastPracticeDate === today) return;
+        const last = new Date(appData.stats.lastPracticeDate);
+        const now = new Date(today);
+        const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
+        if (diff > 1) appData.stats.streak = 0;
+    } else {
+        appData.stats.streak = 0;
+    }
+    saveDatabase();
+}
+
+function logRepetitionImpact() {
+    const today = getTodayDateString();
+    appData.stats.dailyRepetitions[today] = (appData.stats.dailyRepetitions[today] || 0) + 1;
+
+    if (appData.stats.lastPracticeDate !== today) {
+        if (appData.stats.lastPracticeDate) {
+            const last = new Date(appData.stats.lastPracticeDate);
+            const now = new Date(today);
+            const diff = Math.ceil(Math.abs(now - last) / (1000 * 60 * 60 * 24));
+            if (diff === 1) appData.stats.streak++;
+            else if (diff > 1) appData.stats.streak = 1;
+        } else {
+            appData.stats.streak = 1;
+        }
+        appData.stats.lastPracticeDate = today;
+    }
+    saveDatabase();
+}
 
 // ==================== ISLAS ====================
 function createIsland() {
