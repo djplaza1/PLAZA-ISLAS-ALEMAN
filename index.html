@@ -5649,10 +5649,25 @@ function startExercises() {
     if (phrases.length === 0) { alert('No hay frases disponibles en la fuente seleccionada.'); return; }
 
     // Filtrar frases que contengan conectores (simples o dobles)
-    const connectorPhrases = phrases.filter(p => {
+       const connectorPhrases = phrases.filter(p => {
         const lower = p.de.toLowerCase();
-        return CONNECTORS_SIMPLE.some(c => lower.includes(c.replace('...',' ').replace('...',' '))) ||
-               CONNECTORS_DOUBLE.some(c => lower.includes(c.first) && lower.includes(c.second));
+        // Comprobar conectores dobles con límites de palabra
+        const hasDouble = CONNECTORS_DOUBLE.some(c => {
+            const pat1 = c.first.includes(' ') ? '\\b' + escapeRegex(c.first).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(c.first) + '\\b';
+            const pat2 = c.second.includes(' ') ? '\\b' + escapeRegex(c.second).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(c.second) + '\\b';
+            return new RegExp(pat1, 'i').test(lower) && new RegExp(pat2, 'i').test(lower);
+        });
+        if (hasDouble) return true;
+        // Comprobar conectores simples con límites de palabra
+        return CONNECTORS_SIMPLE.some(c => {
+            let pattern;
+            if (c.includes('...')) {
+                pattern = '\\b' + escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+') + '\\b';
+            } else {
+                pattern = '\\b' + escapeRegex(c) + '\\b';
+            }
+            return new RegExp(pattern, 'i').test(lower);
+        });
     });
     if (connectorPhrases.length === 0) { alert('Ninguna frase contiene conectores reconocidos.'); return; }
 
