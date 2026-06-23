@@ -5698,53 +5698,46 @@ function renderExerciseCard() {
     const phrase = exerciseQueue[exerciseIndex];
     const lower = phrase.de.toLowerCase();
     let masked = phrase.de;
-    let answers = [];
+    let answerSynonyms = []; // Array de arrays de sinónimos para cada hueco
+    let originalConnectors = []; // Conectores originales (para mostrar feedback)
 
-    // --- Conectores dobles (insensible a mayúsculas + límites de palabra) ---
+    // --- Conectores dobles (sin sinónimos por ahora) ---
     let doubleFound = false;
     for (let d of CONNECTORS_DOUBLE) {
-        // Construir patrón para la primera parte (puede contener espacios)
-        const firstPattern = d.first.includes(' ') 
-            ? '\\b' + escapeRegex(d.first).replace(/ /g, '\\s+') + '\\b'
-            : '\\b' + escapeRegex(d.first) + '\\b';
-        const secondPattern = d.second.includes(' ')
-            ? '\\b' + escapeRegex(d.second).replace(/ /g, '\\s+') + '\\b'
-            : '\\b' + escapeRegex(d.second) + '\\b';
-        
+        const firstPattern = d.first.includes(' ') ? '\\b' + escapeRegex(d.first).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(d.first) + '\\b';
+        const secondPattern = d.second.includes(' ') ? '\\b' + escapeRegex(d.second).replace(/ /g, '\\s+') + '\\b' : '\\b' + escapeRegex(d.second) + '\\b';
         const regexFirst = new RegExp(firstPattern, 'i');
         const regexSecond = new RegExp(secondPattern, 'i');
         const matchFirst = lower.match(regexFirst);
         const matchSecond = lower.match(regexSecond);
-        
         if (matchFirst && matchSecond && matchSecond.index > matchFirst.index) {
             masked = masked.replace(regexFirst, '______');
             masked = masked.replace(regexSecond, '______');
-            answers.push(d.first, d.second);
+            // Para dobles, sinónimos es solo el original
+            answerSynonyms.push([d.first], [d.second]);
+            originalConnectors.push(d.first, d.second);
             doubleFound = true;
             break;
         }
     }
 
-    // --- Conectores simples (insensible a mayúsculas + límites de palabra) ---
+    // --- Conectores simples ---
     if (!doubleFound) {
         for (let c of CONNECTORS_SIMPLE) {
             let pattern;
             if (c.includes('...')) {
-                // Conector discontinuo (ej. um...zu, je...desto)
-                // Reemplazamos '...' por '\s+\w+\s+' y ponemos límites de palabra alrededor
                 pattern = '\\b' + escapeRegex(c).replace(/\\\.\\\.\\\./g, '\\s+\\w+\\s+') + '\\b';
-            } else if (c.includes(' ')) {
-                // Conector compuesto por varias palabras (ej. "nicht nur" ya es un doble, pero por si acaso)
-                pattern = '\\b' + escapeRegex(c).replace(/ /g, '\\s+') + '\\b';
             } else {
-                // Palabra única
                 pattern = '\\b' + escapeRegex(c) + '\\b';
             }
             const regex = new RegExp(pattern, 'i');
             const match = lower.match(regex);
             if (match) {
                 masked = masked.replace(regex, '______');
-                answers.push(match[0]);
+                // Obtener sinónimos del grupo, o el propio conector si no tiene grupo
+                const synonyms = CONNECTOR_SYNONYMS[c] || [c];
+                answerSynonyms.push(synonyms);
+                originalConnectors.push(match[0]); // guardamos el match original (con mayúsculas)
                 break;
             }
         }
@@ -5753,38 +5746,93 @@ function renderExerciseCard() {
     document.getElementById('ex-current').textContent = exerciseIndex + 1;
     document.getElementById('ex-score').textContent = exerciseScore + ' aciertos';
 
+    // Serializar los sinónimos para pasarlos a la función onclick
+    const synonymsJSON = JSON.stringify(answerSynonyms).replace(/"/g, '&quot;');
+    const originalsJSON = JSON.stringify(originalConnectors).replace(/"/g, '&quot;');
+
     document.getElementById('ex-card').innerHTML = `
         <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
         <p class="text-lg text-white font-bold mb-4">${masked}</p>
         <div class="flex gap-2">
             <input type="text" id="ex-answer" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white" placeholder="Escribe el conector que falta...">
-            <button onclick="checkExerciseAnswer([${answers.map(a => `'${a}'`).join(',')}], '${phrase.de.replace(/'/g, "\\'")}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
+            <button onclick="checkExerciseAnswer(${synonymsJSON}, ${originalsJSON}, '${phrase.de.replace(/'/g, "\\'")}')" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Comprobar</button>
         </div>
     `;
 }
+// Grupos de sinónimos (mismo comportamiento sintáctico y significado similar)
+const CONNECTOR_SYNONYMS = {
+    // Subordinantes (verbo al final)
+    'weil': ['weil', 'da'],
+    'da': ['da', 'weil'],
+    'obwohl': ['obwohl', 'obgleich', 'obschon'],
+    'obgleich': ['obgleich', 'obwohl', 'obschon'],
+    'obschon': ['obschon', 'obwohl', 'obgleich'],
+    'wenn': ['wenn', 'falls'],
+    'falls': ['falls', 'wenn'],
+    'als': ['als'], // temporal pasado único, sin sinónimo directo
+    'damit': ['damit', 'um...zu'], // um...zu es discontinuo, no intercambiable aquí
+    'um...zu': ['um...zu'],
+    'ohne...zu': ['ohne...zu'],
+    'statt...zu': ['statt...zu'],
+    'bevor': ['bevor'],
+    'nachdem': ['nachdem'],
+    'während': ['während'],
+    'bis': ['bis'],
+    'seit': ['seit', 'seitdem'],
+    'seitdem': ['seitdem', 'seit'],
+    'sodass': ['sodass', 'so...dass'],
+    'so...dass': ['so...dass', 'sodass'],
+    'indem': ['indem'],
+    'dass': ['dass'], // no tiene sinónimo subordinante exacto
+    // Adverbios conjuntivos (verbo en posición 2)
+    'deshalb': ['deshalb', 'deswegen', 'darum', 'daher'],
+    'deswegen': ['deswegen', 'deshalb', 'darum', 'daher'],
+    'darum': ['darum', 'deshalb', 'deswegen', 'daher'],
+    'daher': ['daher', 'deshalb', 'deswegen', 'darum'],
+    'trotzdem': ['trotzdem', 'dennoch'],
+    'dennoch': ['dennoch', 'trotzdem'],
+    'außerdem': ['außerdem', 'zudem', 'darüber hinaus'],
+    'zudem': ['zudem', 'außerdem'],
+    'darüber hinaus': ['darüber hinaus', 'außerdem', 'zudem'],
+    'allerdings': ['allerdings', 'jedoch'],
+    'jedoch': ['jedoch', 'allerdings'],
+    'hingegen': ['hingegen', 'dagegen'],
+    'dagegen': ['dagegen', 'hingegen'],
+    // Dobles (coordinantes, no intercambiables entre sí)
+    'sowohl...als auch': ['sowohl...als auch'],
+    'weder...noch': ['weder...noch'],
+    'nicht nur...sondern auch': ['nicht nur...sondern auch'],
+    'entweder...oder': ['entweder...oder'],
+    'zwar...aber': ['zwar...aber']
+};
 
-function checkExerciseAnswer(expectedAnswers, originalPhrase) {
+function checkExerciseAnswer(synonymsArray, originalConnectors, originalPhrase) {
     const input = document.getElementById('ex-answer');
     const answer = input ? input.value.trim().toLowerCase() : '';
     const userAnswers = answer.split(/[,\s]+/).filter(w => w.length > 0);
-    let correct = false;
-    if (expectedAnswers.length === 1) {
-        correct = userAnswers.length === 1 && userAnswers[0] === expectedAnswers[0].toLowerCase();
-    } else if (expectedAnswers.length === 2) {
-        correct = userAnswers.length === 2 && 
-                  userAnswers[0] === expectedAnswers[0].toLowerCase() && 
-                  userAnswers[1] === expectedAnswers[1].toLowerCase();
+    let correct = true;
+    let feedbackParts = [];
+
+    for (let i = 0; i < synonymsArray.length; i++) {
+        const userAns = userAnswers[i] || '';
+        const allowed = synonymsArray[i].map(s => s.toLowerCase());
+        if (!allowed.includes(userAns)) {
+            correct = false;
+            feedbackParts.push(`<span class="text-rose-400">❌ Hueco ${i+1}: ${originalConnectors[i]}</span>`);
+        } else if (userAns !== originalConnectors[i].toLowerCase()) {
+            feedbackParts.push(`<span class="text-amber-400">✅ Sinónimo válido de "${originalConnectors[i]}"</span>`);
+        } else {
+            feedbackParts.push(`<span class="text-emerald-400">✅ Correcto</span>`);
+        }
     }
-    
+
     const phrase = exerciseQueue[exerciseIndex];
-    const feedback = correct 
-        ? '<span class="text-emerald-400 font-bold">✅ Correcto</span>' 
-        : `<span class="text-rose-400 font-bold">❌ Respuesta: ${expectedAnswers.join(' + ')}</span>`;
+    const feedbackHTML = feedbackParts.join('<br>');
     
     document.getElementById('ex-card').innerHTML = `
         <p class="text-sm text-slate-400 italic mb-2">${phrase.es || '(sin traducción)'}</p>
         <p class="text-lg text-white font-bold mb-4">${originalPhrase}</p>
-        <div class="text-sm mb-4">${feedback}</div>
+        <div class="text-sm mb-4">${feedbackHTML}</div>
         <div class="flex gap-2">
             <button onclick="speakText('${originalPhrase.replace(/'/g, "\\'")}')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-bold"><i class="fa-solid fa-volume-high"></i> Escuchar frase</button>
             <button onclick="nextExercise()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Siguiente ▶</button>
@@ -5793,7 +5841,6 @@ function checkExerciseAnswer(expectedAnswers, originalPhrase) {
     
     if (correct) exerciseScore++;
 }
-
 function nextExercise() {
     exerciseIndex++;
     renderExerciseCard();
