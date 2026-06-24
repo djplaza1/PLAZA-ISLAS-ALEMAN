@@ -831,22 +831,28 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
         </div>
     </div>
 
-    <!-- Selector de raíz -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-        <div class="flex flex-wrap items-center gap-4">
-            <label class="text-xs text-slate-400 font-bold uppercase">Raíz maestra:</label>
-            <select id="janulus-root-select" onchange="onJanulusRootChange()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-bold flex-1 min-w-[200px]">
-                <option value="">-- Selecciona una raíz --</option>
-            </select>
-            <button onclick="refreshJanulusRoots()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold" title="Reextraer raíces del vocabulario">
-                <i class="fa-solid fa-rotate"></i>
-            </button>
-            <button onclick="showAddCustomRootPrompt()" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">
-                <i class="fa-solid fa-plus"></i> Añadir raíz
-            </button>
-        </div>
-        <p class="text-[10px] text-slate-500 mt-2" id="janulus-root-info"></p>
+<!-- Selector de palabra -->
+<div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
+    <div class="flex flex-wrap items-center gap-4">
+        <label class="text-xs text-slate-400 font-bold uppercase">Buscar palabra:</label>
+        <input type="text" id="janulus-word-input" placeholder="Escribe cualquier palabra (ej: fahren, Haus, schön...)" 
+               class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white flex-1 min-w-[200px]"
+               onkeydown="if(event.key==='Enter')onJanulusWordSearch()">
+        <button onclick="onJanulusWordSearch()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">
+            <i class="fa-solid fa-search"></i> Buscar
+        </button>
     </div>
+    <div class="flex flex-wrap items-center gap-4">
+        <label class="text-xs text-slate-400 font-bold uppercase">O elige una raíz:</label>
+        <select id="janulus-root-select" onchange="onJanulusRootChange()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-bold flex-1 min-w-[200px]">
+            <option value="">-- Selecciona una raíz --</option>
+        </select>
+        <button onclick="refreshJanulusRoots()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold" title="Reextraer raíces del vocabulario">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+    </div>
+    <p class="text-[10px] text-slate-500" id="janulus-root-info"></p>
+</div>
 
     <!-- Tabla de constelación -->
     <div id="janulus-table-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 hidden">
@@ -5754,150 +5760,85 @@ function renderAdvancedStatistics() {
 }
 let exerciseSelectedIslandIds = [];
 // ==================== JANULUS C2 PRO ====================
-// Variables declaradas globalmente
+// (Variables globales: janulusData, janulusCurrentRoot, janulusGeneratedPhrases ya declaradas)
+
+// Lista de verbos alemanes frecuentes con conjugaciones reales
+const JANULUS_REAL_VERBS = [
+    { inf: 'fahren', pret: 'fuhr', part: 'gefahren', aux: 'ist', es: 'conducir/ir' },
+    { inf: 'kommen', pret: 'kam', part: 'gekommen', aux: 'ist', es: 'venir' },
+    { inf: 'sprechen', pret: 'sprach', part: 'gesprochen', aux: 'hat', es: 'hablar' },
+    { inf: 'gehen', pret: 'ging', part: 'gegangen', aux: 'ist', es: 'ir' },
+    { inf: 'machen', pret: 'machte', part: 'gemacht', aux: 'hat', es: 'hacer' },
+    { inf: 'arbeiten', pret: 'arbeitete', part: 'gearbeitet', aux: 'hat', es: 'trabajar' },
+    { inf: 'spielen', pret: 'spielte', part: 'gespielt', aux: 'hat', es: 'jugar' },
+    { inf: 'lernen', pret: 'lernte', part: 'gelernt', aux: 'hat', es: 'aprender' },
+    { inf: 'lesen', pret: 'las', part: 'gelesen', aux: 'hat', es: 'leer' },
+    { inf: 'schreiben', pret: 'schrieb', part: 'geschrieben', aux: 'hat', es: 'escribir' },
+    { inf: 'trinken', pret: 'trank', part: 'getrunken', aux: 'hat', es: 'beber' },
+    { inf: 'essen', pret: 'aß', part: 'gegessen', aux: 'hat', es: 'comer' },
+    { inf: 'schlafen', pret: 'schlief', part: 'geschlafen', aux: 'hat', es: 'dormir' },
+    { inf: 'kaufen', pret: 'kaufte', part: 'gekauft', aux: 'hat', es: 'comprar' },
+    { inf: 'wohnen', pret: 'wohnte', part: 'gewohnt', aux: 'hat', es: 'vivir (residir)' },
+    { inf: 'finden', pret: 'fand', part: 'gefunden', aux: 'hat', es: 'encontrar' },
+    { inf: 'bringen', pret: 'brachte', part: 'gebracht', aux: 'hat', es: 'traer' },
+    { inf: 'denken', pret: 'dachte', part: 'gedacht', aux: 'hat', es: 'pensar' },
+    { inf: 'nehmen', pret: 'nahm', part: 'genommen', aux: 'hat', es: 'tomar' },
+    { inf: 'geben', pret: 'gab', part: 'gegeben', aux: 'hat', es: 'dar' },
+];
 
 // Prefijos y sufijos para stemming ligero
 const GERMAN_PREFIXES = ['ab', 'an', 'auf', 'aus', 'bei', 'ein', 'ent', 'er', 'ge', 'her', 'hin', 'los', 'mit', 'nach', 'vor', 'weg', 'zu', 'zurück', 'ver', 'zer', 'be', 'emp', 'miss', 'wider', 'dar', 'heim', 'teil', 'fort'];
 const GERMAN_SUFFIXES = ['ung', 'heit', 'keit', 'schaft', 'erei', 'chen', 'lein', 'er', 'in', 'en', 't', 'et', 'ig', 'lich', 'bar', 'sam', 'los', 'haft', 'mäßig', 'weise'];
 
-// Plantillas gramaticales B2
-const JANULUS_TEMPLATES = [
-    { name: 'Weil + Nebensatz', pattern: 'weil [SUBJ] [VERB_CONJ]', build: (subj, verb, extra) => `weil ${subj} ${verb}` },
-    { name: 'Obwohl + Nebensatz', pattern: 'obwohl [SUBJ] [VERB_CONJ]', build: (subj, verb, extra) => `obwohl ${subj} ${verb}` },
-    { name: 'Nachdem + Plusquamperfekt', pattern: 'nachdem [SUBJ] [PARTIZIP] hatte/war', build: (subj, verb, extra) => `nachdem ${subj} ${extra?.partizip || '...'} ${extra?.aux || 'hatte'}` },
-    { name: 'Wenn + Konjunktiv II', pattern: 'wenn [SUBJ] [VERB_KONJUNKTIV]', build: (subj, verb, extra) => `wenn ${subj} ${extra?.konjunktiv || '...'}` },
-    { name: 'Futur I', pattern: '[SUBJ] wird [INFINITIV]', build: (subj, verb, extra) => `${subj} wird ${extra?.infinitiv || verb}` },
-    { name: 'Pasiva (Vorgangspassiv)', pattern: '[SUBJ] wird [PARTIZIP]', build: (subj, verb, extra) => `${subj} wird ${extra?.partizip || '...'}` },
-    { name: 'Relativsatz', pattern: 'der/die/das [VERB_CONJ]', build: (subj, verb, extra) => `${subj}, der ${verb}` },
-    { name: 'Sowohl... als auch', pattern: 'sowohl [A] als auch [B]', build: (subj, verb, extra) => `sowohl ${subj} als auch ${extra?.objekt || '...'}` },
-    { name: 'Nicht nur... sondern auch', pattern: 'nicht nur [A], sondern auch [B]', build: (subj, verb, extra) => `nicht nur ${subj}, sondern auch ${extra?.objekt || '...'}` },
-    { name: 'Um... zu', pattern: 'um [SUBST] zu [INFINITIV]', build: (subj, verb, extra) => `um ${subj} zu ${extra?.infinitiv || verb}` },
-];
+// Sujetos y objetos genéricos
+const JANULUS_SUBJECTS = ['Ich', 'Du', 'Er', 'Sie', 'Es', 'Wir', 'Ihr', 'Sie'];
+const JANULUS_OBJECTS = ['das Buch', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Brief', 'die Blumen', 'das Auto', 'den Film', 'die Hausaufgabe', 'den Fehler'];
 
-// Sujetos y objetos genéricos para construir frases
-const JANULUS_SUBJECTS = ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'sie', 'der Mann', 'die Frau', 'das Kind', 'der Lehrer', 'mein Freund'];
-const JANULUS_OBJECTS = ['das Buch', 'den Brief', 'die Antwort', 'das Auto', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Fehler'];
-// Extrae ejemplos del wikitexto de Wiktionary (busca la sección "Beispiele")
-function extractWiktionaryExamples(wikitext) {
-    const examples = [];
-    const beispielRegex = /\{\{Beispiel\}\}\s*\n?([^\n]*)/gi;
-    let match;
-    while ((match = beispielRegex.exec(wikitext)) !== null) {
-        let text = match[1]
-            .replace(/\[\[|\]\]/g, '')        // quitar enlaces
-            .replace(/\{\{[^}]+\}\}/g, '')    // quitar plantillas
-            .replace(/<[^>]+>/g, '')          // quitar HTML
-            .trim();
-        if (text.length > 5 && text.includes(' ')) {
-            examples.push(text);
-        }
-    }
-    return examples;
+// --- Búsqueda de palabra ---
+async function onJanulusWordSearch() {
+    const input = document.getElementById('janulus-word-input');
+    const word = input.value.trim();
+    if (!word) return;
+    janulusCurrentRoot = word; // usar la palabra como "raíz"
+    document.getElementById('janulus-table-container').classList.remove('hidden');
+    document.getElementById('janulus-phrase-generator').classList.remove('hidden');
+    document.getElementById('janulus-root-title').textContent = `🔗 Frases para "${word}"`;
+    janulusGeneratedPhrases = [];
+    document.getElementById('janulus-phrases-list').innerHTML = '';
+
+    // Mostrar tabla simple
+    document.getElementById('janulus-verb-row').innerHTML = `<span class="bg-slate-700 hover:bg-slate-600 text-emerald-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${word}')">${word}</span>`;
+    document.getElementById('janulus-nouns-row').innerHTML = '<span class="text-slate-500 text-sm">Pulsa la palabra para generar frases</span>';
+    document.getElementById('janulus-adjectives-row').innerHTML = '';
+    document.getElementById('janulus-compounds-row').innerHTML = '';
+
+    // Generar frases automáticamente
+    await generateAllJanulusPhrases(word);
 }
 
-// Generación local mejorada: frases gramaticalmente correctas
-function generateCorrectLocalPhrases(word, data) {
-    const phrases = [];
-    const verbData = data.verb || {};
-    const inf = verbData.inf || word;
-    // Conjugaciones básicas (presente) para los sujetos más comunes
-    const conjugations = {
-        'ich': inf.replace(/en$/, 'e').replace(/n$/, 'e'),
-        'du': inf.replace(/en$/, 'st').replace(/n$/, 'st'),
-        'er/sie/es': inf.replace(/en$/, 't').replace(/n$/, 't'),
-        'wir': inf,
-        'ihr': inf.replace(/en$/, 't').replace(/n$/, 't'),
-        'sie': inf
-    };
-    // Partizip II aproximado para verbos regulares
-    const partizip = verbData.part || ('ge' + inf.replace(/en$/, 't').replace(/n$/, 't'));
-    const aux = verbData.aux || 'hat';
-
-    const subjects = [
-        { pron: 'ich', subj: 'Ich' },
-        { pron: 'du', subj: 'Du' },
-        { pron: 'er/sie/es', subj: 'Er' },
-        { pron: 'wir', subj: 'Wir' },
-        { pron: 'ihr', subj: 'Ihr' },
-        { pron: 'sie', subj: 'Sie' }
-    ];
-    const objekte = ['das Buch', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Brief', 'die Blumen', 'das Auto', 'den Film'];
-
-    // 1. Frase simple presente
-    const subj1 = subjects[Math.floor(Math.random() * subjects.length)];
-    const obj1 = objekte[Math.floor(Math.random() * objekte.length)];
-    phrases.push({
-        de: `${subj1.subj} ${conjugations[subj1.pron]} ${obj1}.`,
-        es: '(frase generada)',
-        template: 'Presente',
-        root: janulusCurrentRoot
-    });
-
-    // 2. Perfekt
-    const subj2 = subjects[Math.floor(Math.random() * subjects.length)];
-    const obj2 = objekte[Math.floor(Math.random() * objekte.length)];
-    phrases.push({
-        de: `${subj2.subj} ${aux} ${obj2} ${partizip}.`,
-        es: '(frase generada)',
-        template: 'Perfekt',
-        root: janulusCurrentRoot
-    });
-
-    // 3. Weil + Nebensatz
-    const subj3 = subjects[Math.floor(Math.random() * subjects.length)];
-    const obj3 = objekte[Math.floor(Math.random() * objekte.length)];
-    phrases.push({
-        de: `${subj3.subj} ${conjugations[subj3.pron]} ${obj3}, weil ${subj3.pron} ${obj3} ${partizip} ${aux}.`,
-        es: '(frase generada)',
-        template: 'Weil + Nebensatz',
-        root: janulusCurrentRoot
-    });
-
-    // 4. Futur I
-    const subj4 = subjects[Math.floor(Math.random() * subjects.length)];
-    const obj4 = objekte[Math.floor(Math.random() * objekte.length)];
-    phrases.push({
-        de: `${subj4.subj} wird ${obj4} ${inf}.`,
-        es: '(frase generada)',
-        template: 'Futur I',
-        root: janulusCurrentRoot
-    });
-
-    return phrases;
-}
-
-// Extrae todas las raíces del vocabulario e islas
+// --- Extrae raíces locales (mejorada) ---
 function extractLocalRoots() {
     const rootSet = new Set();
-    const allWords = new Map(); // palabra -> { tipo, info extra }
+    const allWords = new Set();
 
-    // 1. Del vocabulario
-    (appData.vocabulary || []).forEach(v => {
-        const word = v.word.toLowerCase();
-        allWords.set(word, { type: 'vocab', translation: v.translation, example: v.example_de });
-    });
-
-    // 2. De las islas
+    (appData.vocabulary || []).forEach(v => allWords.add(v.word.toLowerCase()));
     appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(isl => {
         isl.phrases.forEach(p => {
             p.de.split(/\s+/).forEach(raw => {
                 const w = raw.replace(/[.,!?;:()¿¡]/g, '').toLowerCase();
-                if (w.length > 2) allWords.set(w, { type: 'phrase' });
+                if (w.length > 2) allWords.add(w);
             });
         });
     });
 
-    // 3. Aplicar stemming ligero para extraer raíces
-    allWords.forEach((info, word) => {
+    allWords.forEach(word => {
         let stem = word;
-        // Eliminar terminaciones comunes
         for (const suf of GERMAN_SUFFIXES) {
             if (stem.endsWith(suf) && stem.length - suf.length >= 3) {
                 stem = stem.slice(0, -suf.length);
                 break;
             }
         }
-        // Eliminar prefijos comunes (si queda suficiente raíz)
         for (const pref of GERMAN_PREFIXES) {
             if (stem.startsWith(pref) && stem.length - pref.length >= 2) {
                 const candidate = stem.slice(pref.length);
@@ -5907,180 +5848,20 @@ function extractLocalRoots() {
                 }
             }
         }
-        if (stem.length >= 2) rootSet.add(stem);
+        if (stem.length >= 2 && !/^(ge|be|ver|zer|ent|emp|er|miss)$/i.test(stem)) {
+            rootSet.add(stem);
+        }
     });
 
     return Array.from(rootSet).sort();
 }
 
-// Construye la tabla Janulus para una raíz (local)
-function buildJanulusTable(root) {
-    if (janulusData[root]) return janulusData[root]; // Usar caché
-
-    const data = {
-        root: root,
-        verb: null,
-        nouns: [],
-        adjectives: [],
-        compounds: [],
-    };
-
-    // Buscar todas las palabras que contienen la raíz
-    const candidates = [];
-    (appData.vocabulary || []).forEach(v => {
-        if (v.word.toLowerCase().includes(root)) {
-            candidates.push({ word: v.word, translation: v.translation, example: v.example_de });
-        }
-    });
-    appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(isl => {
-        isl.phrases.forEach(p => {
-            p.de.split(/\s+/).forEach(raw => {
-                const w = raw.replace(/[.,!?;:()¿¡]/g, '');
-                if (w.toLowerCase().includes(root) && !candidates.find(c => c.word === w)) {
-                    candidates.push({ word: w });
-                }
-            });
-        });
-    });
-
-    // Clasificar candidatos
-    candidates.forEach(c => {
-        const w = c.word;
-        // Verbo: termina en -en o -n
-        if (/(en|n)$/i.test(w) && w.length > 3) {
-            if (!data.verb) {
-                data.verb = { inf: w, pret: '', part: '', aux: 'hat' };
-            }
-        }
-        // Sustantivo: empieza con mayúscula
-        else if (/^[A-ZÄÖÜ]/.test(w) && w.length > 2) {
-            if (!data.nouns.find(n => n.word === w)) {
-                data.nouns.push({ word: w, article: 'der', meaning: c.translation || '' });
-            }
-        }
-        // Adjetivo: termina en -ig, -lich, -bar, -sam, -los
-        else if (/(ig|lich|bar|sam|los)$/i.test(w)) {
-            data.adjectives.push({ word: w, meaning: c.translation || '' });
-        }
-        // Compuesto: contiene otra palabra
-        else if (w.length > 6 && w !== data.verb?.inf) {
-            if (!data.compounds.find(c => c.word === w)) {
-                data.compounds.push({ word: w, meaning: c.translation || '' });
-            }
-        }
-    });
-
-    janulusData[root] = data;
-    return data;
-}
-
-// Genera una frase usando una plantilla y una palabra de la constelación
-function generateJanulusPhrase(wordData, template, verbData) {
-    const subj = JANULUS_SUBJECTS[Math.floor(Math.random() * JANULUS_SUBJECTS.length)];
-    let comp = '';
-    // Buscar un complemento en el vocabulario que tenga sentido con este verbo
-    const matchingVocab = (appData.vocabulary || []).filter(v => 
-        v.word !== wordData.word && v.translation && v.example_de
-    );
-    if (matchingVocab.length > 0) {
-        const randomVocab = matchingVocab[Math.floor(Math.random() * matchingVocab.length)];
-        comp = randomVocab.word; // usar palabra como complemento simple
-    } else {
-        comp = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
-    }
-
-    const extra = {
-        partizip: verbData?.part || 'gekommen',
-        aux: verbData?.aux || 'hat',
-        infinitiv: verbData?.inf || wordData.word,
-        konjunktiv: verbData?.inf ? verbData.inf.replace(/en$/, 'te') : 'käme',
-        objekt: comp,
-    };
-    const phraseDe = template.build(subj, wordData.word, extra);
-    return {
-        de: phraseDe.charAt(0).toUpperCase() + phraseDe.slice(1),
-        es: '(Traducción generada)',
-        template: template.name,
-        root: janulusCurrentRoot,
-    };
-}
-
-// Renderiza la vista Janulus completa
-function renderJanulusView() {
-    const select = document.getElementById('janulus-root-select');
-    select.innerHTML = '<option value="">-- Selecciona una raíz --</option>';
-    const roots = extractLocalRoots();
-    roots.forEach(root => {
-        const option = document.createElement('option');
-        option.value = root;
-        option.textContent = root;
-        select.appendChild(option);
-    });
-    document.getElementById('janulus-root-info').textContent = `${roots.length} raíces extraídas de tu vocabulario e islas`;
-}
-
-// Evento al cambiar de raíz
-function onJanulusRootChange() {
-    const root = document.getElementById('janulus-root-select').value;
-    if (!root) {
-        document.getElementById('janulus-table-container').classList.add('hidden');
-        document.getElementById('janulus-phrase-generator').classList.add('hidden');
-        return;
-    }
-    janulusCurrentRoot = root;
-    const data = buildJanulusTable(root);
-
-    document.getElementById('janulus-root-title').textContent = `🔗 Constelación de "${root}"`;
-    document.getElementById('janulus-table-container').classList.remove('hidden');
-    document.getElementById('janulus-phrase-generator').classList.remove('hidden');
-    janulusGeneratedPhrases = [];
-    document.getElementById('janulus-phrases-list').innerHTML = '';
-
-    // Verbo
-    const verbRow = document.getElementById('janulus-verb-row');
-    if (data.verb) {
-        verbRow.innerHTML = `<span class="bg-slate-700 hover:bg-slate-600 text-emerald-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${data.verb.inf}')">${data.verb.inf}</span>`;
-    } else {
-        verbRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrado en tu vocabulario</span>';
-    }
-
-    // Sustantivos
-    const nounsRow = document.getElementById('janulus-nouns-row');
-    if (data.nouns.length > 0) {
-        nounsRow.innerHTML = data.nouns.map(n =>
-            `<span class="bg-slate-700 hover:bg-slate-600 text-blue-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${n.word}')">${n.article} ${n.word} ${n.meaning ? '('+n.meaning+')' : ''}</span>`
-        ).join('');
-    } else {
-        nounsRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
-    }
-
-    // Adjetivos
-    const adjRow = document.getElementById('janulus-adjectives-row');
-    if (data.adjectives.length > 0) {
-        adjRow.innerHTML = data.adjectives.map(a =>
-            `<span class="bg-slate-700 hover:bg-slate-600 text-purple-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${a.word}')">${a.word} ${a.meaning ? '('+a.meaning+')' : ''}</span>`
-        ).join('');
-    } else {
-        adjRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
-    }
-
-    // Compuestos
-    const compRow = document.getElementById('janulus-compounds-row');
-    if (data.compounds.length > 0) {
-        compRow.innerHTML = data.compounds.map(c =>
-            `<span class="bg-slate-700 hover:bg-slate-600 text-amber-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${c.word}')">${c.word} ${c.meaning ? '('+c.meaning+')' : ''}</span>`
-        ).join('');
-    } else {
-        compRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
-    }
-}
-
-// Genera frases para una palabra usando todas las plantillas
+// --- Genera frases para una palabra ---
 async function generateAllJanulusPhrases(word) {
-    const data = janulusData[janulusCurrentRoot] || buildJanulusTable(janulusCurrentRoot);
+    janulusGeneratedPhrases = janulusGeneratedPhrases.filter(p => p.root !== word);
     let phrases = [];
 
-    // 1. Intentar obtener frases reales de Wiktionary (online)
+    // 1. Intentar frases reales de Wiktionary
     try {
         const url = `https://de.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(word)}&prop=wikitext&format=json&origin=*`;
         const resp = await fetch(url);
@@ -6089,247 +5870,216 @@ async function generateAllJanulusPhrases(word) {
             const wikitext = json?.parse?.wikitext?.['*'] || '';
             const examples = extractWiktionaryExamples(wikitext);
             if (examples.length > 0) {
-                phrases = examples.slice(0, 5).map(de => ({
-                    de: de,
-                    es: '(frase real de Wiktionary)',
-                    template: 'Wiktionary',
-                    root: janulusCurrentRoot
-                }));
+                for (const de of examples.slice(0, 5)) {
+                    const es = await fetchOnlineTranslation(de);
+                    phrases.push({ de, es: es || '(sin traducción)', template: 'Wiktionary', root: word });
+                }
             }
         }
-    } catch (e) {
-        console.warn('Wiktionary no disponible, usando generación local mejorada.');
-    }
+    } catch (e) { console.warn('Wiktionary offline.'); }
 
-    // 2. Fallback offline: generación gramaticalmente correcta
+    // 2. Fallback: generación local con verbos reales
     if (phrases.length === 0) {
-        phrases = generateCorrectLocalPhrases(word, data);
+        phrases = await generateCorrectLocalPhrases(word);
     }
 
     janulusGeneratedPhrases = janulusGeneratedPhrases.concat(phrases);
     renderJanulusPhrases();
 }
 
-// Muestra las frases generadas en la lista
+// --- Generación local avanzada ---
+async function generateCorrectLocalPhrases(word) {
+    const phrases = [];
+    // Buscar el verbo real más cercano
+    const cleanWord = word.replace(/[.,!?;:()]/g, '').toLowerCase();
+    let verb = JANULUS_REAL_VERBS.find(v => v.inf === cleanWord);
+    if (!verb) {
+        // Buscar por similitud o usar el primero como modelo
+        verb = JANULUS_REAL_VERBS[Math.floor(Math.random() * JANULUS_REAL_VERBS.length)];
+    }
+
+    const conjug = {
+        'ich': verb.inf.replace(/en$/, 'e').replace(/n$/, 'e'),
+        'du': verb.inf.replace(/en$/, 'st').replace(/n$/, 'st'),
+        'er/sie/es': verb.inf.replace(/en$/, 't').replace(/n$/, 't'),
+        'wir': verb.inf,
+        'ihr': verb.inf.replace(/en$/, 't').replace(/n$/, 't'),
+        'sie': verb.inf,
+    };
+
+    const subjList = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie'];
+    const subjDisplay = { 'ich':'Ich', 'du':'Du', 'er/sie/es':'Er', 'wir':'Wir', 'ihr':'Ihr', 'sie':'Sie' };
+
+    // 1. Presente simple
+    const s1 = subjList[Math.floor(Math.random() * subjList.length)];
+    const o1 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    const de1 = `${subjDisplay[s1]} ${conjug[s1]} ${o1}.`;
+    const es1 = await fetchOnlineTranslation(de1);
+    phrases.push({ de: de1, es: es1 || '(sin traducción)', template: 'Presente', root: word });
+
+    // 2. Perfekt
+    const s2 = subjList[Math.floor(Math.random() * subjList.length)];
+    const o2 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    const de2 = `${subjDisplay[s2]} ${verb.aux} ${o2} ${verb.part}.`;
+    const es2 = await fetchOnlineTranslation(de2);
+    phrases.push({ de: de2, es: es2 || '(sin traducción)', template: 'Perfekt', root: word });
+
+    // 3. Weil + Nebensatz
+    const s3 = subjList[Math.floor(Math.random() * subjList.length)];
+    const o3 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    const de3 = `${subjDisplay[s3]} ${conjug[s3]} ${o3}, weil ${s3} ${o3} ${verb.part} ${verb.aux}.`;
+    const es3 = await fetchOnlineTranslation(de3);
+    phrases.push({ de: de3, es: es3 || '(sin traducción)', template: 'Weil + Nebensatz', root: word });
+
+    // 4. Futur I
+    const s4 = subjList[Math.floor(Math.random() * subjList.length)];
+    const o4 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    const de4 = `${subjDisplay[s4]} wird ${o4} ${verb.inf}.`;
+    const es4 = await fetchOnlineTranslation(de4);
+    phrases.push({ de: de4, es: es4 || '(sin traducción)', template: 'Futur I', root: word });
+
+    return phrases;
+}
+
+function extractWiktionaryExamples(wikitext) {
+    const examples = [];
+    const re = /\{\{Beispiel\}\}\s*\n?([^\n]*)/gi;
+    let m;
+    while ((m = re.exec(wikitext)) !== null) {
+        let t = m[1].replace(/\[\[|\]\]/g, '').replace(/\{\{[^}]+\}\}/g, '').replace(/<[^>]+>/g, '').trim();
+        if (t.length > 5 && t.includes(' ')) examples.push(t);
+    }
+    return examples;
+}
+
+// --- Renderizado y gestión ---
+function renderJanulusView() {
+    const select = document.getElementById('janulus-root-select');
+    select.innerHTML = '<option value="">-- Selecciona una raíz --</option>';
+    extractLocalRoots().forEach(root => {
+        const opt = document.createElement('option');
+        opt.value = root; opt.textContent = root;
+        select.appendChild(opt);
+    });
+    document.getElementById('janulus-root-info').textContent = `${select.options.length - 1} raíces extraídas de tu vocabulario e islas`;
+}
+
+function onJanulusRootChange() {
+    const root = document.getElementById('janulus-root-select').value;
+    if (!root) return;
+    document.getElementById('janulus-word-input').value = root;
+    onJanulusWordSearch();
+}
+
 function renderJanulusPhrases() {
-    const container = document.getElementById('janulus-phrases-list');
-    container.innerHTML = janulusGeneratedPhrases.map((p, i) => `
+    const c = document.getElementById('janulus-phrases-list');
+    c.innerHTML = janulusGeneratedPhrases.map((p, i) => `
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex justify-between items-start gap-3">
             <div>
                 <p class="text-white font-bold">${p.de}</p>
-                <p class="text-xs text-slate-400 mt-1">[${p.template}]</p>
+                <p class="text-sm text-emerald-400 italic mt-1">🇪🇸 ${p.es || ''}</p>
+                <p class="text-xs text-slate-500 mt-1">[${p.template}]</p>
             </div>
             <div class="flex gap-1 shrink-0">
-                <button onclick="speakText('${p.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs" title="Escuchar"><i class="fa-solid fa-volume-high"></i></button>
-                <button onclick="confirmDeleteJanulusPhrase(${i})" class="bg-slate-700 hover:bg-rose-600 p-2 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="speakText('${p.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs"><i class="fa-solid fa-volume-high"></i></button>
+                <button onclick="confirmDeleteJanulusPhrase(${i})" class="bg-slate-700 hover:bg-rose-600 p-2 rounded-lg text-xs"><i class="fa-solid fa-xmark"></i></button>
             </div>
-        </div>
-    `).join('');
-}
-function confirmDeleteJanulusPhrase(index) {
-    if (confirm('¿Seguro que quieres eliminar esta frase?')) {
-        deleteJanulusPhrase(index);
-    }
+        </div>`).join('');
 }
 
-// Elimina una frase de la lista
-function deleteJanulusPhrase(index) {
-    janulusGeneratedPhrases.splice(index, 1);
-    renderJanulusPhrases();
-}
+function confirmDeleteJanulusPhrase(i) { if (confirm('¿Eliminar esta frase?')) { janulusGeneratedPhrases.splice(i,1); renderJanulusPhrases(); } }
+function clearJanulusPhrases() { janulusGeneratedPhrases = []; renderJanulusPhrases(); }
 
-// Limpia todas las frases generadas
-function clearJanulusPhrases() {
-    janulusGeneratedPhrases = [];
-    renderJanulusPhrases();
-}
-
-// Guarda las frases generadas en una isla (nueva o existente)
 async function saveJanulusPhrasesToIsland() {
-    if (janulusGeneratedPhrases.length === 0) {
-        alert('No hay frases generadas. Pulsa en una palabra de la tabla para generar frases.');
-        return;
-    }
+    if (!janulusGeneratedPhrases.length) return alert('No hay frases.');
     const islandList = appData.islands.filter(i => i.type !== 'group');
     const selected = await showIslandSelectionModalWithPreselection(islandList, []);
-    if (!selected || selected.length === 0) {
-        // Crear nueva isla
-        const name = prompt('Nombre de la nueva isla Janulus:', `Janulus - ${janulusCurrentRoot}`);
+    if (!selected || !selected.length) {
+        const name = prompt('Nombre nueva isla:', `Janulus - ${janulusCurrentRoot}`);
         if (!name) return;
-        const newIsland = {
-            id: 'janulus_' + Date.now(),
-            name: name,
-            phrases: [],
-            type: 'island',
-            parentId: null,
-        };
-        janulusGeneratedPhrases.forEach(p => {
-            newIsland.phrases.push({
-                id: 'phrase_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
-                de: p.de,
-                es: p.es,
-                tags: `#janulus #${janulusCurrentRoot} #${p.template}`,
-                starsGrammarNormal: 0, starsFluencyNormal: 0,
-                starsGrammarInverse: 0, starsFluencyInverse: 0,
-                isFavorite: false, isFocus: false,
-                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5,
-            });
-        });
-        appData.islands.push(newIsland);
-        saveDatabase();
-        alert(`${janulusGeneratedPhrases.length} frases guardadas en "${name}". Ve a la pestaña Islas para entrenarlas.`);
+        const isl = { id: 'janulus_'+Date.now(), name, phrases:[], type:'island', parentId:null };
+        janulusGeneratedPhrases.forEach(p => isl.phrases.push({
+            id: 'phrase_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+            de: p.de, es: p.es, tags: `#janulus #${janulusCurrentRoot}`,
+            starsGrammarNormal:0,starsFluencyNormal:0,starsGrammarInverse:0,starsFluencyInverse:0,
+            isFavorite:false,isFocus:false,interval:1,nextReviewDate:getTodayDateString(),easeFactor:2.5
+        }));
+        appData.islands.push(isl); saveDatabase();
+        alert(`${janulusGeneratedPhrases.length} frases guardadas en "${name}".`);
     } else {
-        // Añadir a isla existente
         let added = 0;
-        selected.forEach(isl => {
-            janulusGeneratedPhrases.forEach(p => {
-                isl.phrases.push({
-                    id: 'phrase_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
-                    de: p.de,
-                    es: p.es,
-                    tags: `#janulus #${janulusCurrentRoot} #${p.template}`,
-                    starsGrammarNormal: 0, starsFluencyNormal: 0,
-                    starsGrammarInverse: 0, starsFluencyInverse: 0,
-                    isFavorite: false, isFocus: false,
-                    interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5,
-                });
-                added++;
-            });
-        });
-        saveDatabase();
-        alert(`${added} frases añadidas a ${selected.length} isla(s). Ve a la pestaña Islas para entrenarlas.`);
+        selected.forEach(isl => janulusGeneratedPhrases.forEach(p => {
+            isl.phrases.push({
+                id: 'phrase_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+                de: p.de, es: p.es, tags: `#janulus #${janulusCurrentRoot}`,
+                starsGrammarNormal:0,starsFluencyNormal:0,starsGrammarInverse:0,starsFluencyInverse:0,
+                isFavorite:false,isFocus:false,interval:1,nextReviewDate:getTodayDateString(),easeFactor:2.5
+            }); added++;
+        }));
+        saveDatabase(); alert(`${added} frases añadidas a ${selected.length} isla(s).`);
     }
     clearJanulusPhrases();
 }
 
-// Actualiza la lista de raíces
-function refreshJanulusRoots() {
-    janulusData = {}; // Limpiar caché
-    renderJanulusView();
-    alert('Raíces reextraídas de tu vocabulario e islas.');
-}
-
-// Añade una raíz personalizada
+function refreshJanulusRoots() { janulusData = {}; renderJanulusView(); }
 function showAddCustomRootPrompt() {
-    const root = prompt('Escribe la raíz que quieres añadir (ej: "fahr"):');
+    const root = prompt('Raíz personalizada:');
     if (root && root.length >= 2) {
-        janulusData[root] = {
-            root: root,
-            verb: null,
-            nouns: [],
-            adjectives: [],
-            compounds: [],
-        };
-        const select = document.getElementById('janulus-root-select');
-        const option = document.createElement('option');
-        option.value = root;
-        option.textContent = root + ' (personalizada)';
-        select.appendChild(option);
-        select.value = root;
+        document.getElementById('janulus-root-select').innerHTML += `<option value="${root}">${root} (personalizada)</option>`;
+        document.getElementById('janulus-root-select').value = root;
         onJanulusRootChange();
     }
 }
-
-// Muestra/oculta el panel de ayuda
 function toggleJanulusHelp() {
-    const panel = document.getElementById('janulus-help-panel');
-    if (panel.classList.contains('hidden')) {
-        panel.classList.remove('hidden');
-    } else {
-        panel.classList.add('hidden');
-    }
+    document.getElementById('janulus-help-panel').classList.toggle('hidden');
 }
+
+// --- Tabla combinatoria (clásica) ---
 function addJanulusColumn() {
     const container = document.getElementById('janulus-matrix-columns');
-    const colIndex = container.children.length + 1;
-    const colDiv = document.createElement('div');
-    colDiv.className = 'bg-slate-900 border border-slate-700 rounded-xl p-3';
-    colDiv.innerHTML = `
+    const col = document.createElement('div');
+    col.className = 'bg-slate-900 border border-slate-700 rounded-xl p-3';
+    col.innerHTML = `
         <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-bold text-slate-400">Columna ${colIndex}</span>
-            <button onclick="this.closest('.bg-slate-900').remove()" class="text-slate-500 hover:text-rose-400 text-xs">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <span class="text-xs font-bold text-slate-400">Columna ${container.children.length+1}</span>
+            <button onclick="this.closest('.bg-slate-900').remove()" class="text-slate-500 hover:text-rose-400 text-xs"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <input type="text" placeholder="Palabra 1, Palabra 2, ..." class="janulus-matrix-input w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white mb-2" />
-        <button onclick="addJanulusWordToMatrix(this)" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs font-bold w-full">
-            <i class="fa-solid fa-plus"></i> Añadir palabra
-        </button>
-        <div class="janulus-matrix-words flex flex-wrap gap-1 mt-2"></div>
-    `;
-    container.appendChild(colDiv);
-    // Mostrar el contenedor de la tabla si estaba oculto
+        <input type="text" placeholder="Palabra 1, Palabra 2..." class="janulus-matrix-input w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white mb-2" />
+        <button onclick="addJanulusWordToMatrix(this)" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs font-bold w-full"><i class="fa-solid fa-plus"></i> Añadir</button>
+        <div class="janulus-matrix-words flex flex-wrap gap-1 mt-2"></div>`;
+    container.appendChild(col);
     document.getElementById('janulus-matrix-container').classList.remove('hidden');
 }
 
-function addJanulusWordToMatrix(button) {
-    const colDiv = button.closest('.bg-slate-900');
-    const input = colDiv.querySelector('.janulus-matrix-input');
+function addJanulusWordToMatrix(btn) {
+    const col = btn.closest('.bg-slate-900');
+    const input = col.querySelector('.janulus-matrix-input');
     const word = input.value.trim();
     if (!word) return;
-    const wordsContainer = colDiv.querySelector('.janulus-matrix-words');
     const chip = document.createElement('span');
     chip.className = 'bg-slate-700 text-slate-200 px-2 py-0.5 rounded text-xs cursor-pointer hover:bg-slate-600';
-    chip.textContent = word;
-    chip.onclick = () => chip.remove();
-    wordsContainer.appendChild(chip);
+    chip.textContent = word; chip.onclick = () => chip.remove();
+    col.querySelector('.janulus-matrix-words').appendChild(chip);
     input.value = '';
 }
 
-function generateMatrixPhrase() {
-    const columns = document.querySelectorAll('.janulus-matrix-words');
-    const wordsPerColumn = [];
-    columns.forEach(col => {
-        const words = Array.from(col.children).map(chip => chip.textContent.trim());
-        if (words.length > 0) wordsPerColumn.push(words);
+async function generateMatrixPhrase() {
+    const cols = document.querySelectorAll('.janulus-matrix-words');
+    const wordsPerCol = [];
+    cols.forEach(col => {
+        const words = Array.from(col.children).map(c => c.textContent.trim());
+        if (words.length) wordsPerCol.push(words);
     });
-    if (wordsPerColumn.length < 2) {
-        alert('Añade palabras al menos en 2 columnas para generar una frase.');
-        return;
-    }
-    // Elegir una palabra aleatoria de cada columna
-    const selected = wordsPerColumn.map(col => col[Math.floor(Math.random() * col.length)]);
-    const phraseDe = selected.join(' ');
-    janulusGeneratedPhrases.push({
-        de: phraseDe,
-        es: '(frase combinada)',
-        template: 'Tabla Combinatoria',
-        root: janulusCurrentRoot || 'matriz'
-    });
+    if (wordsPerCol.length < 2) return alert('Añade palabras en al menos 2 columnas.');
+    const selected = wordsPerCol.map(col => col[Math.floor(Math.random() * col.length)]);
+    const de = selected.join(' ');
+    const es = await fetchOnlineTranslation(de);
+    janulusGeneratedPhrases.push({ de, es: es || '(sin traducción)', template: 'Tabla Combinatoria', root: 'matriz' });
     renderJanulusPhrases();
 }
 
 function toggleJanulusMatrixHelp() {
-    const help = document.getElementById('janulus-matrix-help');
-    if (help.classList.contains('hidden')) {
-        help.classList.remove('hidden');
-    } else {
-        help.classList.add('hidden');
-    }
-}
-
-function renderExercisesView() {
-    const source = document.getElementById('exercise-source');
-    const btn = document.getElementById('btn-select-exercise-islands');
-    if (source && btn) {
-        source.onchange = () => {
-            if (source.value === 'selected-islands') {
-                btn.classList.remove('hidden');
-            } else {
-                btn.classList.add('hidden');
-            }
-        };
-    }
-}
-
-async function selectExerciseIslands() {
-    const islandList = appData.islands.filter(i => i.type !== 'group' && i.phrases && i.phrases.length > 0);
-    if (islandList.length === 0) { alert('No hay islas disponibles.'); return; }
-    const selected = await showIslandSelectionModalWithPreselection(islandList, exerciseSelectedIslandIds);
-    if (selected) {
-        exerciseSelectedIslandIds = selected.map(isl => isl.id);
-        document.getElementById('btn-select-exercise-islands').innerHTML = `Elegir islas (${exerciseSelectedIslandIds.length})`;
-    }
+    document.getElementById('janulus-matrix-help').classList.toggle('hidden');
 }
 
 // ==================== GENERADOR DE EJERCICIOS ====================
