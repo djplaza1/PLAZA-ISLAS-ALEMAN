@@ -6076,7 +6076,7 @@ function onJanulusRootChange() {
 }
 
 // Genera frases para una palabra usando todas las plantillas
-aasync function generateAllJanulusPhrases(word) {
+async function generateAllJanulusPhrases(word) {
     const data = janulusData[janulusCurrentRoot] || buildJanulusTable(janulusCurrentRoot);
     let phrases = [];
 
@@ -6126,12 +6126,6 @@ function renderJanulusPhrases() {
         </div>
     `).join('');
 }
-function confirmDeleteJanulusPhrase(index) {
-    if (confirm('¿Seguro que quieres eliminar esta frase?')) {
-        deleteJanulusPhrase(index);
-    }
-}
-
 function confirmDeleteJanulusPhrase(index) {
     if (confirm('¿Seguro que quieres eliminar esta frase?')) {
         deleteJanulusPhrase(index);
