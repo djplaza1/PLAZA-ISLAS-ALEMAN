@@ -191,6 +191,9 @@
                                 <button onclick="switchView('vocabulary')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-book text-teal-400"></i> Vocabulario
                 </button>
+                <button onclick="switchView('janulus')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+    <i class="fa-solid fa-door-open text-orange-400"></i> Janulus
+</button>
                 <button onclick="switchView('exercises')" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
                     <i class="fa-solid fa-dumbbell text-green-400"></i> Ejercicios
                 </button>
@@ -796,6 +799,98 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
         </div>
     </div>
 </section>
+
+<!-- VISTA JANULUS -->
+<section id="view-janulus" class="view-section space-y-6">
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-door-open text-orange-400"></i> Janulus C2 Pro</h2>
+        <div class="flex gap-2 flex-wrap">
+            <button onclick="toggleJanulusHelp()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold transition">
+                <i class="fa-solid fa-circle-question"></i> Ayuda
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel de ayuda (oculto por defecto) -->
+    <div id="janulus-help-panel" class="hidden bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-4">
+        <h3 class="text-lg font-black text-amber-400">🧠 ¿Qué es Janulus y cómo usarlo para B2+?</h3>
+        <div class="text-sm text-slate-300 space-y-3">
+            <p><strong class="text-emerald-400">Janulus</strong> (del latín <em>ianua</em> = puerta) es una técnica de adquisición de vocabulario basada en la <strong>derivación morfológica</strong>. En alemán, una sola raíz (p. ej. <em>fahr-</em>) puede generar familias enteras: <em>fahren, Fahrt, Fahrer, Gefahr, abfahren, Fahrzeug, Fahrkarte...</em></p>
+            <p><strong class="text-amber-400">¿Por qué es tan efectiva?</strong> El cerebro almacena palabras en redes semánticas y morfológicas. Aprender la "constelación" completa de una raíz activa la memoria asociativa y acelera la retención a largo plazo. Con solo unas pocas raíces maestras puedes comprender y producir cientos de frases.</p>
+            <p><strong class="text-rose-400">🔥 Rutina diaria recomendada (15-20 min):</strong></p>
+            <ol class="list-decimal list-inside space-y-1 ml-2">
+                <li><strong>Elige una raíz</strong> (las más productivas primero: <em>fahr-, komm-, sprech-, halt-, stell-</em>)</li>
+                <li><strong>Explora la tabla</strong>: mira cada palabra derivada, su género, su preposición fija, su forma irregular</li>
+                <li><strong>Genera frases</strong>: pulsa en cada celda para crear frases con estructuras B2 (Plusquamperfekt, Futur, Pasiva, Relativsätze...)</li>
+                <li><strong>Repite en voz alta</strong> cada frase generada (usa el TTS y luego graba tu voz)</li>
+                <li><strong>Escribe</strong> algunas frases en el modo "Dictado" o "Producción"</li>
+                <li><strong>Guarda las mejores frases</strong> en tus islas para repasarlas luego con SRS</li>
+            </ol>
+            <p><strong class="text-blue-400">📚 Estructuras gramaticales que practicarás:</strong> Weil/Obwohl + Nebensatz, Plusquamperfekt con <em>nachdem</em>, Futur I y II, Pasiva (Vorgangs- und Zustandspassiv), Relativsätze, Konjunktiv II, conectores dobles (<em>sowohl... als auch, weder... noch</em>), <em>um... zu / damit</em>, y más.</p>
+            <p><strong class="text-purple-400">💡 Consejo PRO:</strong> Cuando generes una frase, no la leas pasivamente. Escúchala, repítela, escríbela, tradúcela al español y viceversa. La repetición activa multinivel es lo que fija la estructura en tu memoria a largo plazo.</p>
+        </div>
+    </div>
+
+    <!-- Selector de raíz -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <div class="flex flex-wrap items-center gap-4">
+            <label class="text-xs text-slate-400 font-bold uppercase">Raíz maestra:</label>
+            <select id="janulus-root-select" onchange="onJanulusRootChange()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-bold flex-1 min-w-[200px]">
+                <option value="">-- Selecciona una raíz --</option>
+            </select>
+            <button onclick="refreshJanulusRoots()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold" title="Reextraer raíces del vocabulario">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+            <button onclick="showAddCustomRootPrompt()" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">
+                <i class="fa-solid fa-plus"></i> Añadir raíz
+            </button>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-2" id="janulus-root-info"></p>
+    </div>
+
+    <!-- Tabla de constelación -->
+    <div id="janulus-table-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 hidden">
+        <h3 class="text-lg font-black text-orange-400 mb-4" id="janulus-root-title"></h3>
+
+        <!-- Verbo base -->
+        <div class="mb-6">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">⚡ Verbo base</h4>
+            <div id="janulus-verb-row" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Sustantivos -->
+        <div class="mb-6">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">📦 Sustantivos</h4>
+            <div id="janulus-nouns-row" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Adjetivos / Adverbios -->
+        <div class="mb-6">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">🎨 Adjetivos / Adverbios</h4>
+            <div id="janulus-adjectives-row" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Compuestos -->
+        <div class="mb-6">
+            <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">🧩 Compuestos</h4>
+            <div id="janulus-compounds-row" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <!-- Generador de frases -->
+    <div id="janulus-phrase-generator" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 hidden">
+        <h3 class="text-lg font-black text-amber-400 mb-4">📝 Frases generadas</h3>
+        <div id="janulus-phrases-list" class="space-y-3 mb-4"></div>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="saveJanulusPhrasesToIsland()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">
+                <i class="fa-solid fa-save"></i> Guardar en isla
+            </button>
+            <button onclick="clearJanulusPhrases()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-xs font-bold">
+                <i class="fa-solid fa-trash"></i> Limpiar frases
+            </button>
+        </div>
+    </div>
+</section>
 <!-- VISTA EJERCICIOS -->
 <section id="view-exercises" class="view-section space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
@@ -936,6 +1031,9 @@ let flashcardSessionActive = false;
 let flashcardStartTime = null;
 let currentFlashcardIndex = 0;
 let isFlipped = false;
+let janulusData = {};
+let janulusCurrentRoot = null;
+let janulusGeneratedPhrases = [];
 // ==================== GRABACIÓN Y REPRODUCCIÓN DE AUDIO ====================
 let mediaRecorder = null;
 let audioChunks = [];
@@ -1537,6 +1635,7 @@ function switchView(viewName) {
     else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
     else if (viewName === 'stats') renderAdvancedStatistics();
     else if (viewName === 'exercises') renderExercisesView();
+    else if (viewName === 'janulus') renderJanulusView();
     if (viewName !== 'training' && sessionActive) endTrainingSession();
 }
 
@@ -5625,6 +5724,365 @@ function renderAdvancedStatistics() {
     }
 }
 let exerciseSelectedIslandIds = [];
+// ==================== JANULUS C2 PRO ====================
+// Variables declaradas globalmente
+
+// Prefijos y sufijos para stemming ligero
+const GERMAN_PREFIXES = ['ab', 'an', 'auf', 'aus', 'bei', 'ein', 'ent', 'er', 'ge', 'her', 'hin', 'los', 'mit', 'nach', 'vor', 'weg', 'zu', 'zurück', 'ver', 'zer', 'be', 'emp', 'miss', 'wider', 'dar', 'heim', 'teil', 'fort'];
+const GERMAN_SUFFIXES = ['ung', 'heit', 'keit', 'schaft', 'erei', 'chen', 'lein', 'er', 'in', 'en', 't', 'et', 'ig', 'lich', 'bar', 'sam', 'los', 'haft', 'mäßig', 'weise'];
+
+// Plantillas gramaticales B2
+const JANULUS_TEMPLATES = [
+    { name: 'Weil + Nebensatz', pattern: 'weil [SUBJ] [VERB_CONJ]', build: (subj, verb, extra) => `weil ${subj} ${verb}` },
+    { name: 'Obwohl + Nebensatz', pattern: 'obwohl [SUBJ] [VERB_CONJ]', build: (subj, verb, extra) => `obwohl ${subj} ${verb}` },
+    { name: 'Nachdem + Plusquamperfekt', pattern: 'nachdem [SUBJ] [PARTIZIP] hatte/war', build: (subj, verb, extra) => `nachdem ${subj} ${extra?.partizip || '...'} ${extra?.aux || 'hatte'}` },
+    { name: 'Wenn + Konjunktiv II', pattern: 'wenn [SUBJ] [VERB_KONJUNKTIV]', build: (subj, verb, extra) => `wenn ${subj} ${extra?.konjunktiv || '...'}` },
+    { name: 'Futur I', pattern: '[SUBJ] wird [INFINITIV]', build: (subj, verb, extra) => `${subj} wird ${extra?.infinitiv || verb}` },
+    { name: 'Pasiva (Vorgangspassiv)', pattern: '[SUBJ] wird [PARTIZIP]', build: (subj, verb, extra) => `${subj} wird ${extra?.partizip || '...'}` },
+    { name: 'Relativsatz', pattern: 'der/die/das [VERB_CONJ]', build: (subj, verb, extra) => `${subj}, der ${verb}` },
+    { name: 'Sowohl... als auch', pattern: 'sowohl [A] als auch [B]', build: (subj, verb, extra) => `sowohl ${subj} als auch ${extra?.objekt || '...'}` },
+    { name: 'Nicht nur... sondern auch', pattern: 'nicht nur [A], sondern auch [B]', build: (subj, verb, extra) => `nicht nur ${subj}, sondern auch ${extra?.objekt || '...'}` },
+    { name: 'Um... zu', pattern: 'um [SUBST] zu [INFINITIV]', build: (subj, verb, extra) => `um ${subj} zu ${extra?.infinitiv || verb}` },
+];
+
+// Sujetos y objetos genéricos para construir frases
+const JANULUS_SUBJECTS = ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'sie', 'der Mann', 'die Frau', 'das Kind', 'der Lehrer', 'mein Freund'];
+const JANULUS_OBJECTS = ['das Buch', 'den Brief', 'die Antwort', 'das Auto', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Fehler'];
+
+// Extrae todas las raíces del vocabulario e islas
+function extractLocalRoots() {
+    const rootSet = new Set();
+    const allWords = new Map(); // palabra -> { tipo, info extra }
+
+    // 1. Del vocabulario
+    (appData.vocabulary || []).forEach(v => {
+        const word = v.word.toLowerCase();
+        allWords.set(word, { type: 'vocab', translation: v.translation, example: v.example_de });
+    });
+
+    // 2. De las islas
+    appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(isl => {
+        isl.phrases.forEach(p => {
+            p.de.split(/\s+/).forEach(raw => {
+                const w = raw.replace(/[.,!?;:()¿¡]/g, '').toLowerCase();
+                if (w.length > 2) allWords.set(w, { type: 'phrase' });
+            });
+        });
+    });
+
+    // 3. Aplicar stemming ligero para extraer raíces
+    allWords.forEach((info, word) => {
+        let stem = word;
+        // Eliminar terminaciones comunes
+        for (const suf of GERMAN_SUFFIXES) {
+            if (stem.endsWith(suf) && stem.length - suf.length >= 3) {
+                stem = stem.slice(0, -suf.length);
+                break;
+            }
+        }
+        // Eliminar prefijos comunes (si queda suficiente raíz)
+        for (const pref of GERMAN_PREFIXES) {
+            if (stem.startsWith(pref) && stem.length - pref.length >= 2) {
+                const candidate = stem.slice(pref.length);
+                if (candidate.length >= 2) {
+                    stem = candidate;
+                    break;
+                }
+            }
+        }
+        if (stem.length >= 2) rootSet.add(stem);
+    });
+
+    return Array.from(rootSet).sort();
+}
+
+// Construye la tabla Janulus para una raíz (local)
+function buildJanulusTable(root) {
+    if (janulusData[root]) return janulusData[root]; // Usar caché
+
+    const data = {
+        root: root,
+        verb: null,
+        nouns: [],
+        adjectives: [],
+        compounds: [],
+    };
+
+    // Buscar todas las palabras que contienen la raíz
+    const candidates = [];
+    (appData.vocabulary || []).forEach(v => {
+        if (v.word.toLowerCase().includes(root)) {
+            candidates.push({ word: v.word, translation: v.translation, example: v.example_de });
+        }
+    });
+    appData.islands.filter(i => i.type !== 'group' && i.phrases).forEach(isl => {
+        isl.phrases.forEach(p => {
+            p.de.split(/\s+/).forEach(raw => {
+                const w = raw.replace(/[.,!?;:()¿¡]/g, '');
+                if (w.toLowerCase().includes(root) && !candidates.find(c => c.word === w)) {
+                    candidates.push({ word: w });
+                }
+            });
+        });
+    });
+
+    // Clasificar candidatos
+    candidates.forEach(c => {
+        const w = c.word;
+        // Verbo: termina en -en o -n
+        if (/(en|n)$/i.test(w) && w.length > 3) {
+            if (!data.verb) {
+                data.verb = { inf: w, pret: '', part: '', aux: 'hat' };
+            }
+        }
+        // Sustantivo: empieza con mayúscula
+        else if (/^[A-ZÄÖÜ]/.test(w) && w.length > 2) {
+            if (!data.nouns.find(n => n.word === w)) {
+                data.nouns.push({ word: w, article: 'der', meaning: c.translation || '' });
+            }
+        }
+        // Adjetivo: termina en -ig, -lich, -bar, -sam, -los
+        else if (/(ig|lich|bar|sam|los)$/i.test(w)) {
+            data.adjectives.push({ word: w, meaning: c.translation || '' });
+        }
+        // Compuesto: contiene otra palabra
+        else if (w.length > 6 && w !== data.verb?.inf) {
+            if (!data.compounds.find(c => c.word === w)) {
+                data.compounds.push({ word: w, meaning: c.translation || '' });
+            }
+        }
+    });
+
+    janulusData[root] = data;
+    return data;
+}
+
+// Genera una frase usando una plantilla y una palabra de la constelación
+function generateJanulusPhrase(wordData, template, verbData) {
+    const subj = JANULUS_SUBJECTS[Math.floor(Math.random() * JANULUS_SUBJECTS.length)];
+    const obj = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    const extra = {
+        partizip: verbData?.part || 'gekommen',
+        aux: verbData?.aux || 'hat',
+        infinitiv: verbData?.inf || wordData.word,
+        konjunktiv: verbData?.inf ? verbData.inf.replace(/en$/, 'te') : 'käme',
+        objekt: obj,
+    };
+    const phraseDe = template.build(subj, wordData.word, extra);
+    return {
+        de: phraseDe.charAt(0).toUpperCase() + phraseDe.slice(1),
+        es: '(Traducción generada)',
+        template: template.name,
+        root: janulusCurrentRoot,
+    };
+}
+
+// Renderiza la vista Janulus completa
+function renderJanulusView() {
+    const select = document.getElementById('janulus-root-select');
+    select.innerHTML = '<option value="">-- Selecciona una raíz --</option>';
+    const roots = extractLocalRoots();
+    roots.forEach(root => {
+        const option = document.createElement('option');
+        option.value = root;
+        option.textContent = root;
+        select.appendChild(option);
+    });
+    document.getElementById('janulus-root-info').textContent = `${roots.length} raíces extraídas de tu vocabulario e islas`;
+}
+
+// Evento al cambiar de raíz
+function onJanulusRootChange() {
+    const root = document.getElementById('janulus-root-select').value;
+    if (!root) {
+        document.getElementById('janulus-table-container').classList.add('hidden');
+        document.getElementById('janulus-phrase-generator').classList.add('hidden');
+        return;
+    }
+    janulusCurrentRoot = root;
+    const data = buildJanulusTable(root);
+
+    document.getElementById('janulus-root-title').textContent = `🔗 Constelación de "${root}"`;
+    document.getElementById('janulus-table-container').classList.remove('hidden');
+    document.getElementById('janulus-phrase-generator').classList.remove('hidden');
+    janulusGeneratedPhrases = [];
+    document.getElementById('janulus-phrases-list').innerHTML = '';
+
+    // Verbo
+    const verbRow = document.getElementById('janulus-verb-row');
+    if (data.verb) {
+        verbRow.innerHTML = `<span class="bg-slate-700 hover:bg-slate-600 text-emerald-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${data.verb.inf}')">${data.verb.inf}</span>`;
+    } else {
+        verbRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrado en tu vocabulario</span>';
+    }
+
+    // Sustantivos
+    const nounsRow = document.getElementById('janulus-nouns-row');
+    if (data.nouns.length > 0) {
+        nounsRow.innerHTML = data.nouns.map(n =>
+            `<span class="bg-slate-700 hover:bg-slate-600 text-blue-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${n.word}')">${n.article} ${n.word} ${n.meaning ? '('+n.meaning+')' : ''}</span>`
+        ).join('');
+    } else {
+        nounsRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
+    }
+
+    // Adjetivos
+    const adjRow = document.getElementById('janulus-adjectives-row');
+    if (data.adjectives.length > 0) {
+        adjRow.innerHTML = data.adjectives.map(a =>
+            `<span class="bg-slate-700 hover:bg-slate-600 text-purple-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${a.word}')">${a.word} ${a.meaning ? '('+a.meaning+')' : ''}</span>`
+        ).join('');
+    } else {
+        adjRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
+    }
+
+    // Compuestos
+    const compRow = document.getElementById('janulus-compounds-row');
+    if (data.compounds.length > 0) {
+        compRow.innerHTML = data.compounds.map(c =>
+            `<span class="bg-slate-700 hover:bg-slate-600 text-amber-400 px-3 py-2 rounded-lg text-sm font-bold cursor-pointer" onclick="generateAllJanulusPhrases('${c.word}')">${c.word} ${c.meaning ? '('+c.meaning+')' : ''}</span>`
+        ).join('');
+    } else {
+        compRow.innerHTML = '<span class="text-slate-500 text-sm">No encontrados</span>';
+    }
+}
+
+// Genera frases para una palabra usando todas las plantillas
+function generateAllJanulusPhrases(word) {
+    const data = janulusData[janulusCurrentRoot] || buildJanulusTable(janulusCurrentRoot);
+    const phrases = [];
+    JANULUS_TEMPLATES.forEach(template => {
+        const phrase = generateJanulusPhrase({ word: word }, template, data.verb);
+        phrases.push(phrase);
+    });
+    janulusGeneratedPhrases = janulusGeneratedPhrases.concat(phrases);
+    renderJanulusPhrases();
+}
+
+// Muestra las frases generadas en la lista
+function renderJanulusPhrases() {
+    const container = document.getElementById('janulus-phrases-list');
+    container.innerHTML = janulusGeneratedPhrases.map((p, i) => `
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex justify-between items-start gap-3">
+            <div>
+                <p class="text-white font-bold">${p.de}</p>
+                <p class="text-xs text-slate-400 mt-1">[${p.template}]</p>
+            </div>
+            <div class="flex gap-1 shrink-0">
+                <button onclick="speakText('${p.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs" title="Escuchar"><i class="fa-solid fa-volume-high"></i></button>
+                <button onclick="deleteJanulusPhrase(${i})" class="bg-slate-700 hover:bg-rose-600 p-2 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Elimina una frase de la lista
+function deleteJanulusPhrase(index) {
+    janulusGeneratedPhrases.splice(index, 1);
+    renderJanulusPhrases();
+}
+
+// Limpia todas las frases generadas
+function clearJanulusPhrases() {
+    janulusGeneratedPhrases = [];
+    renderJanulusPhrases();
+}
+
+// Guarda las frases generadas en una isla (nueva o existente)
+async function saveJanulusPhrasesToIsland() {
+    if (janulusGeneratedPhrases.length === 0) {
+        alert('No hay frases generadas. Pulsa en una palabra de la tabla para generar frases.');
+        return;
+    }
+    const islandList = appData.islands.filter(i => i.type !== 'group');
+    const selected = await showIslandSelectionModalWithPreselection(islandList, []);
+    if (!selected || selected.length === 0) {
+        // Crear nueva isla
+        const name = prompt('Nombre de la nueva isla Janulus:', `Janulus - ${janulusCurrentRoot}`);
+        if (!name) return;
+        const newIsland = {
+            id: 'janulus_' + Date.now(),
+            name: name,
+            phrases: [],
+            type: 'island',
+            parentId: null,
+        };
+        janulusGeneratedPhrases.forEach(p => {
+            newIsland.phrases.push({
+                id: 'phrase_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                de: p.de,
+                es: p.es,
+                tags: `#janulus #${janulusCurrentRoot} #${p.template}`,
+                starsGrammarNormal: 0, starsFluencyNormal: 0,
+                starsGrammarInverse: 0, starsFluencyInverse: 0,
+                isFavorite: false, isFocus: false,
+                interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5,
+            });
+        });
+        appData.islands.push(newIsland);
+        saveDatabase();
+        alert(`${janulusGeneratedPhrases.length} frases guardadas en "${name}". Ve a la pestaña Islas para entrenarlas.`);
+    } else {
+        // Añadir a isla existente
+        let added = 0;
+        selected.forEach(isl => {
+            janulusGeneratedPhrases.forEach(p => {
+                isl.phrases.push({
+                    id: 'phrase_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                    de: p.de,
+                    es: p.es,
+                    tags: `#janulus #${janulusCurrentRoot} #${p.template}`,
+                    starsGrammarNormal: 0, starsFluencyNormal: 0,
+                    starsGrammarInverse: 0, starsFluencyInverse: 0,
+                    isFavorite: false, isFocus: false,
+                    interval: 1, nextReviewDate: getTodayDateString(), easeFactor: 2.5,
+                });
+                added++;
+            });
+        });
+        saveDatabase();
+        alert(`${added} frases añadidas a ${selected.length} isla(s). Ve a la pestaña Islas para entrenarlas.`);
+    }
+    clearJanulusPhrases();
+}
+
+// Actualiza la lista de raíces
+function refreshJanulusRoots() {
+    janulusData = {}; // Limpiar caché
+    renderJanulusView();
+    alert('Raíces reextraídas de tu vocabulario e islas.');
+}
+
+// Añade una raíz personalizada
+function showAddCustomRootPrompt() {
+    const root = prompt('Escribe la raíz que quieres añadir (ej: "fahr"):');
+    if (root && root.length >= 2) {
+        janulusData[root] = {
+            root: root,
+            verb: null,
+            nouns: [],
+            adjectives: [],
+            compounds: [],
+        };
+        const select = document.getElementById('janulus-root-select');
+        const option = document.createElement('option');
+        option.value = root;
+        option.textContent = root + ' (personalizada)';
+        select.appendChild(option);
+        select.value = root;
+        onJanulusRootChange();
+    }
+}
+
+// Muestra/oculta el panel de ayuda
+function toggleJanulusHelp() {
+    const panel = document.getElementById('janulus-help-panel');
+    if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+    } else {
+        panel.classList.add('hidden');
+    }
+}
 
 function renderExercisesView() {
     const source = document.getElementById('exercise-source');
