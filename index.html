@@ -5888,17 +5888,15 @@ async function generateAllJanulusPhrases(word) {
 }
 
 // --- Generación local avanzada ---
+// --- Generación local avanzada (todos los tiempos) ---
 async function generateCorrectLocalPhrases(word) {
     const phrases = [];
-    // Buscar el verbo real más cercano
     const cleanWord = word.replace(/[.,!?;:()]/g, '').toLowerCase();
-    let verb = JANULUS_REAL_VERBS.find(v => v.inf === cleanWord);
-    if (!verb) {
-        // Buscar por similitud o usar el primero como modelo
-        verb = JANULUS_REAL_VERBS[Math.floor(Math.random() * JANULUS_REAL_VERBS.length)];
-    }
+    // Buscar un verbo real que coincida o usar uno aleatorio
+    let verb = JANULUS_REAL_VERBS.find(v => v.inf === cleanWord) 
+            || JANULUS_REAL_VERBS[Math.floor(Math.random() * JANULUS_REAL_VERBS.length)];
 
-    const conjug = {
+    const conj = {
         'ich': verb.inf.replace(/en$/, 'e').replace(/n$/, 'e'),
         'du': verb.inf.replace(/en$/, 'st').replace(/n$/, 'st'),
         'er/sie/es': verb.inf.replace(/en$/, 't').replace(/n$/, 't'),
@@ -5906,37 +5904,52 @@ async function generateCorrectLocalPhrases(word) {
         'ihr': verb.inf.replace(/en$/, 't').replace(/n$/, 't'),
         'sie': verb.inf,
     };
+    const subjPron = ['ich','du','er/sie/es','wir','ihr','sie'];
+    const subjDisp = { 'ich':'Ich', 'du':'Du', 'er/sie/es':'Er', 'wir':'Wir', 'ihr':'Ihr', 'sie':'Sie' };
+    const objects = JANULUS_OBJECTS;
 
-    const subjList = ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie'];
-    const subjDisplay = { 'ich':'Ich', 'du':'Du', 'er/sie/es':'Er', 'wir':'Wir', 'ihr':'Ihr', 'sie':'Sie' };
+    async function add(desc, buildFn) {
+        const s = subjPron[Math.floor(Math.random() * subjPron.length)];
+        const o = objects[Math.floor(Math.random() * objects.length)];
+        const de = buildFn(s, o);
+        const es = await fetchOnlineTranslation(de);
+        phrases.push({ de, es: es || '(sin traducción)', template: desc, root: word });
+    }
 
-    // 1. Presente simple
-    const s1 = subjList[Math.floor(Math.random() * subjList.length)];
-    const o1 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
-    const de1 = `${subjDisplay[s1]} ${conjug[s1]} ${o1}.`;
-    const es1 = await fetchOnlineTranslation(de1);
-    phrases.push({ de: de1, es: es1 || '(sin traducción)', template: 'Presente', root: word });
+    // 1. Präsens
+    await add('Präsens', (s, o) => `${subjDisp[s]} ${conj[s]} ${o}.`);
 
-    // 2. Perfekt
-    const s2 = subjList[Math.floor(Math.random() * subjList.length)];
-    const o2 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
-    const de2 = `${subjDisplay[s2]} ${verb.aux} ${o2} ${verb.part}.`;
-    const es2 = await fetchOnlineTranslation(de2);
-    phrases.push({ de: de2, es: es2 || '(sin traducción)', template: 'Perfekt', root: word });
+    // 2. Präteritum
+    await add('Präteritum', (s, o) => `${subjDisp[s]} ${verb.pret} ${o}.`);
 
-    // 3. Weil + Nebensatz
-    const s3 = subjList[Math.floor(Math.random() * subjList.length)];
-    const o3 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
-    const de3 = `${subjDisplay[s3]} ${conjug[s3]} ${o3}, weil ${s3} ${o3} ${verb.part} ${verb.aux}.`;
-    const es3 = await fetchOnlineTranslation(de3);
-    phrases.push({ de: de3, es: es3 || '(sin traducción)', template: 'Weil + Nebensatz', root: word });
+    // 3. Perfekt
+    await add('Perfekt', (s, o) => `${subjDisp[s]} ${verb.aux} ${o} ${verb.part}.`);
 
-    // 4. Futur I
-    const s4 = subjList[Math.floor(Math.random() * subjList.length)];
-    const o4 = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
-    const de4 = `${subjDisplay[s4]} wird ${o4} ${verb.inf}.`;
-    const es4 = await fetchOnlineTranslation(de4);
-    phrases.push({ de: de4, es: es4 || '(sin traducción)', template: 'Futur I', root: word });
+    // 4. Plusquamperfekt
+    const hatteWar = (verb.aux === 'ist') ? 'war' : 'hatte';
+    await add('Plusquamperfekt', (s, o) => `${subjDisp[s]} ${hatteWar} ${o} ${verb.part}.`);
+
+    // 5. Futur I
+    await add('Futur I', (s, o) => `${subjDisp[s]} wird ${o} ${verb.inf}.`);
+
+    // 6. Futur II
+    await add('Futur II', (s, o) => `${subjDisp[s]} wird ${o} ${verb.part} ${verb.aux === 'ist' ? 'sein' : 'haben'}.`);
+
+    // 7. Konjunktiv II (würde + Infinitiv)
+    await add('Konjunktiv II', (s, o) => `${subjDisp[s]} würde ${o} ${verb.inf}.`);
+
+    // 8. Vorgangspassiv (werden + Partizip II)
+    await add('Vorgangspassiv', (s, o) => `${o.charAt(0).toUpperCase()+o.slice(1)} wird ${verb.part}.`);
+
+    // 9. Zustandspassiv (sein + Partizip II)
+    await add('Zustandspassiv', (s, o) => `${o.charAt(0).toUpperCase()+o.slice(1)} ist ${verb.part}.`);
+
+    // 10. Weil + Nebensatz
+    await add('Weil + Nebensatz', (s, o) => {
+        const main = `${subjDisp[s]} ${conj[s]} ${o}`;
+        const subord = `weil ${s} ${o} ${verb.part} ${verb.aux}`;
+        return `${main}, ${subord}.`;
+    });
 
     return phrases;
 }
