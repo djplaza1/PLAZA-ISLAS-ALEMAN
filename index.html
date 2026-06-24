@@ -876,6 +876,35 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
             <div id="janulus-compounds-row" class="flex flex-wrap gap-2"></div>
         </div>
     </div>
+<!-- Tabla combinatoria Janulus clásica -->
+<div id="janulus-matrix-container" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 hidden">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-black text-cyan-400">🧩 Tabla Combinatoria (Janulus Clásica)</h3>
+        <button onclick="toggleJanulusMatrixHelp()" class="text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-circle-question"></i> ¿Cómo funciona?
+        </button>
+    </div>
+    <p id="janulus-matrix-help" class="hidden text-xs text-slate-400 mb-4 bg-slate-900/60 p-3 rounded-lg">
+        <strong>Combina un elemento de cada columna para formar frases.</strong> Puedes añadir tus propias palabras en cada columna. Por ejemplo:<br>
+        <span class="text-amber-400">Sujeto:</span> Ich, Der Mann, ... &nbsp;|&nbsp; 
+        <span class="text-blue-400">Verbo/Conector:</span> möchte, weil, ... &nbsp;|&nbsp; 
+        <span class="text-emerald-400">Complemento:</span> nach Hause gehen, ein Buch lesen, ...<br>
+        Luego pulsa <strong>"Generar frase"</strong> para crear combinaciones aleatorias o selecciona manualmente una de cada columna.
+    </p>
+
+    <div id="janulus-matrix-columns" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <!-- Las columnas se crean dinámicamente -->
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="addJanulusColumn()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-plus"></i> Añadir columna
+        </button>
+        <button onclick="generateMatrixPhrase()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">
+            <i class="fa-solid fa-shuffle"></i> Generar frase
+        </button>
+    </div>
+</div>
 
     <!-- Generador de frases -->
     <div id="janulus-phrase-generator" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 hidden">
@@ -5970,7 +5999,7 @@ function renderJanulusPhrases() {
             </div>
             <div class="flex gap-1 shrink-0">
                 <button onclick="speakText('${p.de.replace(/'/g, "\\'")}')" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg text-xs" title="Escuchar"><i class="fa-solid fa-volume-high"></i></button>
-                <button onclick="deleteJanulusPhrase(${i})" class="bg-slate-700 hover:bg-rose-600 p-2 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="confirmDeleteJanulusPhrase(${i})" class="bg-slate-700 hover:bg-rose-600 p-2 rounded-lg text-xs" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
     `).join('');
