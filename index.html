@@ -6239,6 +6239,74 @@ function toggleJanulusHelp() {
         panel.classList.add('hidden');
     }
 }
+function addJanulusColumn() {
+    const container = document.getElementById('janulus-matrix-columns');
+    const colIndex = container.children.length + 1;
+    const colDiv = document.createElement('div');
+    colDiv.className = 'bg-slate-900 border border-slate-700 rounded-xl p-3';
+    colDiv.innerHTML = `
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold text-slate-400">Columna ${colIndex}</span>
+            <button onclick="this.closest('.bg-slate-900').remove()" class="text-slate-500 hover:text-rose-400 text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <input type="text" placeholder="Palabra 1, Palabra 2, ..." class="janulus-matrix-input w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white mb-2" />
+        <button onclick="addJanulusWordToMatrix(this)" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs font-bold w-full">
+            <i class="fa-solid fa-plus"></i> Añadir palabra
+        </button>
+        <div class="janulus-matrix-words flex flex-wrap gap-1 mt-2"></div>
+    `;
+    container.appendChild(colDiv);
+    // Mostrar el contenedor de la tabla si estaba oculto
+    document.getElementById('janulus-matrix-container').classList.remove('hidden');
+}
+
+function addJanulusWordToMatrix(button) {
+    const colDiv = button.closest('.bg-slate-900');
+    const input = colDiv.querySelector('.janulus-matrix-input');
+    const word = input.value.trim();
+    if (!word) return;
+    const wordsContainer = colDiv.querySelector('.janulus-matrix-words');
+    const chip = document.createElement('span');
+    chip.className = 'bg-slate-700 text-slate-200 px-2 py-0.5 rounded text-xs cursor-pointer hover:bg-slate-600';
+    chip.textContent = word;
+    chip.onclick = () => chip.remove();
+    wordsContainer.appendChild(chip);
+    input.value = '';
+}
+
+function generateMatrixPhrase() {
+    const columns = document.querySelectorAll('.janulus-matrix-words');
+    const wordsPerColumn = [];
+    columns.forEach(col => {
+        const words = Array.from(col.children).map(chip => chip.textContent.trim());
+        if (words.length > 0) wordsPerColumn.push(words);
+    });
+    if (wordsPerColumn.length < 2) {
+        alert('Añade palabras al menos en 2 columnas para generar una frase.');
+        return;
+    }
+    // Elegir una palabra aleatoria de cada columna
+    const selected = wordsPerColumn.map(col => col[Math.floor(Math.random() * col.length)]);
+    const phraseDe = selected.join(' ');
+    janulusGeneratedPhrases.push({
+        de: phraseDe,
+        es: '(frase combinada)',
+        template: 'Tabla Combinatoria',
+        root: janulusCurrentRoot || 'matriz'
+    });
+    renderJanulusPhrases();
+}
+
+function toggleJanulusMatrixHelp() {
+    const help = document.getElementById('janulus-matrix-help');
+    if (help.classList.contains('hidden')) {
+        help.classList.remove('hidden');
+    } else {
+        help.classList.add('hidden');
+    }
+}
 
 function renderExercisesView() {
     const source = document.getElementById('exercise-source');
