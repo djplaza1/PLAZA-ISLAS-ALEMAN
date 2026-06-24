@@ -5889,13 +5889,24 @@ function buildJanulusTable(root) {
 // Genera una frase usando una plantilla y una palabra de la constelación
 function generateJanulusPhrase(wordData, template, verbData) {
     const subj = JANULUS_SUBJECTS[Math.floor(Math.random() * JANULUS_SUBJECTS.length)];
-    const obj = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    let comp = '';
+    // Buscar un complemento en el vocabulario que tenga sentido con este verbo
+    const matchingVocab = (appData.vocabulary || []).filter(v => 
+        v.word !== wordData.word && v.translation && v.example_de
+    );
+    if (matchingVocab.length > 0) {
+        const randomVocab = matchingVocab[Math.floor(Math.random() * matchingVocab.length)];
+        comp = randomVocab.word; // usar palabra como complemento simple
+    } else {
+        comp = JANULUS_OBJECTS[Math.floor(Math.random() * JANULUS_OBJECTS.length)];
+    }
+
     const extra = {
         partizip: verbData?.part || 'gekommen',
         aux: verbData?.aux || 'hat',
         infinitiv: verbData?.inf || wordData.word,
         konjunktiv: verbData?.inf ? verbData.inf.replace(/en$/, 'te') : 'käme',
-        objekt: obj,
+        objekt: comp,
     };
     const phraseDe = template.build(subj, wordData.word, extra);
     return {
@@ -5977,13 +5988,37 @@ function onJanulusRootChange() {
 }
 
 // Genera frases para una palabra usando todas las plantillas
-function generateAllJanulusPhrases(word) {
+async function generateAllJanulusPhrases(word) {
     const data = janulusData[janulusCurrentRoot] || buildJanulusTable(janulusCurrentRoot);
-    const phrases = [];
-    JANULUS_TEMPLATES.forEach(template => {
-        const phrase = generateJanulusPhrase({ word: word }, template, data.verb);
-        phrases.push(phrase);
-    });
+    let phrases = [];
+
+    // Intentar obtener frases reales de Tatoeba (API gratuita)
+    try {
+        const response = await fetch(`https://tatoeba.org/es/api/search?query=${encodeURIComponent(word)}&from=deu&to=spa&has_audio=no&sort=relevance`);
+        if (response.ok) {
+            const json = await response.json();
+            if (json.results && json.results.length > 0) {
+                // Tomar hasta 5 frases
+                phrases = json.results.slice(0, 5).map(item => ({
+                    de: item.text,
+                    es: item.translation?.text || '',
+                    template: 'Tatoeba (frase real)',
+                    root: janulusCurrentRoot
+                }));
+            }
+        }
+    } catch (e) {
+        console.warn('Tatoeba no disponible, usando generación local.');
+    }
+
+    // Si no se obtuvieron frases online, usar plantillas locales mejoradas
+    if (phrases.length === 0) {
+        JANULUS_TEMPLATES.forEach(template => {
+            const phrase = generateJanulusPhrase({ word: word }, template, data.verb);
+            phrases.push(phrase);
+        });
+    }
+
     janulusGeneratedPhrases = janulusGeneratedPhrases.concat(phrases);
     renderJanulusPhrases();
 }
@@ -6003,6 +6038,11 @@ function renderJanulusPhrases() {
             </div>
         </div>
     `).join('');
+}
+function confirmDeleteJanulusPhrase(index) {
+    if (confirm('¿Seguro que quieres eliminar esta frase?')) {
+        deleteJanulusPhrase(index);
+    }
 }
 
 // Elimina una frase de la lista
