@@ -5777,6 +5777,94 @@ const JANULUS_TEMPLATES = [
 // Sujetos y objetos genéricos para construir frases
 const JANULUS_SUBJECTS = ['ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'sie', 'der Mann', 'die Frau', 'das Kind', 'der Lehrer', 'mein Freund'];
 const JANULUS_OBJECTS = ['das Buch', 'den Brief', 'die Antwort', 'das Auto', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Fehler'];
+// Extrae ejemplos del wikitexto de Wiktionary (busca la sección "Beispiele")
+function extractWiktionaryExamples(wikitext) {
+    const examples = [];
+    const beispielRegex = /\{\{Beispiel\}\}\s*\n?([^\n]*)/gi;
+    let match;
+    while ((match = beispielRegex.exec(wikitext)) !== null) {
+        let text = match[1]
+            .replace(/\[\[|\]\]/g, '')        // quitar enlaces
+            .replace(/\{\{[^}]+\}\}/g, '')    // quitar plantillas
+            .replace(/<[^>]+>/g, '')          // quitar HTML
+            .trim();
+        if (text.length > 5 && text.includes(' ')) {
+            examples.push(text);
+        }
+    }
+    return examples;
+}
+
+// Generación local mejorada: frases gramaticalmente correctas
+function generateCorrectLocalPhrases(word, data) {
+    const phrases = [];
+    const verbData = data.verb || {};
+    const inf = verbData.inf || word;
+    // Conjugaciones básicas (presente) para los sujetos más comunes
+    const conjugations = {
+        'ich': inf.replace(/en$/, 'e').replace(/n$/, 'e'),
+        'du': inf.replace(/en$/, 'st').replace(/n$/, 'st'),
+        'er/sie/es': inf.replace(/en$/, 't').replace(/n$/, 't'),
+        'wir': inf,
+        'ihr': inf.replace(/en$/, 't').replace(/n$/, 't'),
+        'sie': inf
+    };
+    // Partizip II aproximado para verbos regulares
+    const partizip = verbData.part || ('ge' + inf.replace(/en$/, 't').replace(/n$/, 't'));
+    const aux = verbData.aux || 'hat';
+
+    const subjects = [
+        { pron: 'ich', subj: 'Ich' },
+        { pron: 'du', subj: 'Du' },
+        { pron: 'er/sie/es', subj: 'Er' },
+        { pron: 'wir', subj: 'Wir' },
+        { pron: 'ihr', subj: 'Ihr' },
+        { pron: 'sie', subj: 'Sie' }
+    ];
+    const objekte = ['das Buch', 'den Kaffee', 'die Arbeit', 'das Problem', 'den Brief', 'die Blumen', 'das Auto', 'den Film'];
+
+    // 1. Frase simple presente
+    const subj1 = subjects[Math.floor(Math.random() * subjects.length)];
+    const obj1 = objekte[Math.floor(Math.random() * objekte.length)];
+    phrases.push({
+        de: `${subj1.subj} ${conjugations[subj1.pron]} ${obj1}.`,
+        es: '(frase generada)',
+        template: 'Presente',
+        root: janulusCurrentRoot
+    });
+
+    // 2. Perfekt
+    const subj2 = subjects[Math.floor(Math.random() * subjects.length)];
+    const obj2 = objekte[Math.floor(Math.random() * objekte.length)];
+    phrases.push({
+        de: `${subj2.subj} ${aux} ${obj2} ${partizip}.`,
+        es: '(frase generada)',
+        template: 'Perfekt',
+        root: janulusCurrentRoot
+    });
+
+    // 3. Weil + Nebensatz
+    const subj3 = subjects[Math.floor(Math.random() * subjects.length)];
+    const obj3 = objekte[Math.floor(Math.random() * objekte.length)];
+    phrases.push({
+        de: `${subj3.subj} ${conjugations[subj3.pron]} ${obj3}, weil ${subj3.pron} ${obj3} ${partizip} ${aux}.`,
+        es: '(frase generada)',
+        template: 'Weil + Nebensatz',
+        root: janulusCurrentRoot
+    });
+
+    // 4. Futur I
+    const subj4 = subjects[Math.floor(Math.random() * subjects.length)];
+    const obj4 = objekte[Math.floor(Math.random() * objekte.length)];
+    phrases.push({
+        de: `${subj4.subj} wird ${obj4} ${inf}.`,
+        es: '(frase generada)',
+        template: 'Futur I',
+        root: janulusCurrentRoot
+    });
+
+    return phrases;
+}
 
 // Extrae todas las raíces del vocabulario e islas
 function extractLocalRoots() {
@@ -5988,35 +6076,34 @@ function onJanulusRootChange() {
 }
 
 // Genera frases para una palabra usando todas las plantillas
-async function generateAllJanulusPhrases(word) {
+aasync function generateAllJanulusPhrases(word) {
     const data = janulusData[janulusCurrentRoot] || buildJanulusTable(janulusCurrentRoot);
     let phrases = [];
 
-    // Intentar obtener frases reales de Tatoeba (API gratuita)
+    // 1. Intentar obtener frases reales de Wiktionary (online)
     try {
-        const response = await fetch(`https://tatoeba.org/es/api/search?query=${encodeURIComponent(word)}&from=deu&to=spa&has_audio=no&sort=relevance`);
-        if (response.ok) {
-            const json = await response.json();
-            if (json.results && json.results.length > 0) {
-                // Tomar hasta 5 frases
-                phrases = json.results.slice(0, 5).map(item => ({
-                    de: item.text,
-                    es: item.translation?.text || '',
-                    template: 'Tatoeba (frase real)',
+        const url = `https://de.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(word)}&prop=wikitext&format=json&origin=*`;
+        const resp = await fetch(url);
+        if (resp.ok) {
+            const json = await resp.json();
+            const wikitext = json?.parse?.wikitext?.['*'] || '';
+            const examples = extractWiktionaryExamples(wikitext);
+            if (examples.length > 0) {
+                phrases = examples.slice(0, 5).map(de => ({
+                    de: de,
+                    es: '(frase real de Wiktionary)',
+                    template: 'Wiktionary',
                     root: janulusCurrentRoot
                 }));
             }
         }
     } catch (e) {
-        console.warn('Tatoeba no disponible, usando generación local.');
+        console.warn('Wiktionary no disponible, usando generación local mejorada.');
     }
 
-    // Si no se obtuvieron frases online, usar plantillas locales mejoradas
+    // 2. Fallback offline: generación gramaticalmente correcta
     if (phrases.length === 0) {
-        JANULUS_TEMPLATES.forEach(template => {
-            const phrase = generateJanulusPhrase({ word: word }, template, data.verb);
-            phrases.push(phrase);
-        });
+        phrases = generateCorrectLocalPhrases(word, data);
     }
 
     janulusGeneratedPhrases = janulusGeneratedPhrases.concat(phrases);
@@ -6039,6 +6126,12 @@ function renderJanulusPhrases() {
         </div>
     `).join('');
 }
+function confirmDeleteJanulusPhrase(index) {
+    if (confirm('¿Seguro que quieres eliminar esta frase?')) {
+        deleteJanulusPhrase(index);
+    }
+}
+
 function confirmDeleteJanulusPhrase(index) {
     if (confirm('¿Seguro que quieres eliminar esta frase?')) {
         deleteJanulusPhrase(index);
