@@ -4951,7 +4951,15 @@ function executePlaybackChain() {
 
     runCycle();
 }
-
+function revealTargetStructure() {
+    document.getElementById('train-target-container').style.opacity = '1';
+    document.getElementById('btn-reveal').classList.add('hidden');
+    document.getElementById('btn-voice-input').classList.add('hidden');
+    document.getElementById('btn-typing-input').classList.add('hidden');
+    if (document.getElementById('cfg-flow-type').value === 'manual') {
+        document.getElementById('evaluation-panel').classList.remove('hidden');
+    }
+}
  function advanceAuto() {
     if (appData.settings.order === 'random') {
         currentTrainIndex = Math.floor(Math.random() * trainingQueue.length);
