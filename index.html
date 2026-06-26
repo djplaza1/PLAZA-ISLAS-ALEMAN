@@ -4882,19 +4882,20 @@ function executePlaybackChain() {
     indicator.innerText = "Audio activo...";
     indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
 
+    async function runCycle() {
         if (completedLoops >= loops) {
             // Si es modo Comprensión (DE -> ES) y hay traducción, leerla en español una vez
             if (trainingDirection === 'inverse' && phrase.es) {
                 indicator.innerText = "Traducción...";
                 indicator.className = "text-xs uppercase font-black tracking-widest text-blue-400";
-                window.speechSynthesis.cancel(); // cancelar cualquier audio previo
+                window.speechSynthesis.cancel();
                 const utteranceES = new SpeechSynthesisUtterance(phrase.es);
                 utteranceES.lang = 'es-ES';
                 utteranceES.rate = 0.9;
                 // Esperar a que termine la lectura en español antes de continuar
                 await new Promise(resolve => {
                     utteranceES.onend = resolve;
-                    utteranceES.onerror = resolve; // si falla, continuamos igual
+                    utteranceES.onerror = resolve;
                     window.speechSynthesis.speak(utteranceES);
                 });
             }
@@ -4919,47 +4920,37 @@ function executePlaybackChain() {
             return;
         }
 
-        // Decidir qué audio reproducir
+        // Reproducir el audio de la frase (alemán)
         if (voiceSource === 'user') {
             const blob = await getAudioBlob(phrase.id);
             if (blob) {
-                // Reproducir grabación del usuario
-               playAudioBlob(blob, 1.10, () => {
-    completedLoops++;
-    sessionPhraseCount++;   // ← añadido
-    logRepetitionImpact();
-    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
-});
+                playAudioBlob(blob, 1.10, () => {
+                    completedLoops++;
+                    sessionPhraseCount++;
+                    logRepetitionImpact();
+                    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+                });
                 return;
             }
         }
-        // Fallback a TTS
+        // Fallback a TTS alemán
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(phrase.de);
         const voice = getBestGermanVoice();
         if (voice) utterance.voice = voice;
         utterance.lang = 'de-DE';
         utterance.rate = speed;
-       utterance.onend = () => {
-    completedLoops++;
-    sessionPhraseCount++;   // ← añadido
-    logRepetitionImpact();
-    activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
-};
+        utterance.onend = () => {
+            completedLoops++;
+            sessionPhraseCount++;
+            logRepetitionImpact();
+            activePlaybackTimeout = setTimeout(runCycle, pause * 1000);
+        };
         window.speechSynthesis.speak(utterance);
     }
 
     runCycle();
 }
-        function revealTargetStructure() {
-            document.getElementById('train-target-container').style.opacity = '1';
-            document.getElementById('btn-reveal').classList.add('hidden');
-            document.getElementById('btn-voice-input').classList.add('hidden');
-            document.getElementById('btn-typing-input').classList.add('hidden');
-            if (document.getElementById('cfg-flow-type').value === 'manual') {
-                document.getElementById('evaluation-panel').classList.remove('hidden');
-            }
-        }
 
  function advanceAuto() {
     if (appData.settings.order === 'random') {
