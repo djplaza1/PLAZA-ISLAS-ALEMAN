@@ -937,6 +937,7 @@ let flashcardSessionActive = false;
 let flashcardStartTime = null;
 let currentFlashcardIndex = 0;
 let isFlipped = false;
+let trainingAborted = false;
 // ==================== GRABACIÓN Y REPRODUCCIÓN DE AUDIO ====================
 let mediaRecorder = null;
 let audioChunks = [];
@@ -1542,6 +1543,7 @@ function switchView(viewName) {
 }
 
 function stopAudioAndTimers() {
+    trainingAborted = true;
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
     window.speechSynthesis.cancel();
     if (currentAudioElement) {
@@ -4707,6 +4709,7 @@ async function playMyRecording() {
 }
 
 function initiateTrainingSession(islandId, direction) {
+    trainingAborted = false;
     saveSettings();
     let sourcePhrases = getPhrasesArray(islandId);
     if (sourcePhrases.length === 0) { alert("Esta isla no tiene oraciones."); return; }
@@ -4899,7 +4902,7 @@ function executePlaybackChain() {
                     window.speechSynthesis.speak(utteranceES);
                 });
             }
-
+            if (trainingAborted) return;
             indicator.innerText = "¡Tu turno!";
             indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
                        if (flowType === 'auto') {
