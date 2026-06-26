@@ -1810,7 +1810,10 @@ function renderIslandsGrid() {
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${isGroup ? 'border-amber-600/50' : 'border-slate-700'} rounded-2xl p-5 hover:border-emerald-500 transition cursor-pointer shadow-lg`;
         
-        card.onclick = () => openIslandDetail(item.id);
+        card.onclick = (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
+    openIslandDetail(item.id);
+};
 
         card.innerHTML = `
             <div class="flex justify-between items-start gap-2 mb-4">
