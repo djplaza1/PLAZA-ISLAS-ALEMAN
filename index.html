@@ -6690,7 +6690,7 @@ function createConversationGroup() {
         name: name,
         phrases: [],
         type: 'group',
-        parentId: null
+        parentId: currentConversationGroupId || null   // ← aquí se usa el grupo actual
     });
     saveDatabase();
     renderConversationsList();
@@ -6784,12 +6784,25 @@ function renameConversation(id) {
 
 function renderConversationsGroup(groupId) {
     const container = document.getElementById('conversations-list');
-    container.innerHTML = `<button onclick="currentConversationGroupId = null; renderConversationsList();" class="text-xs text-cyan-400 hover:text-cyan-300 font-black flex items-center gap-1 uppercase mb-4 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700"><i class="fa-solid fa-arrow-left"></i> Volver a raíz</button>`;
+    // Cabecera con botón de volver + acciones
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <button onclick="currentConversationGroupId = null; renderConversationsList();" class="text-xs text-cyan-400 hover:text-cyan-300 font-black flex items-center gap-1 uppercase bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
+                <i class="fa-solid fa-arrow-left"></i> Volver a raíz
+            </button>
+            <div class="flex gap-2">
+                <button onclick="createConversation()" class="bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 rounded-lg text-xs font-black uppercase">+ Nueva</button>
+                <button onclick="createConversationGroup()" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-xs font-black uppercase"><i class="fa-solid fa-folder-plus"></i> Grupo</button>
+            </div>
+        </div>
+    `;
+
     const children = appData.conversations.filter(c => c.parentId === groupId);
     if (children.length === 0) {
-        container.innerHTML += '<p class="text-slate-500 text-center py-8">Este grupo está vacío.</p>';
+        container.innerHTML += '<p class="text-slate-500 text-center py-8">Este grupo está vacío. Crea una conversación o un subgrupo.</p>';
         return;
     }
+
     children.forEach(item => {
         const isGroup = item.type === 'group';
         const card = document.createElement('div');
