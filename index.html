@@ -4882,8 +4882,23 @@ function executePlaybackChain() {
     indicator.innerText = "Audio activo...";
     indicator.className = "text-xs uppercase font-black tracking-widest text-amber-500";
 
-    async function runCycle() {
         if (completedLoops >= loops) {
+            // Si es modo Comprensión (DE -> ES) y hay traducción, leerla en español una vez
+            if (trainingDirection === 'inverse' && phrase.es) {
+                indicator.innerText = "Traducción...";
+                indicator.className = "text-xs uppercase font-black tracking-widest text-blue-400";
+                window.speechSynthesis.cancel(); // cancelar cualquier audio previo
+                const utteranceES = new SpeechSynthesisUtterance(phrase.es);
+                utteranceES.lang = 'es-ES';
+                utteranceES.rate = 0.9;
+                // Esperar a que termine la lectura en español antes de continuar
+                await new Promise(resolve => {
+                    utteranceES.onend = resolve;
+                    utteranceES.onerror = resolve; // si falla, continuamos igual
+                    window.speechSynthesis.speak(utteranceES);
+                });
+            }
+
             indicator.innerText = "¡Tu turno!";
             indicator.className = "text-xs uppercase font-black tracking-widest text-emerald-400";
             if (flowType === 'auto') {
@@ -4897,7 +4912,6 @@ function executePlaybackChain() {
                 document.getElementById('btn-voice-input').classList.remove('hidden');
                 document.getElementById('btn-typing-input').classList.remove('hidden');
                 document.getElementById('btn-reveal').classList.remove('hidden');
-                // Mostrar el botón de grabar solo si es manual
                 if (flowType === 'manual') {
                     document.getElementById('btn-record').classList.remove('hidden');
                 }
