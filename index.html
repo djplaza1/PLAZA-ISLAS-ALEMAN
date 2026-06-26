@@ -271,12 +271,27 @@
             <div id="islands-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"></div>
         </section>        <!-- VISTA CONVERSACIONES -->
         <section id="view-conversations" class="view-section space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-comments text-cyan-400"></i> Conversaciones</h2>
-                <button onclick="createConversation()" class="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-xl text-xs font-black uppercase transition">+ Nueva</button>
-            </div>
-            <div id="conversations-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </section>
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-black flex items-center gap-2"><i class="fa-solid fa-comments text-cyan-400"></i> Conversaciones</h2>
+        <div class="flex gap-2">
+            <button onclick="createConversation()" class="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-xl text-xs font-black uppercase transition">+ Nueva</button>
+            <button onclick="createConversationGroup()" class="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-xl text-xs font-black uppercase transition"><i class="fa-solid fa-folder-plus"></i> Grupo</button>
+        </div>
+    </div>
+
+    <!-- Panel de acciones masivas -->
+    <div id="conv-bulk-panel" class="hidden bg-slate-800 border border-blue-500/50 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <span class="text-sm font-bold text-slate-300">Seleccionadas: <span id="conv-selected-count" class="text-blue-400 font-black text-lg">0</span></span>
+        <div class="flex gap-2">
+            <button onclick="moveSelectedConversations()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Mover seleccionadas</button>
+            <button onclick="moveAllConversations()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Mover todas</button>
+            <button onclick="deleteSelectedConversations()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Borrar seleccionadas</button>
+            <button onclick="deleteAllConversations()" class="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase">Borrar todas</button>
+        </div>
+    </div>
+
+    <div id="conversations-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</section>
 
 <!-- VISTA DETALLE CONVERSACIÓN -->
 <section id="view-conversation-detail" class="view-section space-y-4">
@@ -908,6 +923,7 @@ let currentActiveIslandId = null;
 let selectedPhraseIds = new Set();
 let hideConvTranslations = false;
 let selectedChildIslandIds = new Set();
+let selectedConvIds = new Set();
 let currentConversationId = null;
 let trainingQueue = [];
 let currentTrainIndex = 0;
@@ -1447,6 +1463,12 @@ async function loadAppData() {
     }
     if (!appData.vocabulary) appData.vocabulary = [];
     if (!appData.conversations) appData.conversations = [];
+    if (!appData.conversations) appData.conversations = [];
+// Migración: añadir tipo y parentId a conversaciones existentes
+appData.conversations.forEach(c => {
+    if (!c.type) c.type = 'conversation';
+    if (c.parentId === undefined) c.parentId = null;
+});
     migrateVocabData();
     // Eliminar sesiones simuladas que pudieran quedar
 if (appData.stats.sessions) {
@@ -1535,7 +1557,10 @@ function switchView(viewName) {
     if (target) target.classList.add('active');
     stopAudioAndTimers();
     if (viewName === 'islands') renderIslandsGrid();
-    else if (viewName === 'conversations') renderConversationsList();
+    else if (viewName === 'conversations') {
+    currentConversationGroupId = null;
+    renderConversationsList();
+}
     else if (viewName === 'vocabulary') { switchVocabMode('list'); renderVocabFolderSelector(); renderVocabularyList(); }
     else if (viewName === 'stats') renderAdvancedStatistics();
     else if (viewName === 'exercises') renderExercisesView();
@@ -1837,41 +1862,85 @@ function renderIslandsGrid() {
             saveDatabase();
         }
 
-        function renderConversationsList() {
-            const container = document.getElementById('conversations-list');
-            if (!container) return;
-            container.innerHTML = '';
-            if (!appData.conversations || appData.conversations.length === 0) {
-                container.innerHTML = '<div class="col-span-full text-center py-16 text-slate-500">Crea tu primera conversación.</div>';
-                return;
+       function renderConversationsList() {
+    const container = document.getElementById('conversations-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Mostrar solo elementos raíz (sin padre) si no hay búsqueda
+    const visible = appData.conversations.filter(c => c.parentId === null);
+    if (visible.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-16 text-slate-500">Crea tu primera conversación o grupo.</div>';
+        return;
+    }
+
+    visible.forEach(item => {
+        const isGroup = item.type === 'group';
+        const card = document.createElement('div');
+        card.className = `bg-slate-800 border ${isGroup ? 'border-amber-600/50' : 'border-slate-700'} rounded-2xl p-5 hover:border-cyan-400 transition cursor-pointer shadow-lg`;
+
+        card.onclick = (e) => {
+            // Si el clic fue en un checkbox o botón, no abrir detalle
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
+            if (isGroup) {
+                currentConversationGroupId = item.id;
+                renderConversationsGroup(item.id);
+            } else {
+                openConversationDetail(item.id);
             }
-            appData.conversations.forEach(conv => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 hover:border-cyan-400 transition cursor-pointer shadow-lg";
-                card.onclick = () => openConversationDetail(conv.id);
-                card.innerHTML = `<h3 class="font-bold text-lg text-cyan-400 mb-2">${conv.name}</h3><p class="text-xs text-slate-400">${conv.phrases.length} frases</p>`;
-                container.appendChild(card);
-            });
-        }
+        };
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start gap-2 mb-4">
+                <div class="flex items-center gap-3">
+                    ${!isGroup ? `<input type="checkbox" value="${item.id}" class="conv-checkbox w-4 h-4 cursor-pointer accent-blue-600" onclick="event.stopPropagation(); toggleConvBulkPanel()">` : ''}
+                    <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : 'text-cyan-400'}">
+                        ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-comment"></i>'} ${item.name}
+                    </h3>
+                </div>
+                <div class="flex gap-1 shrink-0">
+                    <button onclick="event.stopPropagation(); renameConversation('${item.id}')" class="text-slate-500 hover:text-blue-400 p-2 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
+                    <button onclick="event.stopPropagation(); deleteConversationItem('${item.id}')" class="text-slate-500 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs bg-slate-900 ${isGroup ? 'text-amber-400' : 'text-emerald-400'} px-3 py-1 rounded-lg border border-slate-700 font-bold">
+                    ${isGroup ? 'Grupo' : (item.phrases ? item.phrases.length : 0) + ' frases'}
+                </span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    // Limpiar selección al refrescar
+    selectedConvIds.clear();
+    updateConvBulkPanel();
+}
 
         function createConversation() {
-            const name = prompt('Nombre de la conversación:');
-            if (!name) return;
-            appData.conversations.push({ id: 'conv_' + Date.now(), name, phrases: [] });
-            saveDatabase();
-            renderConversationsList();
-        }
+    const name = prompt('Nombre de la conversación:');
+    if (!name) return;
+    appData.conversations.push({
+        id: 'conv_' + Date.now(),
+        name,
+        phrases: [],
+        type: 'conversation',
+        parentId: currentConversationGroupId || null
+    });
+    saveDatabase();
+    renderConversationsList();
+}
 
         function openConversationDetail(convId) {
-            currentConversationId = convId;
-            const conv = appData.conversations.find(c => c.id === convId);
-            if (!conv) return;
-            document.getElementById('conv-detail-title').innerText = conv.name;
-            document.getElementById('btn-train-conv-normal').onclick = () => initiateConvTraining('normal');
-            document.getElementById('btn-train-conv-inverse').onclick = () => initiateConvTraining('inverse');
-            renderConvPhrases();
-            switchView('conversation-detail');
-        }
+    currentConversationId = convId;
+    const conv = appData.conversations.find(c => c.id === convId);
+    if (!conv) return;
+    document.getElementById('conv-detail-title').innerText = conv.name;
+    document.getElementById('btn-train-conv-normal').onclick = () => initiateConvTraining('normal');
+    document.getElementById('btn-train-conv-inverse').onclick = () => initiateConvTraining('inverse');
+    renderConvPhrases();
+    switchView('conversation-detail');
+}
 
         function deleteConversation() {
             if (!confirm('¿Eliminar esta conversación?')) return;
@@ -6609,6 +6678,185 @@ function toggleBulkPanel() {
         panel.classList.add('hidden');
         panel.classList.remove('flex'); // Oculta el panel
     }
+}
+// --- Gestión masiva de conversaciones ---
+let currentConversationGroupId = null;
+
+function createConversationGroup() {
+    const name = prompt('Nombre del grupo de conversaciones:');
+    if (!name) return;
+    appData.conversations.push({
+        id: 'convgroup_' + Date.now(),
+        name: name,
+        phrases: [],
+        type: 'group',
+        parentId: null
+    });
+    saveDatabase();
+    renderConversationsList();
+}
+
+function toggleConvBulkPanel() {
+    const checked = document.querySelectorAll('.conv-checkbox:checked');
+    selectedConvIds = new Set(Array.from(checked).map(cb => cb.value));
+    updateConvBulkPanel();
+}
+
+function updateConvBulkPanel() {
+    const panel = document.getElementById('conv-bulk-panel');
+    const countSpan = document.getElementById('conv-selected-count');
+    const count = selectedConvIds.size;
+    if (count > 0) {
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+        countSpan.innerText = count;
+    } else {
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+    }
+}
+
+async function moveSelectedConversations() {
+    if (selectedConvIds.size === 0) return;
+    const target = await showConvGroupModal();
+    if (!target) return;
+    appData.conversations.forEach(c => {
+        if (selectedConvIds.has(c.id)) c.parentId = target.id;
+    });
+    saveDatabase();
+    renderConversationsList();
+    alert(`${selectedConvIds.size} conversaciones movidas a "${target.name}".`);
+}
+
+async function moveAllConversations() {
+    const currentParent = currentConversationGroupId || null;
+    const target = await showConvGroupModal();
+    if (!target) return;
+    let moved = 0;
+    appData.conversations.forEach(c => {
+        if (c.parentId === currentParent && c.type !== 'group') {
+            c.parentId = target.id;
+            moved++;
+        }
+    });
+    saveDatabase();
+    renderConversationsList();
+    alert(`${moved} conversaciones movidas a "${target.name}".`);
+}
+
+function deleteSelectedConversations() {
+    if (selectedConvIds.size === 0) return;
+    if (!confirm(`¿Eliminar las ${selectedConvIds.size} conversaciones seleccionadas?`)) return;
+    appData.conversations = appData.conversations.filter(c => !selectedConvIds.has(c.id));
+    selectedConvIds.clear();
+    saveDatabase();
+    renderConversationsList();
+}
+
+function deleteAllConversations() {
+    const currentParent = currentConversationGroupId || null;
+    const items = appData.conversations.filter(c => c.parentId === currentParent && c.type !== 'group');
+    if (items.length === 0) return;
+    if (!confirm(`¿Eliminar TODAS las conversaciones de esta ubicación (${items.length})?`)) return;
+    appData.conversations = appData.conversations.filter(c => !(c.parentId === currentParent && c.type !== 'group'));
+    selectedConvIds.clear();
+    saveDatabase();
+    renderConversationsList();
+}
+
+function deleteConversationItem(id) {
+    if (!confirm('¿Eliminar este elemento?')) return;
+    appData.conversations = appData.conversations.filter(c => c.id !== id);
+    saveDatabase();
+    renderConversationsList();
+}
+
+function renameConversation(id) {
+    const item = appData.conversations.find(c => c.id === id);
+    if (!item) return;
+    const newName = prompt(`Renombrar ${item.type === 'group' ? 'grupo' : 'conversación'}:`, item.name);
+    if (newName) {
+        item.name = newName;
+        saveDatabase();
+        renderConversationsList();
+    }
+}
+
+function renderConversationsGroup(groupId) {
+    const container = document.getElementById('conversations-list');
+    container.innerHTML = `<button onclick="currentConversationGroupId = null; renderConversationsList();" class="text-xs text-cyan-400 hover:text-cyan-300 font-black flex items-center gap-1 uppercase mb-4 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700"><i class="fa-solid fa-arrow-left"></i> Volver a raíz</button>`;
+    const children = appData.conversations.filter(c => c.parentId === groupId);
+    if (children.length === 0) {
+        container.innerHTML += '<p class="text-slate-500 text-center py-8">Este grupo está vacío.</p>';
+        return;
+    }
+    children.forEach(item => {
+        const isGroup = item.type === 'group';
+        const card = document.createElement('div');
+        card.className = `bg-slate-800 border ${isGroup ? 'border-amber-600/50' : 'border-slate-700'} rounded-2xl p-5 hover:border-cyan-400 transition cursor-pointer shadow-lg mb-4`;
+        card.onclick = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
+            if (isGroup) {
+                currentConversationGroupId = item.id;
+                renderConversationsGroup(item.id);
+            } else {
+                openConversationDetail(item.id);
+            }
+        };
+        card.innerHTML = `
+            <div class="flex justify-between items-start gap-2 mb-4">
+                <div class="flex items-center gap-3">
+                    ${!isGroup ? `<input type="checkbox" value="${item.id}" class="conv-checkbox w-4 h-4 cursor-pointer accent-blue-600" onclick="event.stopPropagation(); toggleConvBulkPanel()">` : ''}
+                    <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : 'text-cyan-400'}">
+                        ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-comment"></i>'} ${item.name}
+                    </h3>
+                </div>
+                <div class="flex gap-1 shrink-0">
+                    <button onclick="event.stopPropagation(); renameConversation('${item.id}')" class="text-slate-500 hover:text-blue-400 p-2 text-xs transition"><i class="fa-solid fa-pencil"></i></button>
+                    <button onclick="event.stopPropagation(); deleteConversationItem('${item.id}')" class="text-slate-500 hover:text-rose-400 p-2 text-xs transition"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs bg-slate-900 ${isGroup ? 'text-amber-400' : 'text-emerald-400'} px-3 py-1 rounded-lg border border-slate-700 font-bold">
+                    ${isGroup ? 'Grupo' : (item.phrases ? item.phrases.length : 0) + ' frases'}
+                </span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    updateConvBulkPanel();
+}
+
+async function showConvGroupModal() {
+    const groups = appData.conversations.filter(c => c.type === 'group');
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        const content = document.createElement('div');
+        content.className = 'popup-content max-w-md';
+        content.innerHTML = `
+            <h3 class="font-bold text-lg text-cyan-400 mb-4">Mover a grupo</h3>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                <button class="w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold text-slate-200" data-id="root">📂 Raíz</button>
+                ${groups.map(g => `<button class="w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold text-slate-200" data-id="${g.id}">📁 ${g.name}</button>`).join('')}
+            </div>
+            <div class="flex justify-end mt-4">
+                <button onclick="this.closest('.popup-overlay').remove()" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            </div>
+        `;
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        content.querySelectorAll('[data-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                overlay.remove();
+                if (id === 'root') resolve({ id: null, name: 'Raíz' });
+                else resolve(groups.find(g => g.id === id));
+            });
+        });
+    });
 }
 
 function moveSelectedIslands() {
