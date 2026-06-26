@@ -1543,7 +1543,6 @@ function switchView(viewName) {
 }
 
 function stopAudioAndTimers() {
-    trainingAborted = true;
     if (activePlaybackTimeout) clearTimeout(activePlaybackTimeout);
     window.speechSynthesis.cancel();
     if (currentAudioElement) {
@@ -1643,6 +1642,7 @@ function endTrainingSession() {
 }
 
 function exitTrainingSession() {
+    trainingAborted = true; 
     endTrainingSession();
     if (currentActiveIslandId && 
         (currentActiveIslandId.startsWith('conv_virtual_') || 
