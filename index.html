@@ -1931,7 +1931,11 @@ function renderIslandsGrid() {
         parentId: currentConversationGroupId || null
     });
     saveDatabase();
-    renderConversationsList();
+    if (currentConversationGroupId) {
+        renderConversationsGroup(currentConversationGroupId);
+    } else {
+        renderConversationsList();
+    }
 }
 
         function openConversationDetail(convId) {
@@ -6693,10 +6697,14 @@ function createConversationGroup() {
         name: name,
         phrases: [],
         type: 'group',
-        parentId: currentConversationGroupId || null   // ← aquí se usa el grupo actual
+        parentId: currentConversationGroupId || null
     });
     saveDatabase();
-    renderConversationsList();
+    if (currentConversationGroupId) {
+        renderConversationsGroup(currentConversationGroupId);
+    } else {
+        renderConversationsList();
+    }
 }
 
 function toggleConvBulkPanel() {
@@ -6726,9 +6734,10 @@ async function moveSelectedConversations() {
     appData.conversations.forEach(c => {
         if (selectedConvIds.has(c.id)) c.parentId = target.id;
     });
+        const total = selectedConvIds.size;
     saveDatabase();
     renderConversationsList();
-    alert(`${selectedConvIds.size} conversaciones movidas a "${target.name}".`);
+    alert(`${total} conversaciones movidas a "${target.name}".`);
 }
 
 async function moveAllConversations() {
@@ -6742,9 +6751,10 @@ async function moveAllConversations() {
             moved++;
         }
     });
+        const total = selectedConvIds.size;
     saveDatabase();
     renderConversationsList();
-    alert(`${moved} conversaciones movidas a "${target.name}".`);
+    alert(`${total} conversaciones movidas a "${target.name}".`);
 }
 
 function deleteSelectedConversations() {
