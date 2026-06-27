@@ -1818,7 +1818,7 @@ function renderIslandsGrid() {
         card.innerHTML = `
             <div class="flex justify-between items-start gap-2 mb-4">
                 <div class="flex items-center gap-3">
-                    ${!isGroup ? `<input type="checkbox" value="${item.id}" class="island-checkbox w-4 h-4 cursor-pointer accent-blue-600" onclick="event.stopPropagation(); toggleBulkPanel()">` : ''}
+                    ${!isGroup ? `<span class="inline-flex items-center justify-center p-2 cursor-pointer" onclick="event.stopPropagation(); const cb = this.querySelector('input'); cb.checked = !cb.checked; toggleBulkPanel();"><input type="checkbox" value="${item.id}" class="island-checkbox w-5 h-5 accent-blue-600 pointer-events-none"></span>` : ''}
                     <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : ''}">
                         ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-bolt"></i>'} ${item.name}
                     </h3>
@@ -1896,7 +1896,7 @@ function renderIslandsGrid() {
         card.innerHTML = `
             <div class="flex justify-between items-start gap-2 mb-4">
                 <div class="flex items-center gap-3">
-                    ${!isGroup ? `<input type="checkbox" value="${item.id}" class="conv-checkbox w-4 h-4 cursor-pointer accent-blue-600" onclick="event.stopPropagation(); toggleConvBulkPanel()">` : ''}
+                    ${!isGroup ? `<span class="inline-flex items-center justify-center p-2 cursor-pointer" onclick="event.stopPropagation(); const cb = this.querySelector('input'); cb.checked = !cb.checked; toggleConvBulkPanel();"><input type="checkbox" value="${item.id}" class="conv-checkbox w-5 h-5 accent-blue-600 pointer-events-none"></span>` : ''}
                     <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : 'text-cyan-400'}">
                         ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-comment"></i>'} ${item.name}
                     </h3>
@@ -6822,7 +6822,7 @@ function renderConversationsGroup(groupId) {
         card.innerHTML = `
             <div class="flex justify-between items-start gap-2 mb-4">
                 <div class="flex items-center gap-3">
-                    ${!isGroup ? `<input type="checkbox" value="${item.id}" class="conv-checkbox w-4 h-4 cursor-pointer accent-blue-600" onclick="event.stopPropagation(); toggleConvBulkPanel()">` : ''}
+${!isGroup ? `<span class="inline-flex items-center justify-center p-2 cursor-pointer" onclick="event.stopPropagation(); const cb = this.querySelector('input'); cb.checked = !cb.checked; toggleConvBulkPanel();"><input type="checkbox" value="${item.id}" class="conv-checkbox w-5 h-5 accent-blue-600 pointer-events-none"></span>` : ''}                   
                     <h3 class="font-bold text-base tracking-tight ${isGroup ? 'text-amber-400' : 'text-cyan-400'}">
                         ${isGroup ? '<i class="fa-solid fa-folder"></i>' : '<i class="fa-solid fa-comment"></i>'} ${item.name}
                     </h3>
