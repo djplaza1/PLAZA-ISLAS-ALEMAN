@@ -6482,7 +6482,11 @@ async function exportDatabaseFile() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
     const anchor = document.createElement('a');
     anchor.href = dataStr;
-    anchor.download = "Muller_Satzinseln_ProX_Backup.json";
+    const now = new Date();
+const pad = (n) => String(n).padStart(2, '0');
+const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+anchor.download = `ISLAS PLAZA BACKUP ${dateStr} ${timeStr}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
