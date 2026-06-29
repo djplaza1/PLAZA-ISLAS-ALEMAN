@@ -5500,12 +5500,16 @@ function renderAdvancedStatistics() {
     const sessions = appData.stats.sessions.filter(s => s.date >= dateFrom && s.date.startsWith(statsSelectedYear));
     const totalCards = sessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+        const totalCards = sessions.filter(s => s.type === 'production' || s.type === 'comprehension').reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+    const totalVocabCards = sessions.filter(s => s.type === 'vocab').reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
 
     document.getElementById('stats-year-label').innerText = statsSelectedYear;
     document.getElementById('stat-sessions').innerText = sessions.length;
     document.getElementById('stat-total-cards').innerText = totalCards;
+    const cardsLabel = document.querySelector('#stat-total-cards').closest('.bg-slate-800')?.querySelector('.uppercase');
+if (cardsLabel) cardsLabel.innerText = 'Frases';
         const cardsLabel = document.querySelector('#stat-total-cards').closest('.bg-slate-800')?.querySelector('.uppercase');
     if (cardsLabel) cardsLabel.innerText = 'Repeticiones de frases';
     document.getElementById('stat-total-time-new').innerText = `${hours}h ${minutes}m`;
@@ -5621,7 +5625,7 @@ function renderAdvancedStatistics() {
     const qualityDiv = document.createElement('div');
     qualityDiv.id = 'quality-summary-card';
     qualityDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
-    qualityDiv.innerHTML = `
+        qualityDiv.innerHTML = `
         <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 mb-3">📚 Calidad de Vocabulario</h3>
         <div class="grid grid-cols-4 gap-2 text-center text-xs">
             <div class="bg-slate-900/60 p-2 rounded-lg">
@@ -5641,6 +5645,7 @@ function renderAdvancedStatistics() {
                 <span class="text-white font-black text-lg">${totalQuality.easy}</span>
             </div>
         </div>
+        <p class="text-xs text-slate-400 mt-3 text-center">Total tarjetas practicadas: <span class="text-white font-bold">${totalVocabCards}</span></p>
     `;
     const sessionsListDiv = document.getElementById('sessions-list');
     sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
