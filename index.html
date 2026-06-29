@@ -1644,6 +1644,13 @@ function endTrainingSession() {
     console.log('endTrainingSession llamada. sessionPhraseCount:', sessionPhraseCount, 'totalSessionTime:', totalSessionTime);
     if (sessionActive) trackNetPracticeTime();
     if (sessionPhraseCount > 0 && totalSessionTime > 0) {
+               // Obtener el nombre de la isla actual
+        let sourceName = 'Isla desconocida';
+        if (currentActiveIslandId) {
+            const island = appData.islands.find(i => i.id === currentActiveIslandId);
+            if (island) sourceName = island.name;
+        }
+
         appData.stats.sessions.push({
             id: 'sess_' + Date.now(),
             date: getTodayDateString(),
@@ -1651,7 +1658,8 @@ function endTrainingSession() {
             duration: totalSessionTime,
             type: trainingDirection === 'normal' ? 'production' : 'comprehension',
             cardsCount: sessionPhraseCount,
-            direction: trainingDirection
+            direction: trainingDirection,
+            sourceName: sourceName
         });
         saveDatabase();
     }
@@ -3289,6 +3297,17 @@ function endSRSSession() {
     ).length;
 
     // Registrar sesión con datos reales
+       // Calcular nombre de la fuente
+    let sourceName = '';
+    const practiceSource = document.getElementById('cfg-practice-source').value;
+    if (practiceSource === 'current-folder') {
+        sourceName = getFolderPath(currentVocabFolderId);
+    } else if (practiceSource === 'islands') {
+        sourceName = selectedPracticeIslandIds.length > 0 ? selectedPracticeIslandIds.length + ' isla(s)' : 'Islas seleccionadas';
+    } else {
+        sourceName = 'Todo el vocabulario';
+    }
+
     appData.stats.sessions.push({
         id: 'sess_' + Date.now(),
         date: getTodayDateString(),
@@ -3297,7 +3316,8 @@ function endSRSSession() {
         type: 'vocab',
         cardsCount: total,
         direction: window.customDirection || document.getElementById('flashcard-direction').value,
-        source: document.getElementById('cfg-practice-source').value,
+        source: practiceSource,
+        sourceName: sourceName,
         quality: {
             again: flashcardQualityCounts.again,
             hard: flashcardQualityCounts.hard,
@@ -6416,7 +6436,10 @@ function showDayDetailModal(dateStr) {
                     ${sessions.map((s, i) => `
                                           <li class="flex justify-between">
                         <span>${s.startTime || '—'}</span>
-                                                <span>${s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : s.type === 'comprehension' ? '👂' : '📖'} ${s.cardsCount || 0} tarj.</span>
+                        <div>
+    <span>${s.type === 'vocab' ? '📚' : s.type === 'production' ? '✍️' : s.type === 'comprehension' ? '👂' : '📖'} ${s.cardsCount || 0} tarj.</span>
+    ${s.sourceName ? `<br><span class="text-[10px] text-slate-500">${s.sourceName}</span>` : ''}
+</div>
                         <span>⏱ ${Math.floor((s.duration || 0) / 60)}m ${(s.duration || 0) % 60}s</span>
                     </li>
                     ${s.type === 'vocab' && s.quality ? `
