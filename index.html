@@ -5498,9 +5498,8 @@ function renderAdvancedStatistics() {
     }
 
     const sessions = appData.stats.sessions.filter(s => s.date >= dateFrom && s.date.startsWith(statsSelectedYear));
-    const totalCards = sessions.reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
-        const totalCards = sessions.filter(s => s.type === 'production' || s.type === 'comprehension').reduce((sum, s) => sum + (s.cardsCount || 0), 0);
+    const totalCards = sessions.filter(s => s.type === 'production' || s.type === 'comprehension').reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const totalVocabCards = sessions.filter(s => s.type === 'vocab').reduce((sum, s) => sum + (s.cardsCount || 0), 0);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -5509,8 +5508,6 @@ function renderAdvancedStatistics() {
     document.getElementById('stat-sessions').innerText = sessions.length;
     document.getElementById('stat-total-cards').innerText = totalCards;
     const cardsLabel = document.querySelector('#stat-total-cards').closest('.bg-slate-800')?.querySelector('.uppercase');
-if (cardsLabel) cardsLabel.innerText = 'Frases';
-        const cardsLabel = document.querySelector('#stat-total-cards').closest('.bg-slate-800')?.querySelector('.uppercase');
     if (cardsLabel) cardsLabel.innerText = 'Repeticiones de frases';
     document.getElementById('stat-total-time-new').innerText = `${hours}h ${minutes}m`;
     document.getElementById('stat-streak-new').innerText = `${appData.stats.streak || 0} días`;
@@ -5524,7 +5521,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
 
     // Calendario
     renderCalendarGrid(sessions);
-    // Totales de calidad de vocabulario en el período
+
     // Totales de calidad de vocabulario en el período
     const vocabSessions = sessions.filter(s => s.type === 'vocab');
     const totalQuality = vocabSessions.reduce((acc, s) => {
@@ -5625,7 +5622,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
     const qualityDiv = document.createElement('div');
     qualityDiv.id = 'quality-summary-card';
     qualityDiv.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4";
-        qualityDiv.innerHTML = `
+    qualityDiv.innerHTML = `
         <h3 class="text-xs font-black uppercase tracking-wider text-purple-400 mb-3">📚 Calidad de Vocabulario</h3>
         <div class="grid grid-cols-4 gap-2 text-center text-xs">
             <div class="bg-slate-900/60 p-2 rounded-lg">
@@ -5649,7 +5646,8 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
     `;
     const sessionsListDiv = document.getElementById('sessions-list');
     sessionsListDiv.parentNode.insertBefore(qualityDiv, sessionsListDiv);
-        // --- Gráfico de vocabulario últimos 7 días ---
+
+    // --- Gráfico de vocabulario últimos 7 días ---
     const last7Days = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -5679,7 +5677,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
         </div>
         <div class="flex gap-1 mt-1 text-[8px] text-slate-500">
             ${last7Days.map(day => {
-                const short = day.slice(5); // MM-DD
+                const short = day.slice(5);
                 return `<span class="flex-1 text-center">${short}</span>`;
             }).join('')}
         </div>
@@ -5720,6 +5718,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
         </div>
     `;
     sessionsListDiv.parentNode.insertBefore(heatmapDiv, sessionsListDiv);
+
     // Lista de sesiones
     const listContainer = document.getElementById('sessions-list');
     listContainer.innerHTML = '';
@@ -5727,7 +5726,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
         listContainer.innerHTML = '<p class="text-slate-500 text-center py-4 text-sm">No hay sesiones en este período.</p>';
     } else {
         sessions.forEach(s => {
-                        const typeLabel = s.type === 'vocab' ? '📚 Vocab' : s.type === 'production' ? '✍️ Prod' : s.type === 'comprehension' ? '👂 Comp' : '📖 Lectura';
+            const typeLabel = s.type === 'vocab' ? '📚 Vocab' : s.type === 'production' ? '✍️ Prod' : s.type === 'comprehension' ? '👂 Comp' : '📖 Lectura';
             const typeColor = s.type === 'vocab' ? 'text-teal-400' : s.type === 'production' ? 'text-blue-400' : s.type === 'comprehension' ? 'text-purple-400' : 'text-purple-300';
             const durMin = Math.floor((s.duration || 0) / 60);
             const durSec = (s.duration || 0) % 60;
@@ -5742,7 +5741,7 @@ if (cardsLabel) cardsLabel.innerText = 'Frases';
                     <span class="text-[10px] text-slate-500">${s.direction || ''}</span>
                 </div>
                 <span class="text-[10px] text-slate-400 font-mono">⏱ ${durMin}m ${durSec}s</span>
-                                ${s.type === 'reading' && s.quality ? `<span class="text-[10px] text-slate-500">🎯${s.quality.precision || 0}% · ⚡${s.quality.wpm || 0} WPM · 🏆${s.quality.level || '—'}</span>` : ''}
+                ${s.type === 'reading' && s.quality ? `<span class="text-[10px] text-slate-500">🎯${s.quality.precision || 0}% · ⚡${s.quality.wpm || 0} WPM · 🏆${s.quality.level || '—'}</span>` : ''}
             `;
             listContainer.appendChild(div);
         });
