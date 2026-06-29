@@ -5118,41 +5118,46 @@ function handleIslandTransitionOrLoop() {
 // 🟢 1. EVALUADOR ESTRICTO PARA VOZ (Penaliza orden, omisiones y palabras inventadas)
 function computeStrictEvaluation(transcript, target) {
     if (!transcript || !target) return { score: 0, diff: '<span class="text-rose-500">No se detectó audio útil.</span>' };
-    
+
     const originalWords = transcript.trim().split(/\s+/);
     const targetWords = target.trim().split(/\s+/);
-    
-    const cleanTrans = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
-    const cleanTarget = target.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim().split(' ');
-    
+
+    const cleanTrans = transcript.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim();
+    const cleanTarget = target.toLowerCase().replace(/[.,!?;:()]/g, '').replace(/\s+/g, ' ').trim();
+
+    const transSet = new Set(cleanTrans.split(' '));
+    const targetSet = new Set(cleanTarget.split(' '));
+
+    // Contar coincidencias
     let matches = 0;
-    let diffHtml = [];
-    const maxLen = Math.max(cleanTrans.length, cleanTarget.length);
-    
-    for (let i = 0; i < maxLen; i++) {
-        const tWord = cleanTrans[i] || '';
-        const tgtWord = cleanTarget[i] || '';
-        
-        if (tWord === tgtWord && tWord !== '') {
+    const diffHtml = [];
+
+    // Palabras dichas que están en el objetivo → verde
+    originalWords.forEach((w, i) => {
+        const cleanW = w.replace(/[.,!?;:()]/g, '').toLowerCase();
+        if (targetSet.has(cleanW)) {
             matches++;
-            // Palabra perfecta
-            diffHtml.push(`<span class="text-emerald-400 font-bold">${originalWords[i] || tWord}</span>`);
+            diffHtml.push(`<span class="text-emerald-400 font-bold">${w}</span>`);
         } else {
-            // Palabra fallada, omitida o inventada
-            let errorChunk = '';
-            if (tWord) {
-                errorChunk += `<span class="text-rose-400 line-through bg-rose-950/40 px-1.5 py-0.5 rounded shadow-sm">${originalWords[i] || tWord}</span>`;
-            }
-            if (tgtWord) {
-                errorChunk += `<span class="text-amber-400 border-b-2 border-amber-500/50 text-[10px] uppercase block leading-none mt-1.5 font-black tracking-widest">Era: ${targetWords[i] || tgtWord}</span>`;
-            }
-            diffHtml.push(`<span class="inline-flex flex-col items-center align-top mx-1 mb-2">${errorChunk}</span>`);
+            diffHtml.push(`<span class="text-rose-400 line-through bg-rose-950/40 px-1.5 py-0.5 rounded shadow-sm">${w}</span>`);
         }
-    }
-    
-    return { 
-        score: Math.min(100, Math.round((matches / maxLen) * 100)), 
-        diff: diffHtml.join(' ') 
+    });
+
+    // Palabras objetivo que faltan → amarillo
+    const missing = [];
+    targetWords.forEach(w => {
+        const cleanW = w.replace(/[.,!?;:()]/g, '').toLowerCase();
+        if (!transSet.has(cleanW)) {
+            missing.push(`<span class="text-amber-400 border-b-2 border-amber-500/50 text-[10px] uppercase block leading-none mt-1.5 font-black tracking-widest">Era: ${w}</span>`);
+        }
+    });
+
+    const totalTargetWords = targetWords.length;
+    const score = totalTargetWords > 0 ? Math.round((matches / totalTargetWords) * 100) : 0;
+
+    return {
+        score: Math.min(100, score),
+        diff: diffHtml.join(' ') + (missing.length > 0 ? ' ' + missing.join(' ') : '')
     };
 }
 
