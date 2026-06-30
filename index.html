@@ -489,7 +489,7 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
         <div>
             <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Fuente</label>
-            <select id="cfg-practice-source" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200">
+            <select id="cfg-practice-source" onchange="handleSourceChange()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 font-bold text-slate-200">
                 <option value="current-folder">Carpeta actual</option>
                 <option value="all">Todo el vocabulario</option>
                 <option value="islands">Islas seleccionadas</option>
@@ -504,7 +504,8 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
                 <option value="de-es">DE → ES</option>
                 <option value="es-de">ES → DE</option>
                 <option value="mix">🎲 Mix</option>
-                 </div>
+            </select>
+        </div>
         <div>
             <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Tarjetas</label>
             <input type="number" id="cfg-practice-count" value="20" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
@@ -522,7 +523,6 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
         </div>
     </div>
 </div>
-
     <!-- Subcarpetas -->
     <div id="vocab-folder-tabs" class="flex flex-wrap gap-1"></div>
     <!-- Panel de movimiento masivo de palabras -->
@@ -3155,6 +3155,8 @@ function getWordsBySource(source) {
 }
 function startConfiguredPractice() {
     const source = document.getElementById('cfg-practice-source').value;
+    document.getElementById('btn-select-practice-islands').classList.toggle('hidden', source !== 'islands');
+document.getElementById('btn-select-practice-folders').classList.toggle('hidden', source !== 'folders');
     const direction = document.getElementById('cfg-practice-direction').value;
     const countInput = document.getElementById('cfg-practice-count');
     const mode = document.getElementById('cfg-practice-mode').value;
@@ -3224,6 +3226,12 @@ updateFlashcardProgress();
     document.getElementById('vocab-folder-tabs').classList.add('hidden');
     showFlashcard();
 }
+function handleSourceChange() {
+    const source = document.getElementById('cfg-practice-source').value;
+    document.getElementById('btn-select-practice-islands').classList.toggle('hidden', source !== 'islands');
+    document.getElementById('btn-select-practice-folders').classList.toggle('hidden', source !== 'folders');
+}
+
 // Sobrescribir startFlashcardSession para que use la configuración actual
 function startFlashcardSession() {
     // Simplemente lanza la práctica con los valores del panel
