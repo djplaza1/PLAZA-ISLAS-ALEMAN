@@ -2098,6 +2098,27 @@ Ich: Ich heiße Daniel und bin 28 Jahre alt. Ich komme aus Spanien, aber seit vi
         alert('✅ Prompt copiado. Pégalo en tu IA favorita para generar el diálogo.');
     });
 }
+function copyVocabPrompt() {
+    const prompt = `Crea una lista de vocabulario alemán-español para la aplicación "Profesor Plaza Müller". 
+Formato exacto (una palabra por bloque, con su ejemplo justo después):
+
+der Arbeitstag, -e : el día laboral / la jornada de trabajo
+frase: Der Arbeitstag beginnt um acht Uhr. // La jornada laboral empieza a las ocho.
+
+die Besprechung, -en : la reunión
+frase: Die Besprechung findet im Konferenzraum statt. // La reunión tiene lugar en la sala de conferencias.
+
+Reglas importantes:
+- La línea de ejemplo debe empezar con "frase:" y estar justo después de la palabra a la que pertenece.
+- La traducción de la frase va después de "//".
+- No uses emojis ni formatos extra.
+- Incluye el artículo y el plural de los sustantivos.
+- Nivel B2/C1.
+- 20 palabras.`;
+    navigator.clipboard.writeText(prompt).then(() => {
+        alert('✅ Prompt copiado. Pégalo en tu IA favorita para generar la lista.');
+    });
+}
 
 function processImportDialog() {
     const text = document.getElementById('import-dialog-text').value.trim();
@@ -4227,6 +4248,27 @@ function importVocabFromText() {
     content.style.maxHeight = '90vh'; content.style.overflowY = 'auto';
     content.innerHTML = `
         <h3 class="font-bold text-lg text-emerald-400 mb-2">Pegar lista de vocabulario</h3>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 space-y-2 mb-3">
+            <p class="font-bold text-amber-400">🤖 Prompt para IA</p>
+            <p class="text-slate-400">Puedes copiar este prompt y pedirle a una IA que te genere una lista de vocabulario lista para pegar:</p>
+            <pre class="bg-slate-950 p-2 rounded text-slate-300 text-xs overflow-x-auto">Crea una lista de vocabulario alemán-español para la aplicación "Profesor Plaza Müller". 
+Formato exacto (una palabra por bloque, con su ejemplo justo después):
+
+der Arbeitstag, -e : el día laboral / la jornada de trabajo
+frase: Der Arbeitstag beginnt um acht Uhr. // La jornada laboral empieza a las ocho.
+
+die Besprechung, -en : la reunión
+frase: Die Besprechung findet im Konferenzraum statt. // La reunión tiene lugar en la sala de conferencias.
+
+Reglas importantes:
+- La línea de ejemplo debe empezar con "frase:" y estar justo después de la palabra a la que pertenece.
+- La traducción de la frase va después de "//".
+- No uses emojis ni formatos extra.
+- Incluye el artículo y el plural de los sustantivos.
+- Nivel B2/C1.
+- 20 palabras.</pre>
+            <button onclick="copyVocabPrompt()" class="mt-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-copy"></i> Copiar prompt para IA</button>
+        </div>
         <p class="text-xs text-slate-400 mb-3">Formatos admitidos:<br>
         • <code>palabra : traducción</code> o <code>palabra - traducción</code><br>
         • <code>frase: Frase en alemán // Traducción</code> (justo después de la palabra a la que pertenece)<br>
