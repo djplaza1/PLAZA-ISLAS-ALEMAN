@@ -3319,8 +3319,11 @@ function endSRSSession() {
     const practiceSource = document.getElementById('cfg-practice-source').value;
     if (practiceSource === 'current-folder') {
         sourceName = getFolderPath(currentVocabFolderId);
-    } else if (practiceSource === 'islands') {
+        } else if (practiceSource === 'islands') {
         sourceName = selectedPracticeIslandIds.length > 0 ? selectedPracticeIslandIds.length + ' isla(s)' : 'Islas seleccionadas';
+    } else if (practiceSource === 'folders') {
+        const folders = appData.vocabFolders.filter(f => selectedPracticeFolderIds.includes(f.id));
+        sourceName = folders.length > 0 ? folders.map(f => f.name).join(', ') : 'Carpetas seleccionadas';
     } else {
         sourceName = 'Todo el vocabulario';
     }
