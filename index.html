@@ -493,8 +493,10 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
                 <option value="current-folder">Carpeta actual</option>
                 <option value="all">Todo el vocabulario</option>
                 <option value="islands">Islas seleccionadas</option>
+                <option value="folders">Carpetas seleccionadas</option>
             </select>
-            <button onclick="selectPracticeIslands()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition mt-2 sm:mt-0"><i class="fa-solid fa-layer-group"></i> Elegir islas</button>
+            <button onclick="selectPracticeIslands()" id="btn-select-practice-islands" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition mt-2 sm:mt-0"><i class="fa-solid fa-layer-group"></i> Elegir islas</button>
+            <button onclick="selectPracticeFolders()" id="btn-select-practice-folders" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg text-xs font-bold transition mt-2 sm:mt-0 hidden"><i class="fa-solid fa-folder"></i> Elegir carpetas (0)</button>
         </div>
         <div>
             <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Dirección</label>
@@ -504,8 +506,7 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
                 <option value="mix">🎲 Mix</option>
             </select>
         </div>
-        <div>
-            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Tarjetas</label>
+        <!-- ... el resto de tu panel sigue igual ... -->            <label class="block text-slate-400 font-bold uppercase text-[10px] mb-1">Tarjetas</label>
             <input type="number" id="cfg-practice-count" value="20" min="1" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-center font-black text-emerald-400">
         </div>
         <div>
@@ -3022,6 +3023,7 @@ function setTTSStartWord(index) {
 // ==================== VOCABULARIO (CORREGIDO Y COMPLETO) ====================
 let currentVocabFolderId = null;
 let selectedPracticeIslandIds = [];
+let selectedPracticeFolderIds = [];
 let selectedWordIds = new Set(); // Para mover múltiples palabras
 
 function migrateVocabData() {
@@ -3141,9 +3143,13 @@ function getWordsBySource(source) {
     } else if (source === 'all') {
         words = [...(appData.vocabulary || [])];
     } else if (source === 'islands') {
-        // Filtrar palabras cuyo sourceIslandId esté entre las islas seleccionadas
         const ids = selectedPracticeIslandIds;
         words = (appData.vocabulary || []).filter(w => w.sourceIslandId && ids.includes(w.sourceIslandId));
+    } else if (source === 'folders') {
+        const folderIds = selectedPracticeFolderIds;
+        if (folderIds.length > 0) {
+            words = (appData.vocabulary || []).filter(w => folderIds.includes(w.folderId));
+        }
     }
     return words;
 }
@@ -3157,7 +3163,10 @@ function startConfiguredPractice() {
         alert('Selecciona al menos una isla primero.');
         return;
     }
-
+        if (source === 'folders' && selectedPracticeFolderIds.length === 0) {
+        alert('Selecciona al menos una carpeta primero.');
+        return;
+    }
     let words = getWordsBySource(source);
 
     // Filtrar por pendientes si es el modo
@@ -4114,6 +4123,87 @@ async function selectPracticeIslands() {
             btn.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${selectedPracticeIslandIds.length} isla(s)`;
         }
     }
+}
+async function selectPracticeFolders() {
+    const folders = appData.vocabFolders || [];
+    if (folders.length === 0) {
+        alert('No tienes carpetas de vocabulario. Créalas primero.');
+        return;
+    }
+    // Preseleccionar las que ya estuvieran marcadas
+    const selected = await showFolderSelectionModal(folders, selectedPracticeFolderIds);
+    if (selected) {
+        selectedPracticeFolderIds = selected.map(f => f.id);
+        const btn = document.getElementById('btn-select-practice-folders');
+        if (btn) {
+            btn.innerHTML = `<i class="fa-solid fa-folder"></i> ${selectedPracticeFolderIds.length} carpeta(s)`;
+        }
+    }
+}
+function showFolderSelectionModal(folders, preselectedIds = []) {
+    return new Promise(resolve => {
+        const old = document.getElementById('folder-selection-modal');
+        if (old) old.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'folder-selection-modal';
+        overlay.className = 'popup-overlay';
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        const content = document.createElement('div');
+        content.className = 'popup-content max-w-md';
+        content.style.maxHeight = '80vh'; content.style.overflowY = 'auto';
+
+        const selectedIds = new Set(preselectedIds);
+        let html = `<h3 class="font-bold text-lg text-emerald-400 mb-4">Selecciona carpetas</h3>`;
+        html += `<div class="mb-3 flex gap-2">
+            <button id="select-all-folders" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Todas</button>
+            <button id="deselect-all-folders" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs font-bold">Ninguna</button>
+        </div>`;
+        html += `<div class="space-y-1 max-h-60 overflow-y-auto">`;
+        folders.forEach(f => {
+            const checked = selectedIds.has(f.id) ? 'checked' : '';
+            html += `<label class="flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 p-1 rounded cursor-pointer">
+                <input type="checkbox" value="${f.id}" class="folder-checkbox rounded" ${checked}> 📁 ${getFolderPath(f.id)}
+            </label>`;
+        });
+        html += `</div>`;
+        html += `<div class="flex justify-end gap-2 mt-4 border-t border-slate-700 pt-3">
+            <button id="cancel-folder-selection" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            <button id="confirm-folder-selection" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-xs font-bold">Seleccionar (${selectedIds.size})</button>
+        </div>`;
+
+        content.innerHTML = html;
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        const cbs = content.querySelectorAll('.folder-checkbox');
+        const confirmBtn = document.getElementById('confirm-folder-selection');
+        const updateConfirm = () => {
+            cbs.forEach(cb => {
+                if (cb.checked) selectedIds.add(cb.value);
+                else selectedIds.delete(cb.value);
+            });
+            confirmBtn.textContent = `Seleccionar (${selectedIds.size})`;
+        };
+        cbs.forEach(cb => cb.addEventListener('change', updateConfirm));
+
+        document.getElementById('select-all-folders').onclick = () => {
+            cbs.forEach(cb => { cb.checked = true; selectedIds.add(cb.value); });
+            confirmBtn.textContent = `Seleccionar (${selectedIds.size})`;
+        };
+        document.getElementById('deselect-all-folders').onclick = () => {
+            cbs.forEach(cb => { cb.checked = false; selectedIds.clear(); });
+            confirmBtn.textContent = `Seleccionar (0)`;
+        };
+
+        document.getElementById('confirm-folder-selection').onclick = () => {
+            overlay.remove();
+            resolve(folders.filter(f => selectedIds.has(f.id)));
+        };
+        document.getElementById('cancel-folder-selection').onclick = () => {
+            overlay.remove();
+            resolve(null);
+        };
+    });
 }
 
 // --- IMPORTACIÓN DESDE TEXTO (PARSER FLEXIBLE) ---
