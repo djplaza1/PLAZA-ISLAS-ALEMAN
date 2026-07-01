@@ -599,8 +599,7 @@ Daniel Plaza: Ich komme aus Spanien. // Vengo de España.</pre>
 <!-- VISTA DETALLE DE ISLA -->
         <section id="view-island-detail" class="view-section space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-1 rounded-xl">
-                <button onclick="switchView('islands')" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 transition">
-                    <i class="fa-solid fa-arrow-left"></i> Volver
+                <button onclick="goBackFromIslandDetail()" class="text-xs text-emerald-400 hover:text-emerald-300 font-black flex items-center gap-1 uppercase tracking-wider bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 transition">
                 </button>
                 <div class="flex gap-2">
                     <button onclick="toggleVisibilityMatrix('de')" class="bg-slate-800 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-slate-700 transition">
@@ -4619,6 +4618,19 @@ function openIslandDetail(islandId) {
     // SIEMPRE ejecutará esto gracias al blindaje
     switchView('island-detail');
 }
+function goBackFromIslandDetail() {
+    // Buscar el elemento actual
+    const currentItem = appData.islands.find(i => i.id === currentActiveIslandId);
+    if (currentItem && currentItem.parentId) {
+        // Si tiene padre, ir a ese padre
+        openIslandDetail(currentItem.parentId);
+    } else {
+        // Si no tiene padre (es raíz), volver a la pantalla principal de islas
+        switchView('islands');
+    }
+}
+
+
 function getPhrasesArray(islandId) {
     if (islandId === 'virtual_fav') {
         let list = [];
