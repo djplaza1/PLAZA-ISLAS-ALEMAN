@@ -6844,9 +6844,9 @@ function renderChildIslands(groupId) {
     const container = document.getElementById('phrases-container');
     if (!container) return;
 
-           container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>' +
-        `<button onclick="createSubgroup('${groupId}')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-4"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>`
-        <button onclick="createIslandInGroup('${groupId}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-4 ml-2"><i class="fa-solid fa-plus"></i> Nueva isla</button>`
+               container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>' +
+        `<button onclick="createSubgroup('${groupId}')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-4"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>
+        <button onclick="createIslandInGroup('${groupId}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-4 ml-2"><i class="fa-solid fa-plus"></i> Nueva isla</button>`;
 
     // Panel de acciones masivas para islas hijas (ahora incluye mover)
     const bulkDiv = document.createElement('div');
