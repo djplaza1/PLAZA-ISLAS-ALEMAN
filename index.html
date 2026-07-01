@@ -6818,8 +6818,23 @@ function renderChildIslands(groupId) {
     const container = document.getElementById('phrases-container');
     if (!container) return;
 
-       container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>' +
+           container.innerHTML = '<h3 class="font-black mb-4 text-xs uppercase tracking-wider text-slate-400">Islas en este grupo</h3>' +
         `<button onclick="createGroup('${groupId}')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition mb-4"><i class="fa-solid fa-folder-plus"></i> Nueva subcarpeta</button>`;
+
+    // Panel de acciones masivas para islas hijas (ahora incluye mover)
+    const bulkDiv = document.createElement('div');
+    bulkDiv.id = 'bulk-child-island-actions';
+    bulkDiv.className = 'hidden bg-slate-900/80 border border-blue-500/30 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3';
+    bulkDiv.innerHTML = `
+        <span class="text-xs font-bold text-slate-300">Seleccionadas: <span id="selected-child-island-count" class="text-blue-400 font-black text-lg">0</span></span>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="moveSelectedChildIslands('${groupId}')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-arrow-right-arrow-left"></i> Mover seleccionadas</button>
+            <button onclick="moveAllChildIslands('${groupId}')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-angles-right"></i> Mover todas</button>
+            <button onclick="deleteSelectedChildIslands()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-trash"></i> Borrar seleccionadas</button>
+            <button onclick="deleteAllChildIslands()" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-skull"></i> Borrar todas</button>
+        </div>
+    `;
+    container.appendChild(bulkDiv);
 
     // Panel de acciones masivas para islas hijas
     const bulkDiv = document.createElement('div');
@@ -6894,6 +6909,74 @@ function deleteAllChildIslands() {
     selectedChildIslandIds.clear();
     saveDatabase();
     openIslandDetail(currentActiveIslandId);
+}
+async function moveSelectedChildIslands(groupId) {
+    if (selectedChildIslandIds.size === 0) return;
+    const targetGroupId = await showGroupMoveModal();
+    if (targetGroupId === undefined) return; // Cancelado
+    let moved = 0;
+    appData.islands.forEach(item => {
+        if (selectedChildIslandIds.has(item.id)) {
+            item.parentId = targetGroupId;
+            moved++;
+        }
+    });
+    selectedChildIslandIds.clear();
+    saveDatabase();
+    openIslandDetail(groupId);
+    alert(`${moved} islas movidas correctamente.`);
+}
+
+async function moveAllChildIslands(groupId) {
+    const children = appData.islands.filter(i => i.parentId === groupId);
+    if (children.length === 0) return;
+    if (!confirm(`¿Mover TODAS las islas de este grupo (${children.length}) a otra carpeta?`)) return;
+    const targetGroupId = await showGroupMoveModal();
+    if (targetGroupId === undefined) return;
+    children.forEach(item => { item.parentId = targetGroupId; });
+    saveDatabase();
+    openIslandDetail(groupId);
+    alert(`${children.length} islas movidas correctamente.`);
+}
+
+function showGroupMoveModal() {
+    return new Promise(resolve => {
+        const groups = appData.islands.filter(i => i.type === 'group');
+        const oldModal = document.getElementById('group-move-modal');
+        if (oldModal) oldModal.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'group-move-modal';
+        overlay.className = 'popup-overlay';
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+        const content = document.createElement('div');
+        content.className = 'popup-content max-w-md';
+        content.innerHTML = `
+            <h3 class="font-bold text-lg text-emerald-400 mb-4">Mover a carpeta</h3>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+                <button data-id="root" class="w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold text-slate-200">📂 Raíz</button>
+                ${groups.map(g => `<button data-id="${g.id}" class="w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-bold text-slate-200">📁 ${g.name}</button>`).join('')}
+            </div>
+            <div class="flex justify-end mt-4">
+                <button id="cancel-group-move" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+            </div>
+        `;
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        content.querySelectorAll('[data-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                overlay.remove();
+                resolve(id === 'root' ? null : id);
+            });
+        });
+        document.getElementById('cancel-group-move').onclick = () => {
+            overlay.remove();
+            resolve(undefined);
+        };
+    });
 }
 
 // --- FUNCIONES DE MOVIMIENTO MASIVO ---
