@@ -6837,17 +6837,6 @@ function renderChildIslands(groupId) {
     container.appendChild(bulkDiv);
 
     // Panel de acciones masivas para islas hijas
-    const bulkDiv = document.createElement('div');
-    bulkDiv.id = 'bulk-child-island-actions';
-    bulkDiv.className = 'hidden bg-slate-900/80 border border-blue-500/30 rounded-xl p-3 mb-4 flex flex-wrap items-center justify-between gap-3';
-    bulkDiv.innerHTML = `
-        <span class="text-xs font-bold text-slate-300">Seleccionadas: <span id="selected-child-island-count" class="text-blue-400 font-black text-lg">0</span></span>
-        <div class="flex flex-wrap gap-2">
-            <button onclick="deleteSelectedChildIslands()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-trash"></i> Borrar seleccionadas</button>
-            <button onclick="deleteAllChildIslands()" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-md"><i class="fa-solid fa-skull"></i> Borrar todas</button>
-        </div>
-    `;
-    container.appendChild(bulkDiv);
 
     const children = appData.islands.filter(i => i.parentId === groupId);
     selectedChildIslandIds.clear();
