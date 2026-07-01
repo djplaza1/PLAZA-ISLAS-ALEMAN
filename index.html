@@ -6862,17 +6862,20 @@ function renderChildIslands(groupId) {
     }
 
     children.forEach(child => {
-        const div = document.createElement('div');
-        div.className = "py-3 border-b border-slate-700 flex justify-between items-center";
-        div.innerHTML = `
-            <div class="flex items-center gap-3">
-                <input type="checkbox" class="child-island-checkbox shrink-0 w-4 h-4 cursor-pointer accent-blue-600" value="${child.id}" onchange="handleChildIslandCheckbox()">
-                <span class="font-bold text-emerald-400">${child.name}</span>
-            </div>
-            <button onclick="openIslandDetail('${child.id}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs">Abrir</button>
-        `;
-        container.appendChild(div);
-    });
+    const isGroup = child.type === 'group';
+    const div = document.createElement('div');
+    div.className = "py-3 border-b border-slate-700 flex justify-between items-center";
+    div.innerHTML = `
+        <div class="flex items-center gap-3">
+            <input type="checkbox" class="child-island-checkbox shrink-0 w-4 h-4 cursor-pointer accent-blue-600" value="${child.id}" onchange="handleChildIslandCheckbox()">
+            <span class="font-bold ${isGroup ? 'text-amber-400' : 'text-emerald-400'}">
+                ${isGroup ? '<i class="fa-solid fa-folder"></i>' : ''} ${child.name}
+            </span>
+        </div>
+        <button onclick="openIslandDetail('${child.id}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs">Abrir</button>
+    `;
+    container.appendChild(div);
+});
 }
 
 function handleChildIslandCheckbox() {
